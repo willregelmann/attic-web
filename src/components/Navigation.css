@@ -26,6 +26,7 @@
   padding: 0.25rem 0.5rem;
   border-radius: 8px;
   transition: all 0.2s;
+  flex: 0 0 auto;
 }
 
 .nav-brand:hover {
@@ -87,10 +88,8 @@
 
 /* Search bar */
 .nav-search {
-  flex: 1;
-  max-width: 500px;
-  margin: 0 auto;
-  padding: 0 2rem;
+  flex: 0 1 500px;
+  margin: 0 2rem;
   position: relative;
 }
 
@@ -113,8 +112,7 @@
 
 .search-input {
   width: 100%;
-  padding: 0.6rem 2.75rem;
-  padding-right: 2.75rem;
+  padding: 0.6rem 3rem 0.6rem 2.75rem;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
@@ -135,19 +133,20 @@
 
 .search-clear {
   position: absolute;
-  right: 12px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
   background: transparent;
   border: none;
   color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 4px;
   transition: all 0.2s;
+  z-index: 1;
 }
 
 .search-clear:hover {
@@ -231,6 +230,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex: 0 0 auto;
 }
 
 .nav-btn {
