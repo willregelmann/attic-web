@@ -7,11 +7,15 @@ import {
   GET_COLLECTIONS,
   UPLOAD_COLLECTION_IMAGE 
 } from '../queries';
+import CuratorConfig from './CuratorConfig';
+import SuggestionReview from './SuggestionReview';
 import './CollectionAdmin.css';
 
 const CollectionAdmin = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [selectedCollection, setSelectedCollection] = useState(null);
+  const [activeTab, setActiveTab] = useState('details');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -345,6 +349,12 @@ const CollectionAdmin = () => {
                 </div>
                 <div className="collection-card-actions">
                   <button 
+                    className="btn-manage"
+                    onClick={() => setSelectedCollection(collection)}
+                  >
+                    Manage
+                  </button>
+                  <button 
                     className="btn-edit"
                     onClick={() => handleEdit(collection)}
                   >
@@ -362,6 +372,88 @@ const CollectionAdmin = () => {
           </div>
         )}
       </div>
+
+      {/* Collection Management Modal */}
+      {selectedCollection && (
+        <div className="collection-management-modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>{selectedCollection.name}</h2>
+              <button 
+                className="close-button"
+                onClick={() => setSelectedCollection(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="tabs">
+              <button 
+                className={activeTab === 'details' ? 'active' : ''}
+                onClick={() => setActiveTab('details')}
+              >
+                Details
+              </button>
+              <button 
+                className={activeTab === 'curator' ? 'active' : ''}
+                onClick={() => setActiveTab('curator')}
+              >
+                AI Curator
+              </button>
+              <button 
+                className={activeTab === 'suggestions' ? 'active' : ''}
+                onClick={() => setActiveTab('suggestions')}
+              >
+                Suggestions
+              </button>
+              <button 
+                className={activeTab === 'items' ? 'active' : ''}
+                onClick={() => setActiveTab('items')}
+              >
+                Items
+              </button>
+            </div>
+
+            <div className="tab-content">
+              {activeTab === 'details' && (
+                <div className="collection-details">
+                  <h3>Collection Details</h3>
+                  <p><strong>ID:</strong> {selectedCollection.id}</p>
+                  <p><strong>Created:</strong> {new Date(selectedCollection.created_at).toLocaleDateString()}</p>
+                  {selectedCollection.metadata?.description && (
+                    <p><strong>Description:</strong> {selectedCollection.metadata.description}</p>
+                  )}
+                  {selectedCollection.metadata?.category && (
+                    <p><strong>Category:</strong> {selectedCollection.metadata.category}</p>
+                  )}
+                  <p><strong>Total Items:</strong> {selectedCollection.childrenCount || 0}</p>
+                </div>
+              )}
+
+              {activeTab === 'curator' && (
+                <CuratorConfig 
+                  collectionId={selectedCollection.id}
+                  collectionName={selectedCollection.name}
+                />
+              )}
+
+              {activeTab === 'suggestions' && (
+                <SuggestionReview 
+                  collectionId={selectedCollection.id}
+                />
+              )}
+
+              {activeTab === 'items' && (
+                <div className="collection-items">
+                  <h3>Collection Items</h3>
+                  <p>Items management coming soon...</p>
+                  {/* TODO: Add items management UI */}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

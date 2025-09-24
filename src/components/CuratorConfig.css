@@ -1,0 +1,217 @@
+/* Curator Configuration Styles */
+
+.curator-setup {
+  padding: 20px;
+  text-align: center;
+}
+
+.curator-setup h3 {
+  margin-bottom: 10px;
+}
+
+.curator-setup p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.curator-config, .curator-status {
+  padding: 20px;
+}
+
+.curator-config h3, .curator-status h3 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Form Styles */
+.curator-config .form-group {
+  margin-bottom: 20px;
+}
+
+.curator-config label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #555;
+}
+
+.curator-config input[type="text"],
+.curator-config textarea,
+.curator-config select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.curator-config textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.curator-config input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.curator-config input[type="range"] {
+  width: 200px;
+  margin-right: 10px;
+}
+
+/* Rule Input */
+.rule-input {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.rule-input input {
+  flex: 1;
+}
+
+.rule-input button {
+  padding: 8px 15px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.rule-input button:hover {
+  background: #c82333;
+}
+
+/* Curator Status */
+.curator-info {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.curator-info .status {
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.curator-info .status.active strong {
+  color: #28a745;
+}
+
+.curator-info .status.inactive strong {
+  color: #dc3545;
+}
+
+.curator-info .status.error strong {
+  color: #ffc107;
+}
+
+/* Curator Stats */
+.curator-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.curator-stats .stat {
+  background: white;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.curator-stats .label {
+  display: block;
+  color: #6c757d;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.curator-stats .value {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Curator Actions */
+.curator-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.curator-actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: opacity 0.2s;
+}
+
+.curator-actions button:hover {
+  opacity: 0.9;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.form-actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* Button Styles */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #007bff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #0056b3;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.btn-success {
+  background: #28a745;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #218838;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}

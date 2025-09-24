@@ -63,6 +63,30 @@
   margin-bottom: 8px;
 }
 
+.collection-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-button {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  border-radius: 8px;
+}
+
+.admin-button:hover {
+  background: var(--bg-secondary);
+  color: var(--primary);
+}
+
 .collection-title {
   font-size: 32px;
   font-weight: 700;

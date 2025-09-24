@@ -42,6 +42,11 @@ export const GET_COLLECTION = gql`
         url
         alt_text
       }
+      maintainers {
+        id
+        user_id
+        role
+      }
     }
   }
 `;

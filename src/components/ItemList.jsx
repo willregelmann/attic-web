@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import {
   GET_COLLECTION_ITEMS,
   GET_COLLECTIONS,
@@ -14,6 +15,7 @@ import './ItemList.css';
 
 function ItemList({ collection, onBack, onSelectCollection, isRootView = false }) {
   const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all'); // all, owned, missing
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // grid, list
@@ -331,16 +333,31 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
           <div className="collection-title-row">
             <h1 className="collection-title">{collection.name}</h1>
             {!isRootView && isAuthenticated && (
-              <button
-                className={`favorite-button ${userFavorites.has(collection.id) ? 'active' : ''}`}
-                onClick={toggleFavorite}
-                title={userFavorites.has(collection.id) ? "Remove from favorites" : "Add to favorites"}
-              >
-                <svg viewBox="0 0 24 24" fill={userFavorites.has(collection.id) ? "currentColor" : "none"} width="24" height="24">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
+              <div className="collection-actions">
+                {/* Show admin button if user is a maintainer */}
+                {collection.maintainers?.some(m => m.user_id === user.id) && (
+                  <button
+                    className="admin-button"
+                    onClick={() => navigate('/admin')}
+                    title="Manage Collection"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+                      <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                  </button>
+                )}
+                <button
+                  className={`favorite-button ${userFavorites.has(collection.id) ? 'active' : ''}`}
+                  onClick={toggleFavorite}
+                  title={userFavorites.has(collection.id) ? "Remove from favorites" : "Add to favorites"}
+                >
+                  <svg viewBox="0 0 24 24" fill={userFavorites.has(collection.id) ? "currentColor" : "none"} width="24" height="24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
             )}
           </div>
           <div className="collection-meta">
