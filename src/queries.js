@@ -241,9 +241,15 @@ export const REMOVE_ITEM_FROM_COLLECTION = gql`
   }
 `;
 
-export const SET_COLLECTION_IMAGE = gql`
-  mutation SetCollectionImage($collectionId: ID!, $imageUrl: String!, $altText: String) {
-    setCollectionImage(collection_id: $collectionId, image_url: $imageUrl, alt_text: $altText) {
+export const UPLOAD_COLLECTION_IMAGE = gql`
+  mutation UploadCollectionImage($collectionId: ID!, $imageData: String!, $filename: String!, $mimeType: String!, $altText: String) {
+    uploadCollectionImage(
+      collection_id: $collectionId, 
+      image_data: $imageData, 
+      filename: $filename, 
+      mime_type: $mimeType, 
+      alt_text: $altText
+    ) {
       id
       url
       alt_text

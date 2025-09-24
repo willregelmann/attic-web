@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { 
   CREATE_COLLECTION, 
   UPDATE_COLLECTION, 
   DELETE_COLLECTION, 
   GET_COLLECTIONS,
-  SET_COLLECTION_IMAGE 
+  UPLOAD_COLLECTION_IMAGE 
 } from '../queries';
 import './CollectionAdmin.css';
 
@@ -15,19 +15,21 @@ const CollectionAdmin = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: '',
-    imageUrl: ''
+    category: ''
   });
+  const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
 
   const { data, loading, error, refetch } = useQuery(GET_COLLECTIONS);
   
   const [createCollection] = useMutation(CREATE_COLLECTION, {
     onCompleted: () => {
       setIsCreating(false);
-      setFormData({ name: '', description: '', category: '', imageUrl: '' });
+      setFormData({ name: '', description: '', category: '' });
       setImagePreview(null);
+      setSelectedFile(null);
       refetch();
     },
     onError: (err) => {
@@ -38,8 +40,9 @@ const CollectionAdmin = () => {
   const [updateCollection] = useMutation(UPDATE_COLLECTION, {
     onCompleted: () => {
       setEditingId(null);
-      setFormData({ name: '', description: '', category: '', imageUrl: '' });
+      setFormData({ name: '', description: '', category: '' });
       setImagePreview(null);
+      setSelectedFile(null);
       refetch();
     },
     onError: (err) => {
@@ -56,7 +59,7 @@ const CollectionAdmin = () => {
     }
   });
 
-  const [setCollectionImage] = useMutation(SET_COLLECTION_IMAGE, {
+  const [uploadCollectionImage] = useMutation(UPLOAD_COLLECTION_IMAGE, {
     onCompleted: () => {
       setUploadingImage(false);
       refetch();
@@ -96,15 +99,8 @@ const CollectionAdmin = () => {
     }
 
     // Upload image if provided
-    if (formData.imageUrl && collectionId) {
-      setUploadingImage(true);
-      await setCollectionImage({
-        variables: {
-          collectionId: collectionId,
-          imageUrl: formData.imageUrl,
-          altText: formData.name
-        }
-      });
+    if (selectedFile && collectionId) {
+      await handleImageUpload(collectionId);
     }
   };
 
@@ -113,37 +109,74 @@ const CollectionAdmin = () => {
     setFormData({
       name: collection.name,
       description: collection.metadata?.description || '',
-      category: collection.metadata?.category || '',
-      imageUrl: ''
+      category: collection.metadata?.category || ''
     });
     setImagePreview(collection.primaryImage?.url || null);
+    setSelectedFile(null);
     setIsCreating(true);
   };
 
-  const handleImageUrlChange = (e) => {
-    const url = e.target.value;
-    setFormData({ ...formData, imageUrl: url });
-    
-    // Update preview if valid URL
-    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-      setImagePreview(url);
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+      return;
     }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      alert('Image size must be less than 5MB');
+      return;
+    }
+
+    setSelectedFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleImageUpload = async (collectionId) => {
-    if (!collectionId || !formData.imageUrl) return;
+    if (!collectionId || !selectedFile) return;
     
     setUploadingImage(true);
-    try {
-      await setCollectionImage({
-        variables: {
-          collectionId: collectionId,
-          imageUrl: formData.imageUrl,
-          altText: formData.name
-        }
-      });
-    } catch (error) {
-      console.error('Failed to upload image:', error);
+    
+    // Convert file to base64
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        const base64Data = reader.result;
+        
+        await uploadCollectionImage({
+          variables: {
+            collectionId: collectionId,
+            imageData: base64Data,
+            filename: selectedFile.name,
+            mimeType: selectedFile.type,
+            altText: formData.name
+          }
+        });
+      } catch (error) {
+        console.error('Failed to upload image:', error);
+        alert(`Failed to upload image: ${error.message}`);
+      }
+    };
+    reader.readAsDataURL(selectedFile);
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -158,8 +191,12 @@ const CollectionAdmin = () => {
   const handleCancel = () => {
     setIsCreating(false);
     setEditingId(null);
-    setFormData({ name: '', description: '', category: '', imageUrl: '' });
+    setFormData({ name: '', description: '', category: '' });
     setImagePreview(null);
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   if (loading) return <div className="collection-admin-loading">Loading collections...</div>;
@@ -220,32 +257,47 @@ const CollectionAdmin = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="imageUrl">Cover Image URL</label>
-              <input
-                type="url"
-                id="imageUrl"
-                value={formData.imageUrl}
-                onChange={handleImageUrlChange}
-                placeholder="https://example.com/image.jpg"
-              />
-              <p className="form-help-text">Enter a URL for the collection's cover image</p>
+              <label htmlFor="imageFile">Cover Image</label>
+              <div className="file-input-container">
+                <input
+                  type="file"
+                  id="imageFile"
+                  ref={fileInputRef}
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleFileSelect}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  className="btn-file-select"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {selectedFile ? 'Change Image' : 'Select Image'}
+                </button>
+                {selectedFile && (
+                  <div className="file-info">
+                    <span>{selectedFile.name}</span>
+                    <button
+                      type="button"
+                      className="btn-remove-file"
+                      onClick={handleRemoveImage}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+              <p className="form-help-text">Upload an image for the collection's cover (max 5MB)</p>
             </div>
 
-            {(imagePreview || formData.imageUrl) && (
+            {imagePreview && (
               <div className="image-preview-container">
                 <label>Image Preview</label>
                 <div className="image-preview">
-                  {imagePreview ? (
-                    <img 
-                      src={imagePreview} 
-                      alt="Collection preview"
-                      onError={() => setImagePreview(null)}
-                    />
-                  ) : (
-                    <div className="preview-placeholder">
-                      <span>Invalid image URL</span>
-                    </div>
-                  )}
+                  <img 
+                    src={imagePreview} 
+                    alt="Collection preview"
+                  />
                 </div>
               </div>
             )}
