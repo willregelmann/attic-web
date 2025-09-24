@@ -113,8 +113,8 @@
   z-index: 1;
 }
 
-.search-input {
-  width: 100%;
+.nav-search .search-input {
+  width: 100% !important;
   display: block;
   box-sizing: border-box;
   padding: 0.6rem 3rem 0.6rem 2.75rem;
@@ -126,11 +126,11 @@
   transition: all 0.2s;
 }
 
-.search-input::placeholder {
+.nav-search .search-input::placeholder {
   color: rgba(255, 255, 255, 0.5);
 }
 
-.search-input:focus {
+.nav-search .search-input:focus {
   outline: none;
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.3);
