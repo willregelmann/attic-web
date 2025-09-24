@@ -1,5 +1,7 @@
 import { gql } from '@apollo/client';
 
+// ===== QUERIES =====
+
 export const GET_COLLECTIONS = gql`
   query GetCollections {
     collections {
@@ -181,5 +183,60 @@ export const GET_ITEM_DETAILS = gql`
         }
       }
     }
+  }
+`;
+// ===== MUTATIONS =====
+
+export const CREATE_COLLECTION = gql`
+  mutation CreateCollection($name: String!, $metadata: JSON) {
+    createCollection(name: $name, metadata: $metadata) {
+      id
+      name
+      type
+      metadata
+      created_at
+    }
+  }
+`;
+
+export const UPDATE_COLLECTION = gql`
+  mutation UpdateCollection($id: ID!, $name: String, $metadata: JSON) {
+    updateCollection(id: $id, name: $name, metadata: $metadata) {
+      id
+      name
+      type
+      metadata
+      updated_at
+    }
+  }
+`;
+
+export const DELETE_COLLECTION = gql`
+  mutation DeleteCollection($id: ID!) {
+    deleteCollection(id: $id)
+  }
+`;
+
+export const ADD_ITEM_TO_COLLECTION = gql`
+  mutation AddItemToCollection($collectionId: ID!, $itemId: ID!, $canonicalOrder: Int, $metadata: JSON) {
+    addItemToCollection(
+      collection_id: $collectionId
+      item_id: $itemId
+      canonical_order: $canonicalOrder
+      metadata: $metadata
+    ) {
+      id
+      parent_id
+      child_id
+      relationship_type
+      canonical_order
+      metadata
+    }
+  }
+`;
+
+export const REMOVE_ITEM_FROM_COLLECTION = gql`
+  mutation RemoveItemFromCollection($collectionId: ID!, $itemId: ID!) {
+    removeItemFromCollection(collection_id: $collectionId, item_id: $itemId)
   }
 `;

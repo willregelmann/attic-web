@@ -8,6 +8,7 @@ import Navigation from './components/Navigation';
 import LoginModal from './components/LoginModal';
 import CollectionView from './components/CollectionView';
 import ItemView from './components/ItemView';
+import CollectionAdmin from './components/CollectionAdmin';
 import './App.css';
 
 // Get Google Client ID from environment variable
@@ -40,6 +41,7 @@ function App() {
                 <Route path="/" element={<CollectionView />} />
                 <Route path="/collection/:id" element={<CollectionView />} />
                 <Route path="/item/:id" element={<ItemView />} />
+                <Route path="/admin" element={<CollectionAdmin />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
