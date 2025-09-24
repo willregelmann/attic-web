@@ -88,7 +88,8 @@
 
 /* Search bar */
 .nav-search {
-  flex: 0 1 500px;
+  flex: 1;
+  max-width: 500px;
   margin: 0 2rem;
   position: relative;
 }
@@ -99,17 +100,23 @@
 
 .search-input-wrapper {
   position: relative;
+  width: 100%;
 }
 
 .search-icon {
   position: absolute;
   left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
   color: rgba(255, 255, 255, 0.5);
   pointer-events: none;
+  z-index: 1;
 }
 
 .search-input {
   width: 100%;
+  display: block;
+  box-sizing: border-box;
   padding: 0.6rem 3rem 0.6rem 2.75rem;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
