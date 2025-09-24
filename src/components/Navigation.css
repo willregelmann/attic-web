@@ -99,8 +99,6 @@
 
 .search-input-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
 }
 
 .search-icon {
@@ -133,7 +131,7 @@
 
 .search-clear {
   position: absolute;
-  right: 8px;
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
   background: transparent;
@@ -146,7 +144,7 @@
   justify-content: center;
   border-radius: 4px;
   transition: all 0.2s;
-  z-index: 1;
+  z-index: 2;
 }
 
 .search-clear:hover {
