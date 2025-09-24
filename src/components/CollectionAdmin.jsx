@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMutation, useQuery } from '@apollo/client';
+import { useMutation, useQuery } from '@apollo/client/react';
 import { CREATE_COLLECTION, UPDATE_COLLECTION, DELETE_COLLECTION, GET_COLLECTIONS } from '../queries';
 import './CollectionAdmin.css';
 
