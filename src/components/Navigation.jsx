@@ -5,13 +5,13 @@ import { useLazyQuery } from '@apollo/client/react';
 import { SEARCH_ITEMS } from '../queries';
 import './Navigation.css';
 
-function Navigation({ onLogin, onSignup }) {
+function Navigation({ onLogin, onSignup, onAddToCollection }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const dropdownRef = useRef(null);
+  const menuRef = useRef(null);
   const searchRef = useRef(null);
 
   const [searchItems, { data: searchData, loading: searchLoading }] = useLazyQuery(
@@ -27,11 +27,11 @@ function Navigation({ onLogin, onSignup }) {
     }
   );
 
-  // Close dropdown when clicking outside
+  // Close menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
       }
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowSearchResults(false);
@@ -49,7 +49,14 @@ function Navigation({ onLogin, onSignup }) {
 
   const handleLogout = () => {
     logout();
-    setShowDropdown(false);
+    setShowMenu(false);
+  };
+
+  const handleAddToCollection = () => {
+    setShowMenu(false);
+    if (onAddToCollection) {
+      onAddToCollection();
+    }
   };
 
   const handleSearch = (e) => {
@@ -96,7 +103,7 @@ function Navigation({ onLogin, onSignup }) {
               <circle cx="12" cy="14" r="2" stroke="currentColor" strokeWidth="2"/>
             </svg>
           </div>
-          <span className="nav-title">Attic</span>
+          <span className="nav-title">Will's Attic</span>
         </button>
 
         <div className="nav-search" ref={searchRef}>
@@ -173,76 +180,106 @@ function Navigation({ onLogin, onSignup }) {
         </div>
 
         <div className="nav-actions">
-          {user ? (
-            <div className="nav-user-dropdown" ref={dropdownRef}>
-              <button
-                className="nav-user-button"
-                onClick={() => setShowDropdown(!showDropdown)}
-              >
-                <span className="nav-username">{user.given_name || user.name}</span>
-                {user.picture ? (
-                  <img
-                    src={user.picture}
-                    alt={user.name}
-                    className="nav-avatar-img"
-                    onError={(e) => {
-                      console.error('Failed to load avatar:', user.picture);
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                    referrerPolicy="no-referrer"
-                  />
-                ) : null}
-                <div
-                  className="nav-avatar"
-                  style={{ display: user.picture ? 'none' : 'flex' }}
-                >
-                  {(user.given_name || user.name || 'U').charAt(0).toUpperCase()}
-                </div>
-                <svg
-                  className={`dropdown-arrow ${showDropdown ? 'open' : ''}`}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  width="16"
-                  height="16"
-                >
-                  <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <div className="nav-menu-container" ref={menuRef}>
+            <button
+              className="nav-menu-button"
+              onClick={() => setShowMenu(!showMenu)}
+              aria-label="Menu"
+            >
+              {showMenu ? (
+                <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
-              </button>
-
-              {showDropdown && (
-                <div className="dropdown-menu">
-                  <div className="dropdown-header">
-                    <div className="dropdown-email">{user.email}</div>
-                  </div>
-                  <button 
-                    className="dropdown-item" 
-                    onClick={() => {
-                      navigate('/admin');
-                      setShowDropdown(false);
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                      <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
-                            fill="currentColor"/>
-                    </svg>
-                    Admin Panel
-                  </button>
-                  <button className="dropdown-item" onClick={handleLogout}>
-                    <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
-                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    Log Out
-                  </button>
-                </div>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+                  <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
               )}
-            </div>
-          ) : (
-            <button className="nav-btn nav-btn-primary" onClick={onLogin}>
-              Log In
             </button>
-          )}
+
+            {showMenu && (
+              <div className="nav-dropdown-menu">
+                {user ? (
+                  <>
+                    <div className="dropdown-header">
+                      <div className="dropdown-user-info">
+                        {user.picture ? (
+                          <img
+                            src={user.picture}
+                            alt={user.name}
+                            className="dropdown-avatar"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : null}
+                        <div
+                          className="dropdown-avatar-fallback"
+                          style={{ display: user.picture ? 'none' : 'flex' }}
+                        >
+                          {(user.given_name || user.name || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="dropdown-user-text">
+                          <div className="dropdown-username">{user.given_name || user.name}</div>
+                          <div className="dropdown-email">{user.email}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="dropdown-divider"></div>
+                    <button 
+                      className="dropdown-item"
+                      onClick={handleAddToCollection}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                        <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                      Add to My Collection
+                    </button>
+                    <button 
+                      className="dropdown-item" 
+                      onClick={() => {
+                        navigate('/admin');
+                        setShowMenu(false);
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                        <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                      Admin Panel
+                    </button>
+                    <div className="dropdown-divider"></div>
+                    <button className="dropdown-item" onClick={handleLogout}>
+                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
+                              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Log Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button className="dropdown-item dropdown-item-primary" onClick={onLogin}>
+                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                        <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"
+                              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Log In
+                    </button>
+                    <button className="dropdown-item" onClick={onSignup}>
+                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                        <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M8 11a4 4 0 100-8 4 4 0 000 8zM20 8v6M23 11h-6"
+                              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Sign Up
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </nav>

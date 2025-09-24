@@ -293,15 +293,17 @@
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
-/* User dropdown */
-.nav-user-dropdown {
+/* Menu dropdown */
+.nav-menu-container {
   position: relative;
 }
 
-.nav-user-button {
+.nav-menu-button {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   background: transparent;
   border: none;
   color: white;
@@ -311,26 +313,18 @@
   transition: all 0.2s;
 }
 
-.nav-user-button:hover {
+.nav-menu-button:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.dropdown-arrow {
-  transition: transform 0.2s;
-}
-
-.dropdown-arrow.open {
-  transform: rotate(180deg);
-}
-
-.dropdown-menu {
+.nav-dropdown-menu {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
   background: white;
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  min-width: 200px;
+  min-width: 280px;
   z-index: 1001;
   overflow: hidden;
   animation: dropdownSlide 0.2s ease;
@@ -348,13 +342,65 @@
 }
 
 .dropdown-header {
-  padding: 12px 16px;
+  padding: 16px;
   border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+.dropdown-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dropdown-avatar,
+.dropdown-avatar-fallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dropdown-avatar {
+  object-fit: cover;
+}
+
+.dropdown-avatar-fallback {
+  background: var(--navy-blue);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.dropdown-user-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-username {
+  font-weight: 600;
+  color: #212529;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dropdown-email {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   color: #6c757d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #e9ecef;
+  margin: 0;
 }
 
 .dropdown-item {
@@ -378,6 +424,16 @@
 
 .dropdown-item svg {
   color: #6c757d;
+  flex-shrink: 0;
+}
+
+.dropdown-item.dropdown-item-primary {
+  color: var(--navy-blue);
+  font-weight: 600;
+}
+
+.dropdown-item.dropdown-item-primary:hover {
+  background: #e7f3ff;
 }
 
 @media (max-width: 768px) {

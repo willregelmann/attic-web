@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import client from './apolloClient';
 import Navigation from './components/Navigation';
 import LoginModal from './components/LoginModal';
+import AddItemsModal from './components/AddItemsModal';
 import CollectionView from './components/CollectionView';
 import ItemView from './components/ItemView';
 import CollectionAdmin from './components/CollectionAdmin';
@@ -16,6 +17,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showAddItemsModal, setShowAddItemsModal] = useState(false);
 
   const handleLogin = () => {
     setShowLoginModal(true);
@@ -26,6 +28,10 @@ function App() {
     setShowLoginModal(true);
   };
 
+  const handleAddToCollection = () => {
+    setShowAddItemsModal(true);
+  };
+
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <ApolloProvider client={client}>
@@ -34,6 +40,7 @@ function App() {
             <Navigation
               onLogin={handleLogin}
               onSignup={handleSignup}
+              onAddToCollection={handleAddToCollection}
             />
 
             <main className="app-content">
@@ -45,6 +52,15 @@ function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
+
+            <AddItemsModal
+              isOpen={showAddItemsModal}
+              onClose={() => setShowAddItemsModal(false)}
+              onItemsAdded={() => {
+                setShowAddItemsModal(false);
+                // Refresh will be handled by the modal itself
+              }}
+            />
 
             <LoginModal
               isOpen={showLoginModal}

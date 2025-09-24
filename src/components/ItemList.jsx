@@ -10,7 +10,6 @@ import {
   UNFAVORITE_COLLECTION
 } from '../queries';
 import ItemDetail from './ItemDetail';
-import AddItemsModal from './AddItemsModal';
 import './ItemList.css';
 
 function ItemList({ collection, onBack, onSelectCollection, isRootView = false }) {
@@ -21,7 +20,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
   const [viewMode, setViewMode] = useState('grid'); // grid, list
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
-  const [showAddItemsModal, setShowAddItemsModal] = useState(false);
   const [userFavorites, setUserFavorites] = useState(new Set());
 
   // GraphQL mutations for favorites
@@ -380,18 +378,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
       {/* Toolbar */}
       <div className="items-toolbar">
         <div className="filter-tabs">
-          {isAuthenticated && (
-            <button
-              className="add-items-btn"
-              onClick={() => setShowAddItemsModal(true)}
-              style={{ marginRight: '1rem' }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-              Add to My Collection
-            </button>
-          )}
           <button
             className={`filter-tab ${filter === 'all' ? 'active' : ''}`}
             onClick={() => setFilter('all')}
@@ -590,18 +576,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
         />
       )}
 
-      {/* Add Items Modal */}
-      {showAddItemsModal && (
-        <AddItemsModal
-          isOpen={showAddItemsModal}
-          onClose={() => setShowAddItemsModal(false)}
-          onItemsAdded={(addedItems) => {
-            // For now, we'll just refresh the page to show the new items
-            // In a production app, we'd update the local state or refetch queries
-            window.location.reload();
-          }}
-        />
-      )}
     </div>
   );
 }
