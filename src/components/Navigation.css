@@ -4,13 +4,10 @@
   top: 0;
   z-index: 1000;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 0 16px;
 }
 
 .nav-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 12px 0;
+  padding: 12px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
