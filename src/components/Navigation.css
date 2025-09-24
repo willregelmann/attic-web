@@ -1,17 +1,16 @@
 .navigation {
   background: var(--navy-blue);
-  border-radius: 12px;
-  margin: 16px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   position: sticky;
-  top: 16px;
+  top: 0;
   z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 0 16px;
 }
 
 .nav-container {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 12px 24px;
+  padding: 12px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
