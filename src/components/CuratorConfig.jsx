@@ -8,11 +8,8 @@ const GET_CURATOR = gql`
   query GetCollectionCurator($collectionId: ID!) {
     collectionCurator(collection_id: $collectionId) {
       id
-      name
-      description
+      prompt
       status
-      curator_config
-      schedule_type
       auto_approve
       confidence_threshold
       suggestions_made
@@ -27,24 +24,18 @@ const GET_CURATOR = gql`
 const CREATE_CURATOR = gql`
   mutation CreateCurator(
     $collectionId: ID!
-    $name: String!
-    $description: String
-    $curatorConfig: JSON!
-    $scheduleType: String
+    $prompt: String!
     $autoApprove: Boolean
     $confidenceThreshold: Int
   ) {
     createCurator(
       collection_id: $collectionId
-      name: $name
-      description: $description
-      curator_config: $curatorConfig
-      schedule_type: $scheduleType
+      prompt: $prompt
       auto_approve: $autoApprove
       confidence_threshold: $confidenceThreshold
     ) {
       id
-      name
+      prompt
       status
     }
   }
@@ -53,24 +44,18 @@ const CREATE_CURATOR = gql`
 const UPDATE_CURATOR = gql`
   mutation UpdateCurator(
     $id: ID!
-    $name: String
-    $description: String
-    $curatorConfig: JSON
-    $scheduleType: String
+    $prompt: String
     $autoApprove: Boolean
     $confidenceThreshold: Int
   ) {
     updateCurator(
       id: $id
-      name: $name
-      description: $description
-      curator_config: $curatorConfig
-      schedule_type: $scheduleType
+      prompt: $prompt
       auto_approve: $autoApprove
       confidence_threshold: $confidenceThreshold
     ) {
       id
-      name
+      prompt
       status
     }
   }
@@ -97,13 +82,7 @@ const RUN_CURATOR = gql`
 const CuratorConfig = ({ collectionId, collectionName }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: `${collectionName} Curator`,
-    description: '',
-    personality: '',
-    rules: [''],
-    aiModel: 'claude-3-sonnet-20240229',
-    temperature: 0.7,
-    scheduleType: 'manual',
+    prompt: '',
     autoApprove: false,
     confidenceThreshold: 80,
   });
@@ -121,13 +100,7 @@ const CuratorConfig = ({ collectionId, collectionName }) => {
     if (data?.collectionCurator) {
       const curator = data.collectionCurator;
       setFormData({
-        name: curator.name,
-        description: curator.description || '',
-        personality: curator.curator_config.personality || '',
-        rules: curator.curator_config.rules || [''],
-        aiModel: curator.curator_config.ai_model || 'claude-3-sonnet-20240229',
-        temperature: curator.curator_config.temperature || 0.7,
-        scheduleType: curator.schedule_type,
+        prompt: curator.prompt,
         autoApprove: curator.auto_approve,
         confidenceThreshold: curator.confidence_threshold,
       });
@@ -137,22 +110,12 @@ const CuratorConfig = ({ collectionId, collectionName }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const curatorConfig = {
-      personality: formData.personality,
-      rules: formData.rules.filter(r => r.trim() !== ''),
-      ai_model: formData.aiModel,
-      temperature: formData.temperature,
-    };
-
     try {
       if (data?.collectionCurator) {
         await updateCurator({
           variables: {
             id: data.collectionCurator.id,
-            name: formData.name,
-            description: formData.description,
-            curatorConfig,
-            scheduleType: formData.scheduleType,
+            prompt: formData.prompt,
             autoApprove: formData.autoApprove,
             confidenceThreshold: formData.confidenceThreshold,
           },
@@ -161,10 +124,7 @@ const CuratorConfig = ({ collectionId, collectionName }) => {
         await createCurator({
           variables: {
             collectionId,
-            name: formData.name,
-            description: formData.description,
-            curatorConfig,
-            scheduleType: formData.scheduleType,
+            prompt: formData.prompt,
             autoApprove: formData.autoApprove,
             confidenceThreshold: formData.confidenceThreshold,
           },
@@ -201,21 +161,6 @@ const CuratorConfig = ({ collectionId, collectionName }) => {
     }
   };
 
-  const addRule = () => {
-    setFormData({ ...formData, rules: [...formData.rules, ''] });
-  };
-
-  const updateRule = (index, value) => {
-    const newRules = [...formData.rules];
-    newRules[index] = value;
-    setFormData({ ...formData, rules: newRules });
-  };
-
-  const removeRule = (index) => {
-    const newRules = formData.rules.filter((_, i) => i !== index);
-    setFormData({ ...formData, rules: newRules });
-  };
-
   if (loading) return <div>Loading curator configuration...</div>;
 
   const curator = data?.collectionCurator;
@@ -224,7 +169,7 @@ const CuratorConfig = ({ collectionId, collectionName }) => {
     return (
       <div className="curator-setup">
         <h3>AI Curator</h3>
-        <p>Set up an AI curator to automatically suggest items for this collection.</p>
+        <p>Set up an AI curator to automatically suggest items for this collection daily.</p>
         <button onClick={() => setIsEditing(true)} className="btn btn-primary">
           Setup AI Curator
         </button>
@@ -238,73 +183,26 @@ const CuratorConfig = ({ collectionId, collectionName }) => {
         <h3>{curator ? 'Edit' : 'Setup'} AI Curator</h3>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Curator Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Description</label>
+            <label>Curator Instructions</label>
             <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Describe what this curator should focus on..."
-            />
-          </div>
+              value={formData.prompt}
+              onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
+              placeholder={`Describe what this curator should do. For example:
 
-          <div className="form-group">
-            <label>Curator Personality</label>
-            <textarea
-              value={formData.personality}
-              onChange={(e) => setFormData({ ...formData, personality: e.target.value })}
-              placeholder="E.g., 'An expert Pokemon card collector focusing on competitive play...'"
+"You are curating a Pokemon TCG collection. Focus on:
+- Competitive playability in Standard format
+- Cards from recent sets (Sword & Shield onwards)
+- Key trainer cards and energy cards
+- Pokemon with strong abilities or attacks
+- Prioritize cards seeing play in tournament-winning decks"`}
               required
+              rows="10"
+              style={{ width: '100%', fontFamily: 'monospace' }}
             />
-          </div>
-
-          <div className="form-group">
-            <label>Curation Rules</label>
-            {formData.rules.map((rule, index) => (
-              <div key={index} className="rule-input">
-                <input
-                  type="text"
-                  value={rule}
-                  onChange={(e) => updateRule(index, e.target.value)}
-                  placeholder="E.g., 'Only include cards from Standard format'"
-                />
-                <button type="button" onClick={() => removeRule(index)}>Remove</button>
-              </div>
-            ))}
-            <button type="button" onClick={addRule}>Add Rule</button>
-          </div>
-
-          <div className="form-group">
-            <label>AI Model</label>
-            <select
-              value={formData.aiModel}
-              onChange={(e) => setFormData({ ...formData, aiModel: e.target.value })}
-            >
-              <option value="claude-3-opus-20240229">Claude 3 Opus (Best quality)</option>
-              <option value="claude-3-sonnet-20240229">Claude 3 Sonnet (Balanced)</option>
-              <option value="claude-3-haiku-20240307">Claude 3 Haiku (Fast & cheap)</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Schedule</label>
-            <select
-              value={formData.scheduleType}
-              onChange={(e) => setFormData({ ...formData, scheduleType: e.target.value })}
-            >
-              <option value="manual">Manual Only</option>
-              <option value="hourly">Every Hour</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-            </select>
+            <small className="form-help">
+              The AI will use these instructions to suggest items to add or remove from your collection.
+              Be specific about what you want the curator to focus on.
+            </small>
           </div>
 
           <div className="form-group">
@@ -316,24 +214,37 @@ const CuratorConfig = ({ collectionId, collectionName }) => {
               />
               Auto-approve high confidence suggestions
             </label>
+            <small className="form-help">
+              When enabled, suggestions with confidence above the threshold will be automatically applied.
+            </small>
           </div>
 
           {formData.autoApprove && (
             <div className="form-group">
-              <label>Confidence Threshold</label>
+              <label>Confidence Threshold: {formData.confidenceThreshold}%</label>
               <input
                 type="range"
                 min="50"
                 max="100"
                 value={formData.confidenceThreshold}
                 onChange={(e) => setFormData({ ...formData, confidenceThreshold: parseInt(e.target.value) })}
+                style={{ width: '100%' }}
               />
-              <span>{formData.confidenceThreshold}%</span>
+              <small className="form-help">
+                Only suggestions with confidence above {formData.confidenceThreshold}% will be auto-approved.
+              </small>
             </div>
           )}
 
+          <div className="form-info">
+            <p><strong>Schedule:</strong> The curator will run automatically once per day.</p>
+            <p><strong>AI Model:</strong> Using the latest Claude model configured on the server.</p>
+          </div>
+
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary">Save Configuration</button>
+            <button type="submit" className="btn btn-primary">
+              {curator ? 'Save Changes' : 'Create Curator'}
+            </button>
             <button type="button" onClick={() => setIsEditing(false)} className="btn btn-secondary">
               Cancel
             </button>
@@ -346,12 +257,16 @@ const CuratorConfig = ({ collectionId, collectionName }) => {
   // Display curator status
   return (
     <div className="curator-status">
-      <h3>AI Curator: {curator.name}</h3>
+      <h3>AI Curator Status</h3>
       <div className="curator-info">
         <p className={`status ${curator.status}`}>
-          Status: <strong>{curator.status}</strong>
+          Status: <strong>{curator.status === 'active' ? 'Active' : 'Inactive'}</strong>
         </p>
-        {curator.description && <p>{curator.description}</p>}
+        
+        <div className="curator-prompt">
+          <h4>Instructions:</h4>
+          <pre>{curator.prompt}</pre>
+        </div>
         
         <div className="curator-stats">
           <div className="stat">
@@ -372,6 +287,16 @@ const CuratorConfig = ({ collectionId, collectionName }) => {
               <span className="value">{new Date(curator.last_run_at).toLocaleString()}</span>
             </div>
           )}
+          {curator.next_run_at && (
+            <div className="stat">
+              <span className="label">Next Run:</span>
+              <span className="value">{new Date(curator.next_run_at).toLocaleString()}</span>
+            </div>
+          )}
+          <div className="stat">
+            <span className="label">Auto-approve:</span>
+            <span className="value">{curator.auto_approve ? `Yes (>${curator.confidence_threshold}%)` : 'No'}</span>
+          </div>
         </div>
 
         <div className="curator-actions">
@@ -382,12 +307,16 @@ const CuratorConfig = ({ collectionId, collectionName }) => {
             {curator.status === 'active' ? 'Deactivate' : 'Activate'}
           </button>
           
-          <button onClick={handleRunNow} className="btn btn-primary">
+          <button 
+            onClick={handleRunNow} 
+            className="btn btn-primary"
+            disabled={curator.status !== 'active'}
+          >
             Run Now
           </button>
           
           <button onClick={() => setIsEditing(true)} className="btn btn-secondary">
-            Edit Configuration
+            Edit Instructions
           </button>
         </div>
       </div>

@@ -13,7 +13,6 @@ import './CollectionAdmin.css';
 
 const CollectionAdmin = () => {
   const [isCreating, setIsCreating] = useState(false);
-  const [editingId, setEditingId] = useState(null);
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
   const [formData, setFormData] = useState({
@@ -24,6 +23,7 @@ const CollectionAdmin = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const fileInputRef = useRef(null);
 
   const { data, loading, error, refetch } = useQuery(GET_COLLECTIONS);
@@ -43,11 +43,18 @@ const CollectionAdmin = () => {
 
   const [updateCollection] = useMutation(UPDATE_COLLECTION, {
     onCompleted: () => {
-      setEditingId(null);
       setFormData({ name: '', description: '', category: '' });
       setImagePreview(null);
       setSelectedFile(null);
+      setIsEditMode(false);
       refetch();
+      // Update the selected collection with new data
+      if (selectedCollection) {
+        const updatedCollection = data?.collections?.find(c => c.id === selectedCollection.id);
+        if (updatedCollection) {
+          setSelectedCollection(updatedCollection);
+        }
+      }
     },
     onError: (err) => {
       alert(`Error updating collection: ${err.message}`);
@@ -82,17 +89,9 @@ const CollectionAdmin = () => {
       category: formData.category
     };
 
-    let collectionId = editingId;
+    let collectionId = null;
 
-    if (editingId) {
-      await updateCollection({
-        variables: {
-          id: editingId,
-          name: formData.name,
-          metadata
-        }
-      });
-    } else {
+    if (isCreating) {
       const result = await createCollection({
         variables: {
           name: formData.name,
@@ -108,16 +107,41 @@ const CollectionAdmin = () => {
     }
   };
 
-  const handleEdit = (collection) => {
-    setEditingId(collection.id);
-    setFormData({
-      name: collection.name,
-      description: collection.metadata?.description || '',
-      category: collection.metadata?.category || ''
+  const handleUpdateCollection = async (e) => {
+    e.preventDefault();
+    
+    const metadata = {
+      description: formData.description,
+      category: formData.category
+    };
+
+    await updateCollection({
+      variables: {
+        id: selectedCollection.id,
+        name: formData.name,
+        metadata
+      }
     });
-    setImagePreview(collection.primaryImage?.url || null);
+
+    // Upload image if provided
+    if (selectedFile) {
+      await handleImageUpload(selectedCollection.id);
+    }
+
+    setIsEditMode(false);
+    setActiveTab('details');
+  };
+
+  const handleEditInModal = () => {
+    setFormData({
+      name: selectedCollection.name,
+      description: selectedCollection.metadata?.description || '',
+      category: selectedCollection.metadata?.category || ''
+    });
+    setImagePreview(selectedCollection.primaryImage?.url || null);
     setSelectedFile(null);
-    setIsCreating(true);
+    setIsEditMode(true);
+    setActiveTab('edit');
   };
 
   const handleFileSelect = (e) => {
@@ -194,13 +218,23 @@ const CollectionAdmin = () => {
 
   const handleCancel = () => {
     setIsCreating(false);
-    setEditingId(null);
     setFormData({ name: '', description: '', category: '' });
     setImagePreview(null);
     setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setFormData({ name: '', description: '', category: '' });
+    setImagePreview(null);
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setActiveTab('details');
   };
 
   if (loading) return <div className="collection-admin-loading">Loading collections...</div>;
@@ -224,7 +258,7 @@ const CollectionAdmin = () => {
 
       {isCreating && (
         <div className="collection-form-container">
-          <h3>{editingId ? 'Edit Collection' : 'Create New Collection'}</h3>
+          <h3>Create New Collection</h3>
           <form onSubmit={handleSubmit} className="collection-form">
             <div className="form-group">
               <label htmlFor="name">Collection Name *</label>
@@ -308,7 +342,7 @@ const CollectionAdmin = () => {
 
             <div className="form-actions">
               <button type="submit" className="btn-primary">
-                {editingId ? 'Update Collection' : 'Create Collection'}
+                Create Collection
               </button>
               <button type="button" className="btn-secondary" onClick={handleCancel}>
                 Cancel
@@ -355,12 +389,6 @@ const CollectionAdmin = () => {
                     Manage
                   </button>
                   <button 
-                    className="btn-edit"
-                    onClick={() => handleEdit(collection)}
-                  >
-                    Edit
-                  </button>
-                  <button 
                     className="btn-delete"
                     onClick={() => handleDelete(collection.id, collection.name)}
                   >
@@ -381,7 +409,14 @@ const CollectionAdmin = () => {
               <h2>{selectedCollection.name}</h2>
               <button 
                 className="close-button"
-                onClick={() => setSelectedCollection(null)}
+                onClick={() => {
+                  setSelectedCollection(null);
+                  setIsEditMode(false);
+                  setActiveTab('details');
+                  setFormData({ name: '', description: '', category: '' });
+                  setImagePreview(null);
+                  setSelectedFile(null);
+                }}
               >
                 ×
               </button>
@@ -393,6 +428,12 @@ const CollectionAdmin = () => {
                 onClick={() => setActiveTab('details')}
               >
                 Details
+              </button>
+              <button 
+                className={activeTab === 'edit' ? 'active' : ''}
+                onClick={() => setActiveTab('edit')}
+              >
+                Edit
               </button>
               <button 
                 className={activeTab === 'curator' ? 'active' : ''}
@@ -427,6 +468,128 @@ const CollectionAdmin = () => {
                     <p><strong>Category:</strong> {selectedCollection.metadata.category}</p>
                   )}
                   <p><strong>Total Items:</strong> {selectedCollection.childrenCount || 0}</p>
+                  <button 
+                    className="btn-primary"
+                    onClick={handleEditInModal}
+                    style={{ marginTop: '20px' }}
+                  >
+                    Edit Collection
+                  </button>
+                </div>
+              )}
+
+              {activeTab === 'edit' && (
+                <div className="collection-edit">
+                  <form onSubmit={handleUpdateCollection} className="collection-form">
+                    <div className="form-group">
+                      <label htmlFor="modal-name">Collection Name *</label>
+                      <input
+                        type="text"
+                        id="modal-name"
+                        value={isEditMode ? formData.name : selectedCollection.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                        disabled={!isEditMode}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="modal-description">Description</label>
+                      <textarea
+                        id="modal-description"
+                        value={isEditMode ? formData.description : (selectedCollection.metadata?.description || '')}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        rows="4"
+                        disabled={!isEditMode}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="modal-category">Category</label>
+                      <input
+                        type="text"
+                        id="modal-category"
+                        value={isEditMode ? formData.category : (selectedCollection.metadata?.category || '')}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        disabled={!isEditMode}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Collection Image</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        ref={fileInputRef}
+                        disabled={!isEditMode}
+                        style={{ display: 'none' }}
+                      />
+                      {!isEditMode ? (
+                        imagePreview && (
+                          <div className="image-preview">
+                            <img 
+                              src={imagePreview || selectedCollection.primaryImage?.url} 
+                              alt="Collection preview"
+                            />
+                          </div>
+                        )
+                      ) : (
+                        <>
+                          <button 
+                            type="button" 
+                            className="btn-secondary"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            {imagePreview ? 'Change Image' : 'Upload Image'}
+                          </button>
+                          {imagePreview && (
+                            <>
+                              <button 
+                                type="button" 
+                                className="btn-secondary"
+                                onClick={handleRemoveImage}
+                                style={{ marginLeft: '10px' }}
+                              >
+                                Remove Image
+                              </button>
+                              <div className="image-preview">
+                                <img 
+                                  src={imagePreview} 
+                                  alt="Collection preview"
+                                />
+                              </div>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    {isEditMode ? (
+                      <div className="form-actions">
+                        <button type="submit" className="btn-primary">
+                          Save Changes
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn-secondary" 
+                          onClick={handleCancelEdit}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => {
+                          handleEditInModal();
+                        }}
+                      >
+                        Edit Collection
+                      </button>
+                    )}
+                  </form>
                 </div>
               )}
 
