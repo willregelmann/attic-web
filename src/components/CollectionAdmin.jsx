@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { CREATE_COLLECTION, UPDATE_COLLECTION, DELETE_COLLECTION, GET_COLLECTIONS } from '../queries';
+import { 
+  CREATE_COLLECTION, 
+  UPDATE_COLLECTION, 
+  DELETE_COLLECTION, 
+  GET_COLLECTIONS,
+  SET_COLLECTION_IMAGE 
+} from '../queries';
 import './CollectionAdmin.css';
 
 const CollectionAdmin = () => {
@@ -9,15 +15,19 @@ const CollectionAdmin = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: ''
+    category: '',
+    imageUrl: ''
   });
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const { data, loading, error, refetch } = useQuery(GET_COLLECTIONS);
   
   const [createCollection] = useMutation(CREATE_COLLECTION, {
     onCompleted: () => {
       setIsCreating(false);
-      setFormData({ name: '', description: '', category: '' });
+      setFormData({ name: '', description: '', category: '', imageUrl: '' });
+      setImagePreview(null);
       refetch();
     },
     onError: (err) => {
@@ -28,7 +38,8 @@ const CollectionAdmin = () => {
   const [updateCollection] = useMutation(UPDATE_COLLECTION, {
     onCompleted: () => {
       setEditingId(null);
-      setFormData({ name: '', description: '', category: '' });
+      setFormData({ name: '', description: '', category: '', imageUrl: '' });
+      setImagePreview(null);
       refetch();
     },
     onError: (err) => {
@@ -45,6 +56,17 @@ const CollectionAdmin = () => {
     }
   });
 
+  const [setCollectionImage] = useMutation(SET_COLLECTION_IMAGE, {
+    onCompleted: () => {
+      setUploadingImage(false);
+      refetch();
+    },
+    onError: (err) => {
+      setUploadingImage(false);
+      alert(`Error uploading image: ${err.message}`);
+    }
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -52,6 +74,8 @@ const CollectionAdmin = () => {
       description: formData.description,
       category: formData.category
     };
+
+    let collectionId = editingId;
 
     if (editingId) {
       await updateCollection({
@@ -62,10 +86,23 @@ const CollectionAdmin = () => {
         }
       });
     } else {
-      await createCollection({
+      const result = await createCollection({
         variables: {
           name: formData.name,
           metadata
+        }
+      });
+      collectionId = result.data.createCollection.id;
+    }
+
+    // Upload image if provided
+    if (formData.imageUrl && collectionId) {
+      setUploadingImage(true);
+      await setCollectionImage({
+        variables: {
+          collectionId: collectionId,
+          imageUrl: formData.imageUrl,
+          altText: formData.name
         }
       });
     }
@@ -76,9 +113,38 @@ const CollectionAdmin = () => {
     setFormData({
       name: collection.name,
       description: collection.metadata?.description || '',
-      category: collection.metadata?.category || ''
+      category: collection.metadata?.category || '',
+      imageUrl: ''
     });
+    setImagePreview(collection.primaryImage?.url || null);
     setIsCreating(true);
+  };
+
+  const handleImageUrlChange = (e) => {
+    const url = e.target.value;
+    setFormData({ ...formData, imageUrl: url });
+    
+    // Update preview if valid URL
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      setImagePreview(url);
+    }
+  };
+
+  const handleImageUpload = async (collectionId) => {
+    if (!collectionId || !formData.imageUrl) return;
+    
+    setUploadingImage(true);
+    try {
+      await setCollectionImage({
+        variables: {
+          collectionId: collectionId,
+          imageUrl: formData.imageUrl,
+          altText: formData.name
+        }
+      });
+    } catch (error) {
+      console.error('Failed to upload image:', error);
+    }
   };
 
   const handleDelete = async (id, name) => {
@@ -92,7 +158,8 @@ const CollectionAdmin = () => {
   const handleCancel = () => {
     setIsCreating(false);
     setEditingId(null);
-    setFormData({ name: '', description: '', category: '' });
+    setFormData({ name: '', description: '', category: '', imageUrl: '' });
+    setImagePreview(null);
   };
 
   if (loading) return <div className="collection-admin-loading">Loading collections...</div>;
@@ -151,6 +218,37 @@ const CollectionAdmin = () => {
                 placeholder="e.g., Trading Cards, Comics, etc."
               />
             </div>
+
+            <div className="form-group">
+              <label htmlFor="imageUrl">Cover Image URL</label>
+              <input
+                type="url"
+                id="imageUrl"
+                value={formData.imageUrl}
+                onChange={handleImageUrlChange}
+                placeholder="https://example.com/image.jpg"
+              />
+              <p className="form-help-text">Enter a URL for the collection's cover image</p>
+            </div>
+
+            {(imagePreview || formData.imageUrl) && (
+              <div className="image-preview-container">
+                <label>Image Preview</label>
+                <div className="image-preview">
+                  {imagePreview ? (
+                    <img 
+                      src={imagePreview} 
+                      alt="Collection preview"
+                      onError={() => setImagePreview(null)}
+                    />
+                  ) : (
+                    <div className="preview-placeholder">
+                      <span>Invalid image URL</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="form-actions">
               <button type="submit" className="btn-primary">

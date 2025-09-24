@@ -240,3 +240,14 @@ export const REMOVE_ITEM_FROM_COLLECTION = gql`
     removeItemFromCollection(collection_id: $collectionId, item_id: $itemId)
   }
 `;
+
+export const SET_COLLECTION_IMAGE = gql`
+  mutation SetCollectionImage($collectionId: ID!, $imageUrl: String!, $altText: String) {
+    setCollectionImage(collection_id: $collectionId, image_url: $imageUrl, alt_text: $altText) {
+      id
+      url
+      alt_text
+      is_primary
+    }
+  }
+`;
