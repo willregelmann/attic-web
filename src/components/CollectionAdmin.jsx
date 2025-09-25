@@ -8,7 +8,7 @@ import {
   UPLOAD_COLLECTION_IMAGE 
 } from '../queries';
 import CuratorConfig from './CuratorConfig';
-import SuggestionReview from './SuggestionReview';
+import HierarchicalSuggestions from './HierarchicalSuggestions';
 import './CollectionAdmin.css';
 
 const CollectionAdmin = () => {
@@ -601,7 +601,7 @@ const CollectionAdmin = () => {
               )}
 
               {activeTab === 'suggestions' && (
-                <SuggestionReview 
+                <HierarchicalSuggestions 
                   collectionId={selectedCollection.id}
                 />
               )}

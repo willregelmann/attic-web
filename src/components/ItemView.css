@@ -236,7 +236,7 @@
 .view-collection-btn {
   flex: 1;
   padding: 0.75rem 1.5rem;
-  background: var(--color-primary);
+  background: #3b82f6;
   color: white;
   border: none;
   border-radius: 0.5rem;
@@ -248,10 +248,18 @@
   gap: 0.5rem;
   cursor: pointer;
   transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .view-collection-btn:hover {
-  background: var(--color-primary-dark);
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.view-collection-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Related Section */
