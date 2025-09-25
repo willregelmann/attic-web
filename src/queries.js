@@ -262,3 +262,41 @@ export const UPLOAD_COLLECTION_IMAGE = gql`
     }
   }
 `;
+
+// ===== API TOKEN QUERIES =====
+
+export const GET_MY_API_TOKENS = gql`
+  query GetMyApiTokens {
+    myApiTokens {
+      id
+      name
+      abilities
+      last_used_at
+      expires_at
+      created_at
+    }
+  }
+`;
+
+// ===== API TOKEN MUTATIONS =====
+
+export const CREATE_API_TOKEN = gql`
+  mutation CreateApiToken($name: String!, $abilities: [String!], $expiresAt: DateTime) {
+    createApiToken(name: $name, abilities: $abilities, expires_at: $expiresAt) {
+      token {
+        id
+        name
+        abilities
+        expires_at
+        created_at
+      }
+      plainTextToken
+    }
+  }
+`;
+
+export const REVOKE_API_TOKEN = gql`
+  mutation RevokeApiToken($id: ID!) {
+    revokeApiToken(id: $id)
+  }
+`;
