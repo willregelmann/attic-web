@@ -17,7 +17,7 @@
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .header-controls {
@@ -47,12 +47,12 @@
 }
 
 .filter-pills button:hover {
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .filter-pills button.active {
   background: white;
-  color: #111827;
+  color: var(--text-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -77,12 +77,12 @@
 }
 
 .view-toggle button:hover {
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .view-toggle button.active {
   background: white;
-  color: #111827;
+  color: var(--text-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -218,7 +218,7 @@ button:disabled {
 }
 
 .expand-toggle:hover {
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .subcollection-icon {
@@ -234,7 +234,7 @@ button:disabled {
   margin: 0 0 8px 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .metadata {
@@ -313,7 +313,7 @@ button:disabled {
 }
 
 .reasoning-box strong {
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .nested-item {
@@ -344,7 +344,7 @@ button:disabled {
 .item-name {
   flex: 1;
   font-weight: 500;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .item-metadata {
@@ -376,15 +376,13 @@ button:disabled {
 
 /* Standalone Items */
 .suggestion-item.standalone {
-  padding: 16px;
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   margin-bottom: 12px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
   transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
 }
 
 .suggestion-item.standalone:hover {
@@ -408,6 +406,114 @@ button:disabled {
   border-left: 3px solid #ef4444;
 }
 
+
+/* Item Header Section */
+.suggestion-item .item-header {
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* Item Details Section */
+.suggestion-item .item-details {
+  padding: 0 16px 16px;
+}
+
+/* Item Actions */
+.item-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btn-preview,
+.btn-accept,
+.btn-reject {
+  padding: 6px 12px;
+  border: 1px solid;
+  border-radius: 6px;
+  cursor: pointer;
+  background: white;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.btn-label {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .btn-label {
+    display: inline;
+  }
+}
+
+.btn-preview {
+  border-color: #6b7280;
+  color: #6b7280;
+}
+
+.btn-preview:hover:not(:disabled) {
+  background: #6b7280;
+  color: white;
+}
+
+.btn-accept {
+  border-color: #10b981;
+  color: #10b981;
+}
+
+.btn-accept:hover:not(:disabled) {
+  background: #10b981;
+  color: white;
+}
+
+.btn-reject {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.btn-reject:hover:not(:disabled) {
+  background: #ef4444;
+  color: white;
+}
+
+
+/* Processing Overlay */
+.processing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .item-content {
   flex: 1;
 }
@@ -416,7 +522,7 @@ button:disabled {
   margin: 0 0 8px 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .reasoning {
@@ -474,7 +580,7 @@ button:disabled {
 .empty-state h3 {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
   margin: 0 0 8px 0;
 }
 

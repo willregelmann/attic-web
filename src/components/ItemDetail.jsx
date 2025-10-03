@@ -1,15 +1,20 @@
 import { useAuth } from '../contexts/AuthContext';
 import './ItemDetail.css';
 
-function ItemDetail({ item, index, isOwned, onToggleOwnership, onClose, onNavigateToCollection }) {
+function ItemDetail({
+  item,
+  index,
+  isOwned,
+  onToggleOwnership,
+  onClose,
+  onNavigateToCollection,
+  isSuggestionPreview = false,
+  onAcceptSuggestion,
+  onRejectSuggestion
+}) {
   const { isAuthenticated } = useAuth();
 
   if (!item) return null;
-
-  console.log('ItemDetail rendering for item:', item);
-  console.log('Item type is:', item.type);
-  console.log('Is collection?', item.type === 'collection');
-  console.log('Has onNavigateToCollection?', !!onNavigateToCollection);
 
   const getItemImage = () => {
     // Use actual image if available
@@ -28,13 +33,34 @@ function ItemDetail({ item, index, isOwned, onToggleOwnership, onClose, onNaviga
   };
 
   return (
-    <div className="item-detail-overlay" onClick={onClose}>
-      <div className="item-detail-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="detail-close-btn" onClick={onClose}>
-          <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+    <div className="item-detail-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="item-detail-title">
+      <div className={`item-detail-modal ${isSuggestionPreview ? 'suggestion-preview' : ''}`} onClick={(e) => e.stopPropagation()}>
+        <button className="detail-close-btn" onClick={onClose} aria-label="Close item details">
+          <svg viewBox="0 0 24 24" fill="none" width="24" height="24" aria-hidden="true">
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
         </button>
+
+        {/* Suggestion Preview Header */}
+        {isSuggestionPreview && item._suggestion && (
+          <div className="suggestion-preview-header">
+            <div className="preview-badge">
+              <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <path d="M12 2v6m0 4v6m0 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor"/>
+              </svg>
+              SUGGESTION PREVIEW
+            </div>
+            <div className="suggestion-info">
+              <span className={`confidence-badge ${item._suggestion.confidence_score >= 80 ? 'high' : item._suggestion.confidence_score >= 60 ? 'medium' : 'low'}`}>
+                {item._suggestion.confidence_score}% Confidence
+              </span>
+              <span className="action-type">
+                {item._suggestion.action_type === 'add_item' ? 'New Item' : 'Update Item'}
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className="detail-content">
           <div className="detail-image-section">
@@ -97,41 +123,75 @@ function ItemDetail({ item, index, isOwned, onToggleOwnership, onClose, onNaviga
               </div>
             )}
 
-            <div className="detail-ownership-section">
-              <div className="ownership-status">
-                <span className="ownership-label">Status:</span>
-                <span className={`ownership-value ${isOwned ? 'owned' : 'missing'}`}>
-                  {isOwned ? 'Owned' : 'Missing'}
-                </span>
-              </div>
+            {/* Show suggestion actions in preview mode */}
+            {isSuggestionPreview ? (
+              <div className="suggestion-actions-section">
+                {item._suggestion && (
+                  <div className="suggestion-reasoning">
+                    <h4>AI Reasoning:</h4>
+                    <p>{item._suggestion.reasoning}</p>
+                  </div>
+                )}
 
-              {isAuthenticated ? (
-                <button
-                  className={`ownership-toggle-btn ${isOwned ? 'remove' : 'add'}`}
-                  onClick={onToggleOwnership}
-                >
-                  {isOwned ? (
-                    <>
-                      <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                        <path d="M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                      Remove from Collection
-                    </>
-                  ) : (
-                    <>
-                      <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                        <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                      Add to Collection
-                    </>
-                  )}
-                </button>
-              ) : (
-                <p className="auth-prompt">
-                  Sign in to track your collection
-                </p>
-              )}
-            </div>
+                <div className="suggestion-action-buttons">
+                  <button
+                    className="suggestion-accept-btn"
+                    onClick={onAcceptSuggestion}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Accept Suggestion
+                  </button>
+
+                  <button
+                    className="suggestion-reject-btn"
+                    onClick={onRejectSuggestion}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                      <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    Reject Suggestion
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="detail-ownership-section">
+                <div className="ownership-status">
+                  <span className="ownership-label">Status:</span>
+                  <span className={`ownership-value ${isOwned ? 'owned' : 'missing'}`}>
+                    {isOwned ? 'Owned' : 'Missing'}
+                  </span>
+                </div>
+
+                {isAuthenticated ? (
+                  <button
+                    className={`ownership-toggle-btn ${isOwned ? 'remove' : 'add'}`}
+                    onClick={onToggleOwnership}
+                  >
+                    {isOwned ? (
+                      <>
+                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                          <path d="M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                        Remove from Collection
+                      </>
+                    ) : (
+                      <>
+                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                          <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                        Add to Collection
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <p className="auth-prompt">
+                    Sign in to track your collection
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Additional details if available */}
             {item.metadata?.description && (

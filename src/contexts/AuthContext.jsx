@@ -43,8 +43,6 @@ export function AuthProvider({ children }) {
         family_name: decodedToken.family_name,
       };
 
-      console.log('Authenticating with backend...');
-
       // Authenticate with our backend
       const { data } = await googleLoginMutation({
         variables: {
@@ -54,8 +52,6 @@ export function AuthProvider({ children }) {
 
       if (data?.googleLogin) {
         const { access_token, user: backendUser } = data.googleLogin;
-
-        console.log('Backend authentication successful');
 
         // Store the Laravel token for API requests
         localStorage.setItem('token', access_token);
@@ -71,7 +67,6 @@ export function AuthProvider({ children }) {
         localStorage.setItem('user_data', JSON.stringify(userData));
         setUser(userData);
 
-        console.log('User authenticated:', userData);
         return userData;
       }
     } catch (error) {

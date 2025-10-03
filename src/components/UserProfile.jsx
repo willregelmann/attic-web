@@ -100,7 +100,7 @@ function UserProfile() {
           {user.picture && (
             <div className="info-row">
               <span className="info-label">Avatar:</span>
-              <img src={user.picture} alt={user.name} className="profile-avatar" />
+              <img src={user.picture} alt={user.name} className="profile-avatar" loading="lazy" />
             </div>
           )}
         </div>

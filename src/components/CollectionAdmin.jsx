@@ -332,9 +332,10 @@ const CollectionAdmin = () => {
               <div className="image-preview-container">
                 <label>Image Preview</label>
                 <div className="image-preview">
-                  <img 
-                    src={imagePreview} 
+                  <img
+                    src={imagePreview}
                     alt="Collection preview"
+                    loading="lazy"
                   />
                 </div>
               </div>
@@ -362,9 +363,10 @@ const CollectionAdmin = () => {
               <div key={collection.id} className="collection-card">
                 <div className="collection-card-image">
                   {collection.primaryImage ? (
-                    <img 
-                      src={collection.primaryImage.url} 
+                    <img
+                      src={collection.primaryImage.url}
                       alt={collection.primaryImage.alt_text || collection.name}
+                      loading="lazy"
                     />
                   ) : (
                     <div className="placeholder-image">
@@ -528,9 +530,10 @@ const CollectionAdmin = () => {
                       {!isEditMode ? (
                         imagePreview && (
                           <div className="image-preview">
-                            <img 
-                              src={imagePreview || selectedCollection.primaryImage?.url} 
+                            <img
+                              src={imagePreview || selectedCollection.primaryImage?.url}
                               alt="Collection preview"
+                              loading="lazy"
                             />
                           </div>
                         )
@@ -554,9 +557,10 @@ const CollectionAdmin = () => {
                                 Remove Image
                               </button>
                               <div className="image-preview">
-                                <img 
-                                  src={imagePreview} 
+                                <img
+                                  src={imagePreview}
                                   alt="Collection preview"
+                                  loading="lazy"
                                 />
                               </div>
                             </>

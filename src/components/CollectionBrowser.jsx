@@ -1,5 +1,6 @@
 import { useQuery } from '@apollo/client/react';
 import { GET_COLLECTIONS } from '../queries';
+import { CollectionGridSkeleton } from './SkeletonLoader';
 import './CollectionBrowser.css';
 
 function CollectionBrowser({ onSelectCollection }) {
@@ -7,9 +8,14 @@ function CollectionBrowser({ onSelectCollection }) {
 
   if (loading) {
     return (
-      <div className="collections-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading your collections...</p>
+      <div className="collection-browser">
+        <div className="collections-header">
+          <div className="header-content">
+            <h1>My Collections</h1>
+            <p>Track and manage your collectibles</p>
+          </div>
+        </div>
+        <CollectionGridSkeleton count={6} />
       </div>
     );
   }

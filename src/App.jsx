@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ApolloProvider } from '@apollo/client/react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import client from './apolloClient';
 import Navigation from './components/Navigation';
 import LoginModal from './components/LoginModal';
@@ -11,6 +12,8 @@ import CollectionView from './components/CollectionView';
 import ItemView from './components/ItemView';
 import CollectionAdmin from './components/CollectionAdmin';
 import UserProfile from './components/UserProfile';
+import ItemManagement from './components/ItemManagement';
+import WishlistView from './components/WishlistView';
 import './App.css';
 
 // Get Google Client ID from environment variable
@@ -36,8 +39,9 @@ function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <ApolloProvider client={client}>
-        <AuthProvider>
-          <div className="app">
+        <ThemeProvider>
+          <AuthProvider>
+            <div className="app">
             <Navigation
               onLogin={handleLogin}
               onSignup={handleSignup}
@@ -49,7 +53,9 @@ function App() {
                 <Route path="/" element={<CollectionView />} />
                 <Route path="/collection/:id" element={<CollectionView />} />
                 <Route path="/item/:id" element={<ItemView />} />
+                <Route path="/wishlist" element={<WishlistView />} />
                 <Route path="/admin" element={<CollectionAdmin />} />
+                <Route path="/items" element={<ItemManagement />} />
                 <Route path="/profile" element={<UserProfile />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
@@ -68,8 +74,9 @@ function App() {
               isOpen={showLoginModal}
               onClose={() => setShowLoginModal(false)}
             />
-          </div>
-        </AuthProvider>
+            </div>
+          </AuthProvider>
+        </ThemeProvider>
       </ApolloProvider>
     </GoogleOAuthProvider>
   );

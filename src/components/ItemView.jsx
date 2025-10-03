@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client/react';
-import { GET_ITEM_DETAILS, ADD_ITEM_TO_MY_COLLECTION } from '../queries';
+import { GET_ITEM_DETAILS, ADD_ITEM_TO_MY_COLLECTION, ADD_ITEM_TO_WISHLIST, REMOVE_ITEM_FROM_WISHLIST, GET_MY_WISHLIST } from '../queries';
 import { useAuth } from '../contexts/AuthContext';
+import { Skeleton } from './SkeletonLoader';
 import './ItemView.css';
 
 function ItemView() {
@@ -11,12 +12,24 @@ function ItemView() {
   const { isAuthenticated } = useAuth();
   const [selectedImage, setSelectedImage] = useState(null);
   const [isOwned, setIsOwned] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
 
   const { loading, error, data } = useQuery(GET_ITEM_DETAILS, {
     variables: { id }
   });
 
+  const { data: wishlistData } = useQuery(GET_MY_WISHLIST, {
+    skip: !isAuthenticated,
+    fetchPolicy: 'network-only'
+  });
+
   const [addToCollection] = useMutation(ADD_ITEM_TO_MY_COLLECTION);
+  const [addToWishlist] = useMutation(ADD_ITEM_TO_WISHLIST, {
+    refetchQueries: [{ query: GET_MY_WISHLIST }]
+  });
+  const [removeFromWishlist] = useMutation(REMOVE_ITEM_FROM_WISHLIST, {
+    refetchQueries: [{ query: GET_MY_WISHLIST }]
+  });
 
   const item = data?.item;
 
@@ -25,6 +38,13 @@ function ItemView() {
       setSelectedImage(item.primaryImage.url);
     }
   }, [item]);
+
+  useEffect(() => {
+    if (wishlistData && id) {
+      const inWishlist = wishlistData.myWishlist?.some(w => w.item_id === id);
+      setIsWishlisted(inWishlist);
+    }
+  }, [wishlistData, id]);
 
   const handleToggleOwnership = async () => {
     if (!isAuthenticated) return;
@@ -44,6 +64,30 @@ function ItemView() {
     }
   };
 
+  const handleToggleWishlist = async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      if (isWishlisted) {
+        await removeFromWishlist({
+          variables: { itemId: item.id }
+        });
+        setIsWishlisted(false);
+      } else {
+        await addToWishlist({
+          variables: { itemId: item.id }
+        });
+        setIsWishlisted(true);
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      // Show user-friendly error if item is already owned
+      if (error.message.includes('already in your collection')) {
+        alert('This item is already in your collection!');
+      }
+    }
+  };
+
   const navigateToCollection = (collection) => {
     navigate(`/collection/${collection.id}`);
   };
@@ -54,9 +98,29 @@ function ItemView() {
 
   if (loading) {
     return (
-      <div className="item-view-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading item details...</p>
+      <div className="item-view">
+        <div className="item-view-header">
+          <button className="back-button" disabled>
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d="M19 12H5M5 12l7-7m-7 7l7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            </svg>
+            Back
+          </button>
+        </div>
+        <div className="item-view-content">
+          <div className="item-images-section">
+            <Skeleton height="500px" borderRadius="12px" />
+          </div>
+          <div className="item-details-section">
+            <Skeleton width="70%" height="36px" style={{ marginBottom: '16px' }} />
+            <Skeleton width="100px" height="24px" borderRadius="12px" style={{ marginBottom: '24px' }} />
+            <div style={{ marginBottom: '24px' }}>
+              <Skeleton width="40%" height="20px" style={{ marginBottom: '12px' }} />
+              <Skeleton width="100%" height="60px" borderRadius="8px" />
+            </div>
+            <Skeleton width="200px" height="48px" borderRadius="8px" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -93,6 +157,7 @@ function ItemView() {
                 src={selectedImage}
                 alt={item.name}
                 className="main-image"
+                loading="lazy"
               />
             ) : (
               <div className="image-placeholder">
@@ -113,7 +178,7 @@ function ItemView() {
                   className={`thumbnail ${selectedImage === img.url ? 'active' : ''}`}
                   onClick={() => setSelectedImage(img.url)}
                 >
-                  <img src={img.url} alt={img.alt_text} />
+                  <img src={img.url} alt={img.alt_text} loading="lazy" />
                 </div>
               ))}
             </div>
@@ -195,6 +260,22 @@ function ItemView() {
                   </>
                 )}
               </button>
+
+              {/* Wishlist button - only show if not owned */}
+              {!isOwned && (
+                <button
+                  className={`wishlist-btn ${isWishlisted ? 'active' : ''}`}
+                  onClick={handleToggleWishlist}
+                >
+                  <svg viewBox="0 0 24 24" width="20" height="20">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                          fill={isWishlisted ? 'currentColor' : 'none'}
+                          stroke="currentColor"
+                          strokeWidth="2"/>
+                  </svg>
+                  {isWishlisted ? 'On Wishlist' : 'Add to Wishlist'}
+                </button>
+              )}
             </div>
           )}
 
@@ -227,7 +308,7 @@ function ItemView() {
                   >
                     <div className="related-image">
                       {parent.primaryImage ? (
-                        <img src={parent.primaryImage.url} alt={parent.name} />
+                        <img src={parent.primaryImage.url} alt={parent.name} loading="lazy" />
                       ) : (
                         <div className="related-placeholder">
                           <svg viewBox="0 0 24 24" width="24" height="24">
@@ -259,7 +340,7 @@ function ItemView() {
                   >
                     <div className="related-image">
                       {child.primaryImage ? (
-                        <img src={child.primaryImage.url} alt={child.name} />
+                        <img src={child.primaryImage.url} alt={child.name} loading="lazy" />
                       ) : (
                         <div className="related-placeholder">
                           <svg viewBox="0 0 24 24" width="24" height="24">

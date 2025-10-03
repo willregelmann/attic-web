@@ -227,6 +227,52 @@
   color: white;
 }
 
+.wishlist-btn {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 2px solid var(--color-border);
+}
+
+.wishlist-btn:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-hover);
+  color: var(--color-text-primary);
+}
+
+.wishlist-btn.active {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.wishlist-btn.active:hover {
+  background: #fde68a;
+  border-color: #fbbf24;
+}
+
+/* Dark mode wishlist button */
+:root.dark .wishlist-btn.active {
+  background: #78350f;
+  color: #fef3c7;
+  border-color: #92400e;
+}
+
+:root.dark .wishlist-btn.active:hover {
+  background: #92400e;
+  border-color: #b45309;
+}
+
 /* Collection Actions */
 .collection-actions {
   display: flex;

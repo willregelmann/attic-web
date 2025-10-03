@@ -190,6 +190,27 @@ export const GET_ITEM_DETAILS = gql`
     }
   }
 `;
+
+export const GET_ALL_ITEMS = gql`
+  query GetAllItems($type: ItemType) {
+    items(type: $type) {
+      id
+      name
+      type
+      metadata
+      primaryImage {
+        url
+        alt_text
+      }
+      parents {
+        id
+        name
+        type
+      }
+    }
+  }
+`;
+
 // ===== MUTATIONS =====
 
 export const CREATE_COLLECTION = gql`
@@ -298,5 +319,82 @@ export const CREATE_API_TOKEN = gql`
 export const REVOKE_API_TOKEN = gql`
   mutation RevokeApiToken($id: ID!) {
     revokeApiToken(id: $id)
+  }
+`;
+
+// ===== ITEM MUTATIONS =====
+
+export const CREATE_ITEM = gql`
+  mutation CreateItem($name: String!, $type: ItemType!, $metadata: JSON) {
+    createItem(name: $name, type: $type, metadata: $metadata) {
+      id
+      name
+      type
+      metadata
+      created_at
+    }
+  }
+`;
+
+export const UPDATE_ITEM = gql`
+  mutation UpdateItem($id: ID!, $name: String, $metadata: JSON) {
+    updateItem(id: $id, name: $name, metadata: $metadata) {
+      id
+      name
+      type
+      metadata
+      updated_at
+    }
+  }
+`;
+
+export const DELETE_ITEM = gql`
+  mutation DeleteItem($id: ID!) {
+    deleteItem(id: $id)
+  }
+`;
+
+// ===== WISHLIST QUERIES =====
+
+export const GET_MY_WISHLIST = gql`
+  query GetMyWishlist {
+    myWishlist {
+      id
+      item_id
+      created_at
+      item {
+        id
+        name
+        type
+        metadata
+        primaryImage {
+          url
+          alt_text
+        }
+        parents {
+          id
+          name
+          type
+        }
+      }
+    }
+  }
+`;
+
+// ===== WISHLIST MUTATIONS =====
+
+export const ADD_ITEM_TO_WISHLIST = gql`
+  mutation AddItemToWishlist($itemId: ID!) {
+    addItemToWishlist(item_id: $itemId) {
+      id
+      item_id
+      created_at
+    }
+  }
+`;
+
+export const REMOVE_ITEM_FROM_WISHLIST = gql`
+  mutation RemoveItemFromWishlist($itemId: ID!) {
+    removeItemFromWishlist(item_id: $itemId)
   }
 `;

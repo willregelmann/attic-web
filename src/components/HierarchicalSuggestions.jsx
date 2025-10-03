@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
 import { gql } from '@apollo/client';
-import { ChevronDown, ChevronRight, Package, Plus, X, Check, AlertCircle, Layers, Hash } from 'lucide-react';
+import { ChevronDown, ChevronRight, Package, Plus, X, Check, AlertCircle, Layers, Hash, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
+import ItemDetail from './ItemDetail';
 import './HierarchicalSuggestions.css';
 
 const GET_SUGGESTIONS = gql`
@@ -32,10 +33,13 @@ const REVIEW_SUGGESTIONS = gql`
 `;
 
 const HierarchicalSuggestions = ({ collectionId }) => {
+  // Component state
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [filter, setFilter] = useState('pending');
   const [viewMode, setViewMode] = useState('tree'); // 'tree' or 'flat'
+  const [previewedItem, setPreviewedItem] = useState(null); // Store the full item being previewed
+  const [processingItems, setProcessingItems] = useState(new Set());
 
   const { data, loading, refetch } = useQuery(GET_SUGGESTIONS, {
     variables: { collectionId, status: filter === 'all' ? null : filter },
@@ -137,6 +141,70 @@ const HierarchicalSuggestions = ({ collectionId }) => {
     }
   };
 
+  const handleIndividualAction = async (suggestionId, action) => {
+    setProcessingItems(prev => new Set([...prev, suggestionId]));
+
+    try {
+      await reviewSuggestions({
+        variables: { ids: [suggestionId], action }
+      });
+      await refetch();
+
+      // Close preview if this item was being previewed
+      if (previewedItem && previewedItem._suggestion?.id === suggestionId) {
+        setPreviewedItem(null);
+      }
+    } catch (error) {
+      console.error('Error reviewing suggestion:', error);
+    } finally {
+      setProcessingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(suggestionId);
+        return newSet;
+      });
+    }
+  };
+
+  const openPreview = (suggestion) => {
+    // Convert suggestion data to item format for ItemDetail
+    const suggestionData = suggestion.suggestion_data || {};
+
+    // Try to get the name from various possible fields
+    const itemName = suggestionData.item_name ||
+                     suggestionData.name ||
+                     suggestionData.title ||
+                     suggestion.item_name ||
+                     suggestion.name ||
+                     'New Item';
+
+    const previewItem = {
+      id: suggestion.id,
+      name: itemName,
+      type: suggestionData.item_type || suggestionData.type || suggestion.type || 'item',
+      metadata: suggestionData.metadata || suggestion.metadata || {},
+      primaryImage: suggestionData.image ? { url: suggestionData.image } : null,
+      // Add suggestion-specific data
+      _suggestion: {
+        id: suggestion.id,
+        action_type: suggestion.action_type,
+        reasoning: suggestion.reasoning,
+        confidence_score: suggestion.confidence_score,
+        status: suggestion.status
+      }
+    };
+
+    // If there's a description in the suggestion, add it to metadata
+    if (suggestionData.description) {
+      previewItem.metadata.description = suggestionData.description;
+    }
+
+    setPreviewedItem(previewItem);
+  };
+
+  const closePreview = () => {
+    setPreviewedItem(null);
+  };
+
   const getConfidenceColor = (score) => {
     if (score >= 80) return 'high';
     if (score >= 60) return 'medium';
@@ -211,7 +279,7 @@ const HierarchicalSuggestions = ({ collectionId }) => {
                 )}
                 
                 <Package size={16} />
-                <span className="item-name">{item.item_name || item.name}</span>
+                <span className="item-name">{item.item_name || item.name || item.title || 'Unknown'}</span>
                 
                 {item.metadata && (
                   <div className="item-metadata">
@@ -230,37 +298,86 @@ const HierarchicalSuggestions = ({ collectionId }) => {
 
   const renderStandaloneItem = (suggestion) => {
     const isSelected = selectedItems.has(suggestion.id);
-    
+    const isProcessing = processingItems.has(suggestion.id);
+
     return (
-      <div 
-        key={suggestion.id} 
+      <div
+        key={suggestion.id}
         className={`suggestion-item standalone ${suggestion.status} ${isSelected ? 'selected' : ''}`}
       >
-        {filter === 'pending' && (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => toggleSelection(suggestion.id)}
-          />
-        )}
-        
-        <Package size={20} />
-        
-        <div className="item-content">
-          <h4>{suggestion.suggestion_data.item_name || 'Unknown Item'}</h4>
-          <p className="reasoning">{suggestion.reasoning}</p>
-          
-          <div className="item-meta">
-            <span className={`confidence ${getConfidenceColor(suggestion.confidence_score)}`}>
-              {suggestion.confidence_score}% confidence
-            </span>
-            {suggestion.status !== 'pending' && (
-              <span className={`status-badge ${suggestion.status}`}>
-                {suggestion.status}
+        <div className="item-header">
+          {filter === 'pending' && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => toggleSelection(suggestion.id)}
+              disabled={isProcessing}
+            />
+          )}
+
+          <Package size={20} />
+
+          <div className="item-content">
+            <h4>{suggestion.suggestion_data?.item_name ||
+                 suggestion.suggestion_data?.name ||
+                 suggestion.suggestion_data?.title ||
+                 'Unknown Item'}</h4>
+            <p className="reasoning">{suggestion.reasoning}</p>
+
+            <div className="item-meta">
+              <span className={`confidence ${getConfidenceColor(suggestion.confidence_score)}`}>
+                {suggestion.confidence_score}% confidence
               </span>
-            )}
+              {suggestion.status !== 'pending' && (
+                <span className={`status-badge ${suggestion.status}`}>
+                  {suggestion.status}
+                </span>
+              )}
+            </div>
           </div>
+
+          {/* Action buttons for pending items */}
+          {suggestion.status === 'pending' && (
+            <div className="item-actions">
+              <button
+                className="btn-preview"
+                onClick={() => openPreview(suggestion)}
+                disabled={isProcessing}
+                title="Preview changes"
+              >
+                <Eye size={18} />
+                <span className="btn-label">Preview</span>
+              </button>
+
+              <button
+                className="btn-accept"
+                onClick={() => handleIndividualAction(suggestion.id, 'approve')}
+                disabled={isProcessing}
+                title="Accept this suggestion"
+              >
+                <CheckCircle size={18} />
+                <span className="btn-label">Accept</span>
+              </button>
+
+              <button
+                className="btn-reject"
+                onClick={() => handleIndividualAction(suggestion.id, 'reject')}
+                disabled={isProcessing}
+                title="Reject this suggestion"
+              >
+                <XCircle size={18} />
+                <span className="btn-label">Reject</span>
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Processing overlay */}
+        {isProcessing && (
+          <div className="processing-overlay">
+            <div className="spinner"></div>
+          </div>
+        )}
       </div>
     );
   };
@@ -382,6 +499,30 @@ const HierarchicalSuggestions = ({ collectionId }) => {
           </>
         )}
       </div>
+
+      {/* Item Detail Modal for Preview */}
+      {previewedItem && (
+        <ItemDetail
+          item={previewedItem}
+          index={0}
+          isOwned={false}
+          onToggleOwnership={() => {}}
+          onClose={closePreview}
+          isSuggestionPreview={true}
+          onAcceptSuggestion={() => {
+            if (previewedItem._suggestion) {
+              handleIndividualAction(previewedItem._suggestion.id, 'approve');
+              closePreview();
+            }
+          }}
+          onRejectSuggestion={() => {
+            if (previewedItem._suggestion) {
+              handleIndividualAction(previewedItem._suggestion.id, 'reject');
+              closePreview();
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

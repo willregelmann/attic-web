@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -7,12 +7,19 @@ import {
   GET_COLLECTIONS,
   GET_MY_FAVORITE_COLLECTIONS,
   FAVORITE_COLLECTION,
-  UNFAVORITE_COLLECTION
+  UNFAVORITE_COLLECTION,
+  UPDATE_COLLECTION,
+  DELETE_COLLECTION,
+  UPLOAD_COLLECTION_IMAGE
 } from '../queries';
 import ItemDetail from './ItemDetail';
+import CuratorConfig from './CuratorConfig';
+import HierarchicalSuggestions from './HierarchicalSuggestions';
+import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import './ItemList.css';
+import './CollectionAdmin.css';
 
-function ItemList({ collection, onBack, onSelectCollection, isRootView = false }) {
+function ItemList({ collection, onBack, onSelectCollection, isRootView = false, onRefresh }) {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [filter, setFilter] = useState('all'); // all, owned, missing
@@ -21,10 +28,65 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
   const [userFavorites, setUserFavorites] = useState(new Set());
+  const [showManageModal, setShowManageModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('details');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    category: ''
+  });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
 
   // GraphQL mutations for favorites
   const [favoriteCollectionMutation] = useMutation(FAVORITE_COLLECTION);
   const [unfavoriteCollectionMutation] = useMutation(UNFAVORITE_COLLECTION);
+
+  // GraphQL mutations for collection management
+  const [updateCollection] = useMutation(UPDATE_COLLECTION, {
+    onCompleted: () => {
+      setFormData({ name: '', description: '', category: '' });
+      setImagePreview(null);
+      setSelectedFile(null);
+      setIsEditMode(false);
+      refetch();
+    },
+    onError: (err) => {
+      alert(`Error updating collection: ${err.message}`);
+    }
+  });
+
+  const [deleteCollection] = useMutation(DELETE_COLLECTION, {
+    onCompleted: () => {
+      setShowManageModal(false);
+      onBack(); // Go back to collections list after deletion
+    },
+    onError: (err) => {
+      alert(`Error deleting collection: ${err.message}`);
+    }
+  });
+
+  const [uploadCollectionImage] = useMutation(UPLOAD_COLLECTION_IMAGE, {
+    onCompleted: (data) => {
+      setUploadingImage(false);
+      // Update the image preview with the uploaded image URL
+      if (data?.uploadCollectionImage?.url) {
+        setImagePreview(data.uploadCollectionImage.url);
+      }
+      refetch();
+      // Also trigger a refresh of the parent component if available
+      if (onRefresh) {
+        onRefresh();
+      }
+    },
+    onError: (err) => {
+      setUploadingImage(false);
+      alert(`Error uploading image: ${err.message}`);
+    }
+  });
 
   // Fetch user's favorite collections from database
   const { data: favoritesData, refetch: refetchFavorites } = useQuery(GET_MY_FAVORITE_COLLECTIONS, {
@@ -45,19 +107,17 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
   // Use different queries for root vs nested collections
   const isRoot = collection.id === 'root';
 
-  console.log('ItemList rendering with collection:', collection);
-  console.log('isRoot:', isRoot, 'isRootView:', isRootView);
+  // For root: use favorites for authenticated users, all collections for others
+  const rootQuery = isAuthenticated ? GET_MY_FAVORITE_COLLECTIONS : GET_COLLECTIONS;
 
-  const { loading, error, data } = useQuery(
-    isRoot ? GET_COLLECTIONS : GET_COLLECTION_ITEMS,
+  const { loading, error, data, refetch } = useQuery(
+    isRoot ? rootQuery : GET_COLLECTION_ITEMS,
     {
       variables: isRoot ? {} : { collectionId: collection.id },
       skip: !collection.id,
       fetchPolicy: 'cache-and-network'
     }
   );
-
-  console.log('ItemList query result:', { loading, error, data });
 
   // Ownership data - stored locally for authenticated users
   const [userOwnership, setUserOwnership] = useState(() => {
@@ -89,6 +149,132 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
 
       return newSet;
     });
+  };
+
+  // Handler functions for collection management
+  const handleEditInModal = () => {
+    setFormData({
+      name: collection.name,
+      description: collection.metadata?.description || '',
+      category: collection.metadata?.category || ''
+    });
+    setImagePreview(collection.primaryImage?.url || null);
+    setActiveTab('edit');
+    setIsEditMode(true);
+  };
+
+  const handleUpdateCollection = async (e) => {
+    e.preventDefault();
+
+    const metadata = {
+      description: formData.description,
+      category: formData.category
+    };
+
+    // Update the collection
+    await updateCollection({
+      variables: {
+        id: collection.id,
+        name: formData.name,
+        metadata
+      }
+    });
+
+    // Handle image upload if a new file was selected
+    if (selectedFile && collection.id) {
+      setUploadingImage(true);
+
+      // Convert file to base64 using a Promise
+      const readFileAsBase64 = (file) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      };
+
+      try {
+        const base64Data = await readFileAsBase64(selectedFile);
+
+        await uploadCollectionImage({
+          variables: {
+            collectionId: collection.id,
+            imageData: base64Data,
+            filename: selectedFile.name,
+            mimeType: selectedFile.type,
+            altText: formData.name
+          }
+        });
+      } catch (error) {
+        console.error('Failed to upload image:', error);
+        alert(`Failed to upload image: ${error.message}`);
+        setUploadingImage(false);
+      }
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    setSelectedFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete the collection "${collection.name}"? This action cannot be undone.`)) {
+      await deleteCollection({
+        variables: { id: collection.id }
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setFormData({ name: '', description: '', category: '' });
+    setImagePreview(null);
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setActiveTab('details');
+  };
+
+  const handleCloseModal = () => {
+    setShowManageModal(false);
+    setIsEditMode(false);
+    setActiveTab('details');
+    setFormData({ name: '', description: '', category: '' });
+    setImagePreview(null);
+    setSelectedFile(null);
   };
 
   // Toggle collection favorite status
@@ -136,10 +322,15 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
   // Get items from the appropriate query result
   const items = useMemo(() => {
     if (isRoot) {
+      // For authenticated users, extract collections from myFavoriteCollections
+      if (isAuthenticated && data?.myFavoriteCollections) {
+        return data.myFavoriteCollections.map(fav => fav.collection);
+      }
+      // For unauthenticated users, use collections directly
       return data?.collections || [];
     }
     return data?.collectionItems || [];
-  }, [data, isRoot]);
+  }, [data, isRoot, isAuthenticated]);
 
   // Separate favorites from other items for root view
   const { favoriteItems, otherItems } = useMemo(() => {
@@ -147,30 +338,19 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
       return { favoriteItems: [], otherItems: items };
     }
 
-    const favorites = [];
-    const others = [];
-
-    items.forEach(item => {
-      if (userFavorites.has(item.id)) {
-        favorites.push(item);
-      } else {
-        others.push(item);
-      }
-    });
-
-    // Shuffle other items for variety if user is not authenticated or has no favorites
-    if (!isAuthenticated || favorites.length === 0) {
-      // Fisher-Yates shuffle for randomization
-      const shuffled = [...others];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      return { favoriteItems: [], otherItems: shuffled.slice(0, 20) }; // Show max 20 random
+    // For authenticated users at root, all items are already favorites from the query
+    if (isAuthenticated) {
+      return { favoriteItems: items, otherItems: [] };
     }
 
-    return { favoriteItems: favorites, otherItems: others };
-  }, [items, isRoot, userFavorites, isAuthenticated]);
+    // For unauthenticated users, shuffle and show random collections
+    const shuffled = [...items];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return { favoriteItems: [], otherItems: shuffled.slice(0, 20) }; // Show max 20 random
+  }, [items, isRoot, isAuthenticated]);
 
   // Filter and search items
   const filteredItems = useMemo(() => {
@@ -235,9 +415,26 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
 
   if (loading) {
     return (
-      <div className="items-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading collection items...</p>
+      <div className="item-list">
+        {!isRootView && (
+          <div className="back-button-wrapper">
+            <button className="back-button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Back to Collections
+            </button>
+          </div>
+        )}
+        <CollectionHeaderSkeleton />
+        <div className="items-toolbar">
+          <div className="filter-tabs">
+            <button className="filter-tab active" disabled>All</button>
+            <button className="filter-tab" disabled>Owned</button>
+            <button className="filter-tab" disabled>Missing</button>
+          </div>
+        </div>
+        <ItemListSkeleton count={12} />
       </div>
     );
   }
@@ -336,7 +533,10 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
                 {collection.maintainers?.some(m => m.user_id === user.id) && (
                   <button
                     className="admin-button"
-                    onClick={() => navigate('/admin')}
+                    onClick={() => {
+                      setShowManageModal(true);
+                      setActiveTab('details');
+                    }}
                     title="Manage Collection"
                   >
                     <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
@@ -454,8 +654,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
                 key={item.id}
                 className={`item-card ${!isOwned ? 'item-missing' : ''} ${isFavorite ? 'item-favorite' : ''} clickable`}
                 onClick={() => {
-                  console.log('Clicked item:', item);
-                  console.log('Item type:', item.type);
                   // In root view, collections should navigate directly
                   if (isRoot && item.type?.toLowerCase() === 'collection') {
                     onSelectCollection(item);
@@ -471,10 +669,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
                     {!isRoot && shouldShowNumberBadge(collection, item) && (
                       <span className="item-number">
                         {(() => {
-                          // Debug: log what we're getting
-                          if (index === 0) {
-                            console.log('First item:', item.name, 'metadata:', item.metadata);
-                          }
                           // Use card_number from metadata if available
                           if (item.metadata?.card_number) {
                             return `#${String(item.metadata.card_number).padStart(3, '0')}`;
@@ -546,6 +740,15 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
               <h3>No items found</h3>
               <p>Try adjusting your filters or search term</p>
             </>
+          ) : isRoot && isAuthenticated ? (
+            <>
+              <svg className="empty-icon" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <h3>No starred collections yet</h3>
+              <p>Star your favorite collections to see them here</p>
+            </>
           ) : (
             <>
               <svg className="empty-icon" viewBox="0 0 24 24" fill="none">
@@ -574,6 +777,250 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false }
             setSelectedItemIndex(null);
           }}
         />
+      )}
+
+      {/* Collection Management Modal */}
+      {showManageModal && collection && (
+        <div className="collection-management-modal" role="dialog" aria-modal="true" aria-labelledby="manage-collection-title">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2 id="manage-collection-title">{collection.name}</h2>
+              <button
+                className="close-button"
+                onClick={handleCloseModal}
+                aria-label="Close collection management modal"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="tabs" role="tablist" aria-label="Collection management tabs">
+              <button
+                className={activeTab === 'details' ? 'active' : ''}
+                onClick={() => setActiveTab('details')}
+                role="tab"
+                aria-selected={activeTab === 'details'}
+                aria-controls="tab-panel-details"
+              >
+                Details
+              </button>
+              <button
+                className={activeTab === 'edit' ? 'active' : ''}
+                onClick={() => setActiveTab('edit')}
+                role="tab"
+                aria-selected={activeTab === 'edit'}
+                aria-controls="tab-panel-edit"
+              >
+                Edit
+              </button>
+              <button
+                className={activeTab === 'curator' ? 'active' : ''}
+                onClick={() => setActiveTab('curator')}
+                role="tab"
+                aria-selected={activeTab === 'curator'}
+                aria-controls="tab-panel-curator"
+              >
+                AI Curator
+              </button>
+              <button
+                className={activeTab === 'suggestions' ? 'active' : ''}
+                onClick={() => setActiveTab('suggestions')}
+                role="tab"
+                aria-selected={activeTab === 'suggestions'}
+                aria-controls="tab-panel-suggestions"
+              >
+                Suggestions
+              </button>
+              <button
+                className={activeTab === 'items' ? 'active' : ''}
+                onClick={() => setActiveTab('items')}
+                role="tab"
+                aria-selected={activeTab === 'items'}
+                aria-controls="tab-panel-items"
+              >
+                Items
+              </button>
+            </div>
+
+            <div className="tab-content" role="tabpanel" id={`tab-panel-${activeTab}`}>
+              {activeTab === 'details' && (
+                <div className="collection-details">
+                  <h3>Collection Details</h3>
+                  <p><strong>ID:</strong> {collection.id}</p>
+                  <p><strong>Created:</strong> {new Date(collection.created_at).toLocaleDateString()}</p>
+                  {collection.metadata?.description && (
+                    <p><strong>Description:</strong> {collection.metadata.description}</p>
+                  )}
+                  {collection.metadata?.category && (
+                    <p><strong>Category:</strong> {collection.metadata.category}</p>
+                  )}
+                  <p><strong>Total Items:</strong> {collection.childrenCount || items.length || 0}</p>
+                  <button
+                    className="btn-primary"
+                    onClick={handleEditInModal}
+                    style={{ marginTop: '20px' }}
+                  >
+                    Edit Collection
+                  </button>
+                  <button
+                    className="btn-delete"
+                    onClick={handleDelete}
+                    style={{ marginTop: '10px', marginLeft: '10px' }}
+                  >
+                    Delete Collection
+                  </button>
+                </div>
+              )}
+
+              {activeTab === 'edit' && (
+                <div className="collection-edit">
+                  <form onSubmit={handleUpdateCollection} className="collection-form">
+                    <div className="form-group">
+                      <label htmlFor="modal-name">Collection Name *</label>
+                      <input
+                        type="text"
+                        id="modal-name"
+                        value={isEditMode ? formData.name : collection.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                        disabled={!isEditMode}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="modal-description">Description</label>
+                      <textarea
+                        id="modal-description"
+                        value={isEditMode ? formData.description : (collection.metadata?.description || '')}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        rows="4"
+                        disabled={!isEditMode}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="modal-category">Category</label>
+                      <input
+                        type="text"
+                        id="modal-category"
+                        value={isEditMode ? formData.category : (collection.metadata?.category || '')}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        disabled={!isEditMode}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Collection Image</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        ref={fileInputRef}
+                        disabled={!isEditMode}
+                        style={{ display: 'none' }}
+                      />
+                      {!isEditMode ? (
+                        imagePreview && (
+                          <div className="image-preview">
+                            <img
+                              src={imagePreview || collection.primaryImage?.url}
+                              alt="Collection preview"
+                              loading="lazy"
+                            />
+                          </div>
+                        )
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            {imagePreview ? 'Change Image' : 'Upload Image'}
+                          </button>
+                          {imagePreview && (
+                            <>
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={handleRemoveImage}
+                                style={{ marginLeft: '10px' }}
+                              >
+                                Remove Image
+                              </button>
+                              <div className="image-preview">
+                                <img
+                                  src={imagePreview}
+                                  alt="Collection preview"
+                                  loading="lazy"
+                                />
+                              </div>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    {isEditMode ? (
+                      <div className="form-actions">
+                        <button type="submit" className="btn-primary">
+                          Save Changes
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={handleCancelEdit}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={handleEditInModal}
+                      >
+                        Edit Collection
+                      </button>
+                    )}
+                  </form>
+                </div>
+              )}
+
+              {activeTab === 'curator' && (
+                <CuratorConfig
+                  collectionId={collection.id}
+                  collectionName={collection.name}
+                />
+              )}
+
+              {activeTab === 'suggestions' && (
+                <HierarchicalSuggestions
+                  collectionId={collection.id}
+                  collectionName={collection.name}
+                />
+              )}
+
+              {activeTab === 'items' && (
+                <div className="collection-items-tab">
+                  <h3>Collection Items</h3>
+                  <p>Total items in this collection: {items.length}</p>
+                  <div className="items-list-preview">
+                    {items.slice(0, 10).map(item => (
+                      <div key={item.id} className="item-preview-row">
+                        <span>{item.name}</span>
+                        <span className="item-type-badge">{item.type}</span>
+                      </div>
+                    ))}
+                    {items.length > 10 && (
+                      <p className="more-items-text">...and {items.length - 10} more items</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
