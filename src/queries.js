@@ -1,6 +1,124 @@
 import { gql } from '@apollo/client';
 
-// ===== QUERIES =====
+// ===== DATABASE OF THINGS QUERIES (Canonical Data) =====
+
+export const GET_DATABASE_OF_THINGS_COLLECTIONS = gql`
+  query GetDatabaseOfThingsCollections($first: Int, $after: String) {
+    databaseOfThingsCollections(first: $first, after: $after) {
+      id
+      name
+      type
+      year
+      country
+      attributes
+      image_url
+      external_ids
+    }
+  }
+`;
+
+export const GET_DATABASE_OF_THINGS_COLLECTION_ITEMS = gql`
+  query GetDatabaseOfThingsCollectionItems($collectionId: ID!, $first: Int, $after: String) {
+    databaseOfThingsCollectionItems(collection_id: $collectionId, first: $first, after: $after) {
+      id
+      name
+      type
+      year
+      country
+      attributes
+      image_url
+      external_ids
+    }
+  }
+`;
+
+export const SEARCH_DATABASE_OF_THINGS_ENTITIES = gql`
+  query SearchDatabaseOfThingsEntities($query: String!, $type: String, $first: Int) {
+    databaseOfThingsSearch(query: $query, type: $type, first: $first) {
+      id
+      name
+      type
+      year
+      country
+      attributes
+      image_url
+      external_ids
+    }
+  }
+`;
+
+export const SEMANTIC_SEARCH_DATABASE_OF_THINGS = gql`
+  query SemanticSearchDatabaseOfThings($query: String!, $type: String, $first: Int) {
+    databaseOfThingsSemanticSearch(query: $query, type: $type, first: $first) {
+      id
+      name
+      type
+      year
+      country
+      attributes
+      image_url
+      external_ids
+      similarity
+    }
+  }
+`;
+
+export const GET_DATABASE_OF_THINGS_ENTITY = gql`
+  query GetDatabaseOfThingsEntity($id: ID!) {
+    databaseOfThingsEntity(id: $id) {
+      id
+      name
+      type
+      year
+      country
+      attributes
+      image_url
+      external_ids
+    }
+  }
+`;
+
+export const GET_DATABASE_OF_THINGS_ITEM_PARENTS = gql`
+  query GetDatabaseOfThingsItemParents($itemId: ID!) {
+    databaseOfThingsItemParents(item_id: $itemId) {
+      id
+      name
+      type
+      year
+      image_url
+      parents {
+        id
+        name
+        type
+        year
+        image_url
+        parents {
+          id
+          name
+          type
+          year
+          image_url
+          parents {
+            id
+            name
+            type
+            year
+            image_url
+            parents {
+              id
+              name
+              type
+              year
+              image_url
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+// ===== LEGACY LOCAL QUERIES (Deprecated - Use Supabase) =====
 
 export const GET_COLLECTIONS = gql`
   query GetCollections {
@@ -88,9 +206,9 @@ export const SEARCH_ITEMS = gql`
 
 export const ADD_ITEM_TO_MY_COLLECTION = gql`
   mutation AddItemToMyCollection($itemId: ID!, $metadata: JSON) {
-    addItemToMyCollection(item_id: $itemId, metadata: $metadata) {
+    addItemToMyCollection(entity_id: $itemId, metadata: $metadata) {
       id
-      item_id
+      entity_id
       user_id
       metadata
       created_at
@@ -211,79 +329,6 @@ export const GET_ALL_ITEMS = gql`
   }
 `;
 
-// ===== MUTATIONS =====
-
-export const CREATE_COLLECTION = gql`
-  mutation CreateCollection($name: String!, $metadata: JSON) {
-    createCollection(name: $name, metadata: $metadata) {
-      id
-      name
-      type
-      metadata
-      created_at
-    }
-  }
-`;
-
-export const UPDATE_COLLECTION = gql`
-  mutation UpdateCollection($id: ID!, $name: String, $metadata: JSON) {
-    updateCollection(id: $id, name: $name, metadata: $metadata) {
-      id
-      name
-      type
-      metadata
-      updated_at
-    }
-  }
-`;
-
-export const DELETE_COLLECTION = gql`
-  mutation DeleteCollection($id: ID!) {
-    deleteCollection(id: $id)
-  }
-`;
-
-export const ADD_ITEM_TO_COLLECTION = gql`
-  mutation AddItemToCollection($collectionId: ID!, $itemId: ID!, $canonicalOrder: Int, $metadata: JSON) {
-    addItemToCollection(
-      collection_id: $collectionId
-      item_id: $itemId
-      canonical_order: $canonicalOrder
-      metadata: $metadata
-    ) {
-      id
-      parent_id
-      child_id
-      relationship_type
-      canonical_order
-      metadata
-    }
-  }
-`;
-
-export const REMOVE_ITEM_FROM_COLLECTION = gql`
-  mutation RemoveItemFromCollection($collectionId: ID!, $itemId: ID!) {
-    removeItemFromCollection(collection_id: $collectionId, item_id: $itemId)
-  }
-`;
-
-export const UPLOAD_COLLECTION_IMAGE = gql`
-  mutation UploadCollectionImage($collectionId: ID!, $imageData: String!, $filename: String!, $mimeType: String!, $altText: String) {
-    uploadCollectionImage(
-      collection_id: $collectionId, 
-      image_data: $imageData, 
-      filename: $filename, 
-      mime_type: $mimeType, 
-      alt_text: $altText
-    ) {
-      id
-      url
-      alt_text
-      is_primary
-    }
-  }
-`;
-
 // ===== API TOKEN QUERIES =====
 
 export const GET_MY_API_TOKENS = gql`
@@ -322,61 +367,14 @@ export const REVOKE_API_TOKEN = gql`
   }
 `;
 
-// ===== ITEM MUTATIONS =====
-
-export const CREATE_ITEM = gql`
-  mutation CreateItem($name: String!, $type: ItemType!, $metadata: JSON) {
-    createItem(name: $name, type: $type, metadata: $metadata) {
-      id
-      name
-      type
-      metadata
-      created_at
-    }
-  }
-`;
-
-export const UPDATE_ITEM = gql`
-  mutation UpdateItem($id: ID!, $name: String, $metadata: JSON) {
-    updateItem(id: $id, name: $name, metadata: $metadata) {
-      id
-      name
-      type
-      metadata
-      updated_at
-    }
-  }
-`;
-
-export const DELETE_ITEM = gql`
-  mutation DeleteItem($id: ID!) {
-    deleteItem(id: $id)
-  }
-`;
-
 // ===== WISHLIST QUERIES =====
 
 export const GET_MY_WISHLIST = gql`
   query GetMyWishlist {
     myWishlist {
       id
-      item_id
+      entity_id
       created_at
-      item {
-        id
-        name
-        type
-        metadata
-        primaryImage {
-          url
-          alt_text
-        }
-        parents {
-          id
-          name
-          type
-        }
-      }
     }
   }
 `;
@@ -385,9 +383,9 @@ export const GET_MY_WISHLIST = gql`
 
 export const ADD_ITEM_TO_WISHLIST = gql`
   mutation AddItemToWishlist($itemId: ID!) {
-    addItemToWishlist(item_id: $itemId) {
+    addItemToWishlist(entity_id: $itemId) {
       id
-      item_id
+      entity_id
       created_at
     }
   }
@@ -395,6 +393,6 @@ export const ADD_ITEM_TO_WISHLIST = gql`
 
 export const REMOVE_ITEM_FROM_WISHLIST = gql`
   mutation RemoveItemFromWishlist($itemId: ID!) {
-    removeItemFromWishlist(item_id: $itemId)
+    removeItemFromWishlist(entity_id: $itemId)
   }
 `;

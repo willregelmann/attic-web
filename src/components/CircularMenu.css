@@ -1,0 +1,264 @@
+/* CircularMenu - Mobile-first floating action button menu */
+
+.circular-menu {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1000;
+}
+
+/* Hide on desktop by default */
+@media (min-width: 768px) {
+  .circular-menu:not(.show-desktop) {
+    display: none;
+  }
+}
+
+/* Floating Action Button - Matches nav logo style */
+.floating-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: var(--navy-blue, #2C4B7B);
+  color: var(--yellow-accent, #F5C842);
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+              box-shadow 0.3s ease,
+              background 0.3s ease;
+  z-index: 1002;
+  position: relative;
+}
+
+.floating-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2), 0 3px 8px rgba(0, 0, 0, 0.15);
+  background: #3a5e98; /* Slightly brighter navy on hover */
+}
+
+.floating-btn:active {
+  transform: scale(0.95);
+}
+
+.circular-menu.active .floating-btn {
+  transform: rotate(135deg);
+  background: var(--yellow-accent, #F5C842);
+}
+
+/* Briefcase Icon Styling - Yellow briefcase */
+.floating-btn .briefcase-icon {
+  font-size: 18px !important;
+  color: var(--yellow-accent, #F5C842);
+  transition: transform 0.3s ease;
+}
+
+.floating-btn:hover .briefcase-icon {
+  transform: scale(1.1);
+}
+
+/* Close Icon (X) Styling - Navy X */
+.floating-btn i.fa-times {
+  font-size: 1.25rem;
+  color: var(--navy-blue, #2C4B7B);
+  transition: transform 0.3s ease;
+}
+
+/* When menu is active (showing X), counter-rotate the icon */
+.circular-menu.active .floating-btn i {
+  transform: rotate(-135deg);
+}
+
+/* Menu Items Container */
+.items-wrapper {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Individual Menu Items */
+.menu-item {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--navy-blue, #2C4B7B);
+  color: white;
+  border: 2px solid var(--yellow-accent, #F5C842);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  opacity: 0;
+  transform: translate(0, 0) scale(0);
+  pointer-events: none;
+  bottom: 0.25rem;
+  right: 0.25rem;
+  z-index: 1001;
+}
+
+.menu-item i {
+  font-size: 1.1rem;
+  transition: transform 0.2s ease;
+}
+
+.menu-item:hover {
+  transform: scale(1.15);
+  background: var(--yellow-accent, #F5C842);
+  color: var(--navy-blue, #2C4B7B);
+  border-color: var(--yellow-accent, #F5C842);
+  box-shadow: 0 4px 14px rgba(245, 200, 66, 0.4);
+}
+
+.menu-item:active {
+  transform: scale(0.9);
+}
+
+/* Menu Item Positions - Circular arrangement */
+/* When active, items fan out in an arc */
+
+/* Item 1 - Add to Collection (upper right) */
+.circular-menu.active .menu-item:nth-child(1) {
+  opacity: 1;
+  transform: translate(-5rem, -4rem) scale(1);
+  pointer-events: auto;
+  transition-delay: 0.05s;
+}
+
+/* Item 2 - Search (left) */
+.circular-menu.active .menu-item:nth-child(2) {
+  opacity: 1;
+  transform: translate(-6.5rem, -1rem) scale(1);
+  pointer-events: auto;
+  transition-delay: 0.1s;
+}
+
+/* Item 3 - Future action (upper) */
+.circular-menu.active .menu-item:nth-child(3) {
+  opacity: 1;
+  transform: translate(-2rem, -6rem) scale(1);
+  pointer-events: auto;
+  transition-delay: 0.15s;
+}
+
+/* Item 4 - Future action (upper left) */
+.circular-menu.active .menu-item:nth-child(4) {
+  opacity: 1;
+  transform: translate(-1rem, -7rem) scale(1);
+  pointer-events: auto;
+  transition-delay: 0.2s;
+}
+
+/* Item 5 - Future action (far left) */
+.circular-menu.active .menu-item:nth-child(5) {
+  opacity: 1;
+  transform: translate(-7.5rem, -3rem) scale(1);
+  pointer-events: auto;
+  transition-delay: 0.25s;
+}
+
+/* Backdrop - dims the background when menu is open */
+.circular-menu-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+  animation: fadeIn 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Accessibility improvements */
+.menu-item:focus-visible,
+.floating-btn:focus-visible {
+  outline: 3px solid var(--yellow-accent, #F5C842);
+  outline-offset: 3px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .floating-btn,
+  .menu-item,
+  .circular-menu-backdrop {
+    transition: none;
+    animation: none;
+  }
+
+  .circular-menu.active .menu-item {
+    transition-delay: 0s;
+  }
+}
+
+/* Dark mode support - CSS variables automatically adjust */
+@media (prefers-color-scheme: dark) {
+  /* Variables are handled in index.css:
+     --yellow-accent: #FFD966
+     --navy-blue: #5A8DD4
+  */
+
+  .floating-btn:hover {
+    background: #6ba3e7; /* Slightly brighter navy in dark mode */
+  }
+
+  .circular-menu-backdrop {
+    background: rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* Small screens adjustments */
+@media (max-width: 480px) {
+  .circular-menu {
+    bottom: 1rem;
+    right: 1rem;
+  }
+
+  .floating-btn {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .menu-item {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  /* Adjust positions for smaller screens */
+  .circular-menu.active .menu-item:nth-child(1) {
+    transform: translate(-4rem, -3.5rem) scale(1);
+  }
+
+  .circular-menu.active .menu-item:nth-child(2) {
+    transform: translate(-5.5rem, -0.5rem) scale(1);
+  }
+
+  .circular-menu.active .menu-item:nth-child(3) {
+    transform: translate(-1.5rem, -5rem) scale(1);
+  }
+
+  .circular-menu.active .menu-item:nth-child(4) {
+    transform: translate(-0.5rem, -6rem) scale(1);
+  }
+
+  .circular-menu.active .menu-item:nth-child(5) {
+    transform: translate(-6.5rem, -2.5rem) scale(1);
+  }
+}

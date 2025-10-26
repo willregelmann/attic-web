@@ -2,13 +2,17 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { useLazyQuery } from '@apollo/client/react';
-import { SEARCH_ITEMS } from '../queries';
+import { SEMANTIC_SEARCH_DATABASE_OF_THINGS } from '../queries';
+import { isCollectionType, formatEntityType } from '../utils/formatters';
+import Breadcrumbs from './Breadcrumbs';
 import './Navigation.css';
 
 function Navigation({ onLogin, onSignup, onAddToCollection }) {
   const { user, logout } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { breadcrumbItems, loading: breadcrumbsLoading } = useBreadcrumbs();
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,7 +21,7 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
   const searchRef = useRef(null);
 
   const [searchItems, { data: searchData, loading: searchLoading }] = useLazyQuery(
-    SEARCH_ITEMS,
+    SEMANTIC_SEARCH_DATABASE_OF_THINGS,
     {
       onCompleted: () => {
         setShowSearchResults(true);
@@ -27,6 +31,19 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
       }
     }
   );
+
+  // Debounce search input
+  useEffect(() => {
+    if (searchQuery.length > 2) {
+      const timeoutId = setTimeout(() => {
+        searchItems({ variables: { query: searchQuery, first: 20 } });
+      }, 500); // Wait 500ms after user stops typing
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      setShowSearchResults(false);
+    }
+  }, [searchQuery, searchItems]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -63,16 +80,16 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      searchItems({ variables: { name: searchQuery } });
+      searchItems({ variables: { query: searchQuery, first: 20 } });
     }
   };
 
   const handleSearchInputChange = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
+    // Search is now handled by useEffect with debounce
     if (query.length > 2) {
-      setShowSearchResults(true); // Show results immediately when typing
-      searchItems({ variables: { name: query } });
+      setShowSearchResults(true); // Show dropdown immediately while loading
     } else {
       setShowSearchResults(false);
     }
@@ -82,7 +99,7 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
     setShowSearchResults(false);
     setSearchQuery('');
 
-    if (item.type === 'COLLECTION' || item.type === 'collection') {
+    if (isCollectionType(item.type)) {
       navigate(`/collection/${item.id}`);
     } else {
       // For individual items, navigate to their parent collection
@@ -92,15 +109,12 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
   };
 
   return (
-    <nav className="navigation">
-      <div className="nav-container">
+    <>
+      <nav className="navigation">
+        <div className="nav-container">
         <button className="nav-brand" onClick={handleLogoClick}>
           <div className="nav-logo">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M16 7V5C16 3.89543 15.1046 3 14 3H10C8.89543 3 8 3.89543 8 5V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <circle cx="12" cy="14" r="2" stroke="currentColor" strokeWidth="2"/>
-            </svg>
+            <i className="fas fa-briefcase"></i>
           </div>
           <span className="nav-title">Will's Attic</span>
         </button>
@@ -141,17 +155,17 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
               {searchLoading && (
                 <div className="search-loading" role="status" aria-live="polite">Searching...</div>
               )}
-              {!searchLoading && searchData?.searchItems && (
+              {!searchLoading && searchData?.databaseOfThingsSemanticSearch && (
                 <>
-                  {searchData.searchItems.length === 0 ? (
+                  {searchData.databaseOfThingsSemanticSearch.length === 0 ? (
                     <div className="search-empty">No results found</div>
                   ) : (
                     <>
                       <div className="search-results-header">
-                        Found {searchData.searchItems.length} result{searchData.searchItems.length !== 1 ? 's' : ''}
+                        Found {searchData.databaseOfThingsSemanticSearch.length} result{searchData.databaseOfThingsSemanticSearch.length !== 1 ? 's' : ''}
                       </div>
                       <div className="search-results-list" role="group">
-                        {searchData.searchItems.map(item => (
+                        {searchData.databaseOfThingsSemanticSearch.map(item => (
                           <button
                             key={item.id}
                             className="search-result-item"
@@ -159,13 +173,30 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
                             role="option"
                             aria-label={`${item.name} - ${item.type}`}
                           >
-                            <div className="search-result-type">
-                              {item.type === 'COLLECTION' || item.type === 'collection' ? '📦' : '🎴'}
+                            <div className="search-result-image">
+                              {item.image_url ? (
+                                <img
+                                  src={item.image_url}
+                                  alt={item.name}
+                                  className="search-result-thumbnail"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                className="search-result-emoji"
+                                style={{ display: item.image_url ? 'none' : 'flex' }}
+                              >
+                                {isCollectionType(item.type) ? '📦' : '🎴'}
+                              </div>
                             </div>
                             <div className="search-result-details">
                               <div className="search-result-name">{item.name}</div>
                               <div className="search-result-meta">
-                                {item.type === 'COLLECTION' || item.type === 'collection' ? 'Collection' : 'Item'}
+                                {formatEntityType(item.type)}
+                                {item.year && ` • ${item.year}`}
                               </div>
                             </div>
                           </button>
@@ -286,36 +317,6 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
                       </svg>
                       Profile & API Tokens
                     </button>
-                    <button
-                      className="dropdown-item"
-                      onClick={() => {
-                        navigate('/admin');
-                        setShowMenu(false);
-                      }}
-                      role="menuitem"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                        <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                      Collection Admin
-                    </button>
-                    <button
-                      className="dropdown-item"
-                      onClick={() => {
-                        navigate('/items');
-                        setShowMenu(false);
-                      }}
-                      role="menuitem"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                        <rect x="3" y="3" width="7" height="7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <rect x="14" y="3" width="7" height="7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <rect x="3" y="14" width="7" height="7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <rect x="14" y="14" width="7" height="7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      Item Management
-                    </button>
                     <div className="dropdown-divider" role="separator"></div>
                     <button className="dropdown-item" onClick={handleLogout} role="menuitem">
                       <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
@@ -349,6 +350,10 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
         </div>
       </div>
     </nav>
+    {breadcrumbItems.length > 0 && (
+      <Breadcrumbs items={breadcrumbItems} loading={breadcrumbsLoading} />
+    )}
+    </>
   );
 }
 

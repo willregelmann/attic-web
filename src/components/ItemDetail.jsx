@@ -1,5 +1,10 @@
 import { useAuth } from '../contexts/AuthContext';
+import { useQuery, useLazyQuery } from '@apollo/client/react';
+import { useState, useEffect } from 'react';
+import { GET_DATABASE_OF_THINGS_ITEM_PARENTS, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS } from '../queries';
+import { formatEntityType, isCollectionType } from '../utils/formatters';
 import './ItemDetail.css';
+import './ItemList.css'; // Import for child-images-grid styles
 
 function ItemDetail({
   item,
@@ -8,29 +13,127 @@ function ItemDetail({
   onToggleOwnership,
   onClose,
   onNavigateToCollection,
+  collection,
   isSuggestionPreview = false,
   onAcceptSuggestion,
   onRejectSuggestion
 }) {
   const { isAuthenticated } = useAuth();
 
+  // Fetch parent collections for this item
+  const { data: parentsData, loading: parentsLoading } = useQuery(
+    GET_DATABASE_OF_THINGS_ITEM_PARENTS,
+    {
+      variables: { itemId: item?.id },
+      skip: !item?.id || isSuggestionPreview,
+    }
+  );
+
   if (!item) return null;
 
-  const getItemImage = () => {
-    // Use actual image if available
-    if (item?.primaryImage?.url) {
-      return `url(${item.primaryImage.url})`;
+  const parentCollections = parentsData?.databaseOfThingsItemParents || [];
+
+  // Child images state for collections without images
+  const [childImages, setChildImages] = useState([]);
+  const [fetchChildren, { data: childrenData }] = useLazyQuery(
+    GET_DATABASE_OF_THINGS_COLLECTION_ITEMS,
+    {
+      fetchPolicy: 'cache-first'
     }
-    // Fall back to gradient if no image
-    const gradients = [
-      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-      'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-      'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-      'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-    ];
-    return gradients[index % gradients.length];
+  );
+
+  // Fetch children if item has no image and is a collection type
+  useEffect(() => {
+    if (!item.image_url && isCollectionType(item.type) && item.id) {
+      fetchChildren({ variables: { collectionId: item.id, first: 50 } });
+    }
+  }, [item.image_url, item.type, item.id, fetchChildren]);
+
+  // Extract child images using breadth-first search
+  useEffect(() => {
+    if (!childrenData?.databaseOfThingsCollectionItems) return;
+
+    const findChildImages = (items) => {
+      const images = [];
+      const queue = [...items];
+
+      // Fetch up to 5 images to know if there are more than 4
+      while (queue.length > 0 && images.length < 5) {
+        const current = queue.shift();
+        if (current.image_url) {
+          images.push(current.image_url);
+        }
+      }
+
+      return images;
+    };
+
+    const images = findChildImages(childrenData.databaseOfThingsCollectionItems);
+    setChildImages(images);
+  }, [childrenData]);
+
+  // Recursive component to render collection tree
+  const CollectionTreeNode = ({ collection, depth = 0 }) => {
+    const hasParents = collection.parents && collection.parents.length > 0;
+
+    return (
+      <li className="tree-item">
+        <button
+          className="tree-collection-link"
+          style={{ paddingLeft: `${12 + (depth * 20)}px` }}
+          onClick={() => {
+            onNavigateToCollection?.(collection);
+            onClose();
+          }}
+          title={`View ${collection.name}`}
+        >
+          {depth > 0 && (
+            <svg className="tree-branch" viewBox="0 0 16 16" width="16" height="16">
+              <path d="M8 0 L8 8 L16 8" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+            </svg>
+          )}
+          <span className="tree-collection-name">
+            {collection.name}
+            {collection.year && <span className="tree-year"> • {collection.year}</span>}
+          </span>
+          <svg className="tree-arrow" viewBox="0 0 24 24" fill="none" width="16" height="16">
+            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+
+        {hasParents && (
+          <ul className="tree-nested-list">
+            {collection.parents.map((parent) => (
+              <CollectionTreeNode key={parent.id} collection={parent} depth={depth + 1} />
+            ))}
+          </ul>
+        )}
+      </li>
+    );
   };
+
+  const getItemImage = () => {
+    // Use image_url from Supabase which provides fully-qualified URLs
+    if (item.image_url) {
+      return `url(${item.image_url})`;
+    }
+    // Only use gradient if no child images are available
+    if (childImages.length === 0) {
+      const gradients = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+      ];
+      return gradients[index % gradients.length];
+    }
+    // No background when showing child images
+    return 'transparent';
+  };
+
+  const hasMoreImages = childImages.length > 4;
+  const displayImages = hasMoreImages ? childImages.slice(0, 3) : childImages;
 
   return (
     <div className="item-detail-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="item-detail-title">
@@ -70,6 +173,41 @@ function ItemDetail({
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat'
             }}>
+              {/* Child images - special handling for 1 or 2 images */}
+              {!item.image_url && childImages.length === 1 && (
+                <div
+                  className="child-image-single"
+                  style={{ backgroundImage: `url(${childImages[0]})` }}
+                />
+              )}
+
+              {!item.image_url && childImages.length === 2 && (
+                <div className="child-images-grid child-images-diagonal">
+                  <div className="child-image" style={{ backgroundImage: `url(${childImages[0]})` }} />
+                  <div className="child-image child-image-empty" />
+                  <div className="child-image child-image-empty" />
+                  <div className="child-image" style={{ backgroundImage: `url(${childImages[1]})` }} />
+                </div>
+              )}
+
+              {/* Standard grid for 3+ images */}
+              {!item.image_url && childImages.length >= 3 && (
+                <div className="child-images-grid">
+                  {displayImages.map((imageUrl, idx) => (
+                    <div
+                      key={idx}
+                      className="child-image"
+                      style={{ backgroundImage: `url(${imageUrl})` }}
+                    />
+                  ))}
+                  {hasMoreImages && (
+                    <div className="child-image child-image-more">
+                      <div className="more-indicator">...</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {isOwned && (
                 <div className="detail-owned-badge">
                   <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
@@ -81,31 +219,47 @@ function ItemDetail({
           </div>
 
           <div className="detail-info-section">
-            <h2 className="detail-title">{item.name}</h2>
-
-            <div className="detail-metadata">
-              <div className="detail-meta-item">
-                <span className="meta-label">Type:</span>
-                <span className="meta-value">{item.type || 'Standard'}</span>
-              </div>
-              <div className="detail-meta-item">
-                <span className="meta-label">Number:</span>
-                <span className="meta-value">
-                  {item.metadata?.card_number
-                    ? `#${String(item.metadata.card_number).padStart(3, '0')}`
-                    : `#${String(index + 1).padStart(3, '0')}`}
-                </span>
-              </div>
-              {item.metadata?.rarity && (
-                <div className="detail-meta-item">
-                  <span className="meta-label">Rarity:</span>
-                  <span className="meta-value">{item.metadata.rarity}</span>
-                </div>
-              )}
+            <div className="detail-header">
+              <h2 className="detail-title">{item.name}</h2>
+              <p className="detail-subtitle">
+                {formatEntityType(item.type)}
+                {item.year && ` • ${item.year}`}
+              </p>
             </div>
 
+            {item.attributes && Object.keys(item.attributes).length > 0 && (
+              <div className="detail-metadata">
+                {Object.entries(item.attributes)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([key, value]) => (
+                    <div key={key} className="detail-meta-item">
+                      <span className="meta-label">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
+                      <span className="meta-value">{value}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            {/* Parent Collections Tree View */}
+            {!isSuggestionPreview && parentCollections.length > 0 && (
+              <div className="detail-collections-tree">
+                <h5 className="collections-tree-header">Collections</h5>
+                <div className="collections-tree-list">
+                  {parentsLoading ? (
+                    <div className="tree-loading">Loading collections...</div>
+                  ) : (
+                    <ul className="tree-list">
+                      {parentCollections.map((parent) => (
+                        <CollectionTreeNode key={parent.id} collection={parent} depth={0} />
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Show "View Full Page" button if this is a collection */}
-            {item.type?.toLowerCase() === 'collection' && onNavigateToCollection && (
+            {isCollectionType(item.type) && onNavigateToCollection && (
               <div className="detail-collection-section">
                 <button
                   className="view-collection-btn"
@@ -156,15 +310,8 @@ function ItemDetail({
                 </div>
               </div>
             ) : (
-              <div className="detail-ownership-section">
-                <div className="ownership-status">
-                  <span className="ownership-label">Status:</span>
-                  <span className={`ownership-value ${isOwned ? 'owned' : 'missing'}`}>
-                    {isOwned ? 'Owned' : 'Missing'}
-                  </span>
-                </div>
-
-                {isAuthenticated ? (
+              <>
+                {isAuthenticated && (
                   <button
                     className={`ownership-toggle-btn ${isOwned ? 'remove' : 'add'}`}
                     onClick={onToggleOwnership}
@@ -185,12 +332,8 @@ function ItemDetail({
                       </>
                     )}
                   </button>
-                ) : (
-                  <p className="auth-prompt">
-                    Sign in to track your collection
-                  </p>
                 )}
-              </div>
+              </>
             )}
 
             {/* Additional details if available */}

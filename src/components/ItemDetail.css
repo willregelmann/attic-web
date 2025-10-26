@@ -63,6 +63,110 @@
   transform: rotate(90deg);
 }
 
+/* Parent Collections Tree View */
+.detail-collections-tree {
+}
+
+.collections-tree-header {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px 0;
+}
+
+.tree-header {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+}
+
+.collections-tree-list {
+  margin: 0;
+}
+
+.tree-loading {
+  padding: 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.tree-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tree-nested-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tree-item {
+  margin: 0;
+  padding: 0;
+}
+
+.tree-collection-link {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  position: relative;
+  transition: opacity 0.2s;
+}
+
+.tree-collection-link:hover {
+  opacity: 0.7;
+}
+
+.tree-branch {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  margin-right: -4px;
+  opacity: 0.5;
+}
+
+.tree-icon {
+  flex-shrink: 0;
+  color: var(--primary);
+  transition: color 0.2s;
+}
+
+.tree-collection-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.tree-year {
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.tree-arrow {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: color 0.2s;
+}
+
 .detail-content {
   display: flex;
   padding: 32px;
@@ -81,7 +185,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .detail-number {
@@ -117,23 +222,36 @@
   gap: 24px;
 }
 
+.detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 .detail-title {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
 }
 
+.detail-subtitle {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin: 4px 0 0 0;
+  font-weight: 500;
+  /* Testing HMR */
+}
+
 .detail-metadata {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 16px;
+  align-items: baseline;
 }
 
 .detail-meta-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: contents;
 }
 
 .meta-label {
@@ -175,45 +293,6 @@
   background: #1e3c72;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.detail-ownership-section {
-  padding: 20px;
-  background: var(--light-gray);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.ownership-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.ownership-label {
-  font-size: 14px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.ownership-value {
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.ownership-value.owned {
-  background: var(--owned-blue);
-  color: var(--white);
-}
-
-.ownership-value.missing {
-  background: var(--missing-green);
-  color: var(--white);
 }
 
 .ownership-toggle-btn {
@@ -310,12 +389,6 @@
 
   .detail-title {
     font-size: 24px;
-  }
-
-  .detail-ownership-section {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
   }
 
   .ownership-toggle-btn {

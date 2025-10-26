@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client/react';
-import { GET_ITEM_DETAILS, ADD_ITEM_TO_MY_COLLECTION, ADD_ITEM_TO_WISHLIST, REMOVE_ITEM_FROM_WISHLIST, GET_MY_WISHLIST } from '../queries';
+import { GET_DATABASE_OF_THINGS_ENTITY, ADD_ITEM_TO_MY_COLLECTION, ADD_ITEM_TO_WISHLIST, REMOVE_ITEM_FROM_WISHLIST, GET_MY_WISHLIST } from '../queries';
 import { useAuth } from '../contexts/AuthContext';
 import { Skeleton } from './SkeletonLoader';
+import { formatEntityType } from '../utils/formatters';
 import './ItemView.css';
 
 function ItemView() {
@@ -14,7 +15,7 @@ function ItemView() {
   const [isOwned, setIsOwned] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
-  const { loading, error, data } = useQuery(GET_ITEM_DETAILS, {
+  const { loading, error, data } = useQuery(GET_DATABASE_OF_THINGS_ENTITY, {
     variables: { id }
   });
 
@@ -31,17 +32,17 @@ function ItemView() {
     refetchQueries: [{ query: GET_MY_WISHLIST }]
   });
 
-  const item = data?.item;
+  const item = data?.databaseOfThingsEntity;
 
   useEffect(() => {
-    if (item?.primaryImage) {
-      setSelectedImage(item.primaryImage.url);
+    if (item?.image_url) {
+      setSelectedImage(item.image_url);
     }
   }, [item]);
 
   useEffect(() => {
     if (wishlistData && id) {
-      const inWishlist = wishlistData.myWishlist?.some(w => w.item_id === id);
+      const inWishlist = wishlistData.myWishlist?.some(w => w.entity_id === id);
       setIsWishlisted(inWishlist);
     }
   }, [wishlistData, id]);
@@ -169,70 +170,47 @@ function ItemView() {
               </div>
             )}
           </div>
-
-          {item.images && item.images.length > 1 && (
-            <div className="thumbnail-list">
-              {item.images.map((img) => (
-                <div
-                  key={img.id}
-                  className={`thumbnail ${selectedImage === img.url ? 'active' : ''}`}
-                  onClick={() => setSelectedImage(img.url)}
-                >
-                  <img src={img.url} alt={img.alt_text} loading="lazy" />
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Right: Details Section */}
         <div className="item-details-section">
           <div className="item-header">
             <h1 className="item-title">{item.name}</h1>
-            <span className="item-type-badge">{item.type}</span>
+            <span className="item-type-badge">{formatEntityType(item.type)}</span>
           </div>
 
           {/* Metadata */}
-          {item.metadata && Object.keys(item.metadata).length > 0 && (
+          {item.year && (
             <div className="metadata-section">
               <h3>Details</h3>
               <div className="metadata-grid">
-                {item.metadata.card_number && (
+                {item.year && (
                   <div className="metadata-item">
-                    <span className="meta-label">Card Number:</span>
-                    <span className="meta-value">#{item.metadata.card_number}</span>
+                    <span className="meta-label">Year:</span>
+                    <span className="meta-value">{item.year}</span>
                   </div>
                 )}
-                {item.metadata.rarity && (
+                {item.country && (
                   <div className="metadata-item">
-                    <span className="meta-label">Rarity:</span>
-                    <span className="meta-value">{item.metadata.rarity}</span>
+                    <span className="meta-label">Country:</span>
+                    <span className="meta-value">{item.country}</span>
                   </div>
                 )}
-                {item.metadata.artist && (
-                  <div className="metadata-item">
-                    <span className="meta-label">Artist:</span>
-                    <span className="meta-value">{item.metadata.artist}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Attributes */}
+          {item.attributes && Object.keys(item.attributes).length > 0 && (
+            <div className="metadata-section">
+              <h3>Attributes</h3>
+              <div className="metadata-grid">
+                {Object.entries(item.attributes).map(([key, value]) => (
+                  <div key={key} className="metadata-item">
+                    <span className="meta-label">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
+                    <span className="meta-value">{String(value)}</span>
                   </div>
-                )}
-                {item.metadata.release_date && (
-                  <div className="metadata-item">
-                    <span className="meta-label">Release Date:</span>
-                    <span className="meta-value">{item.metadata.release_date}</span>
-                  </div>
-                )}
-                {item.metadata.supertype && (
-                  <div className="metadata-item">
-                    <span className="meta-label">Type:</span>
-                    <span className="meta-value">{item.metadata.supertype}</span>
-                  </div>
-                )}
-                {item.metadata.hp && (
-                  <div className="metadata-item">
-                    <span className="meta-label">HP:</span>
-                    <span className="meta-value">{item.metadata.hp}</span>
-                  </div>
-                )}
+                ))}
               </div>
             </div>
           )}
@@ -292,80 +270,6 @@ function ItemView() {
                 </svg>
                 View Collection Items
               </button>
-            </div>
-          )}
-
-          {/* Parent Collections */}
-          {item.parents && item.parents.length > 0 && (
-            <div className="related-section">
-              <h3>Part of Collections</h3>
-              <div className="related-grid">
-                {item.parents.map((parent) => (
-                  <div
-                    key={parent.id}
-                    className="related-item clickable"
-                    onClick={() => navigateToCollection(parent)}
-                  >
-                    <div className="related-image">
-                      {parent.primaryImage ? (
-                        <img src={parent.primaryImage.url} alt={parent.name} loading="lazy" />
-                      ) : (
-                        <div className="related-placeholder">
-                          <svg viewBox="0 0 24 24" width="24" height="24">
-                            <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="2" fill="none"/>
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    <div className="related-info">
-                      <h4>{parent.name}</h4>
-                      <span className="related-type">{parent.type}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Child Items/Variants */}
-          {item.children && item.children.length > 0 && (
-            <div className="related-section">
-              <h3>{isCollection ? 'Items in Collection' : 'Variants & Components'}</h3>
-              <div className="related-grid">
-                {item.children.slice(0, 12).map((child) => (
-                  <div
-                    key={child.id}
-                    className="related-item clickable"
-                    onClick={() => navigateToItem(child.id)}
-                  >
-                    <div className="related-image">
-                      {child.primaryImage ? (
-                        <img src={child.primaryImage.url} alt={child.name} loading="lazy" />
-                      ) : (
-                        <div className="related-placeholder">
-                          <svg viewBox="0 0 24 24" width="24" height="24">
-                            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" fill="none"/>
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    <div className="related-info">
-                      <h4>{child.name}</h4>
-                      {child.metadata?.card_number && (
-                        <span className="card-number">#{child.metadata.card_number}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {item.children.length > 12 && (
-                  <div className="related-item view-all" onClick={() => navigate(`/collection/${item.id}`)}>
-                    <div className="view-all-content">
-                      <span>View All</span>
-                      <span className="count">{item.children.length} items</span>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           )}
         </div>

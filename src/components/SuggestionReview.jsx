@@ -94,6 +94,15 @@ const SuggestionReview = ({ collectionId }) => {
     }
   };
 
+  const selectAllPending = () => {
+    const pendingSuggestions = suggestions.filter(s => s.status === 'pending');
+    setSelectedSuggestions(pendingSuggestions.map(s => s.id));
+  };
+
+  const deselectAll = () => {
+    setSelectedSuggestions([]);
+  };
+
   const getConfidenceColor = (score) => {
     if (score >= 80) return 'high';
     if (score >= 60) return 'medium';
@@ -152,20 +161,35 @@ const SuggestionReview = ({ collectionId }) => {
         <>
           {filter === 'pending' && suggestions.length > 0 && (
             <div className="bulk-actions">
+              <div className="selection-controls">
+                <button
+                  onClick={selectAllPending}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Select All ({suggestions.filter(s => s.status === 'pending').length})
+                </button>
+                <button
+                  onClick={deselectAll}
+                  className="btn btn-secondary btn-sm"
+                  disabled={selectedSuggestions.length === 0}
+                >
+                  Deselect All
+                </button>
+              </div>
               <input
                 type="text"
                 placeholder="Add review notes (optional)"
                 value={reviewNotes}
                 onChange={(e) => setReviewNotes(e.target.value)}
               />
-              <button 
+              <button
                 onClick={() => handleBulkReview('approve')}
                 className="btn btn-success"
                 disabled={selectedSuggestions.length === 0}
               >
                 Approve Selected ({selectedSuggestions.length})
               </button>
-              <button 
+              <button
                 onClick={() => handleBulkReview('reject')}
                 className="btn btn-danger"
                 disabled={selectedSuggestions.length === 0}

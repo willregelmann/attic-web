@@ -1,6 +1,7 @@
 import { useQuery } from '@apollo/client/react';
 import { GET_COLLECTIONS } from '../queries';
 import { CollectionGridSkeleton } from './SkeletonLoader';
+import { formatEntityType } from '../utils/formatters';
 import './CollectionBrowser.css';
 
 function CollectionBrowser({ onSelectCollection }) {
@@ -129,7 +130,7 @@ function CollectionBrowser({ onSelectCollection }) {
               <div className="collection-content">
                 <div className="collection-header">
                   <h3>{collection.name}</h3>
-                  <span className="collection-badge">{collection.type}</span>
+                  <span className="collection-badge">{formatEntityType(collection.type)}</span>
                 </div>
 
                 <div className="collection-progress">

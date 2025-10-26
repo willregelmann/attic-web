@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
 import { GET_COLLECTIONS, GET_COLLECTION_ITEMS, ADD_ITEM_TO_MY_COLLECTION } from '../queries';
+import { formatEntityType } from '../utils/formatters';
 import './AddItemsModal.css';
 
 function AddItemsModal({ isOpen, onClose, onItemsAdded }) {
@@ -140,7 +141,7 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded }) {
                       </div>
                       <div className="collection-info">
                         <h4>{collection.name}</h4>
-                        <span className="collection-type">{collection.type}</span>
+                        <span className="collection-type">{formatEntityType(collection.type)}</span>
                       </div>
                     </div>
                   ))
@@ -190,7 +191,7 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded }) {
                     <div key={item.id} className="item-row-with-quantity">
                       <div className="item-info">
                         <span className="item-name">{item.name}</span>
-                        <span className="item-type-badge">{item.type}</span>
+                        <span className="item-type-badge">{formatEntityType(item.type)}</span>
                       </div>
                       <div className="quantity-controls">
                         <button
