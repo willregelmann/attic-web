@@ -12,6 +12,7 @@ export const GET_DATABASE_OF_THINGS_COLLECTIONS = gql`
       country
       attributes
       image_url
+      thumbnail_url
       external_ids
     }
   }
@@ -27,6 +28,7 @@ export const GET_DATABASE_OF_THINGS_COLLECTION_ITEMS = gql`
       country
       attributes
       image_url
+      thumbnail_url
       external_ids
     }
   }
@@ -42,6 +44,7 @@ export const SEARCH_DATABASE_OF_THINGS_ENTITIES = gql`
       country
       attributes
       image_url
+      thumbnail_url
       external_ids
     }
   }
@@ -57,6 +60,7 @@ export const SEMANTIC_SEARCH_DATABASE_OF_THINGS = gql`
       country
       attributes
       image_url
+      thumbnail_url
       external_ids
       similarity
     }
@@ -73,6 +77,7 @@ export const GET_DATABASE_OF_THINGS_ENTITY = gql`
       country
       attributes
       image_url
+      thumbnail_url
       external_ids
     }
   }
@@ -86,6 +91,7 @@ export const GET_DATABASE_OF_THINGS_ITEM_PARENTS = gql`
       type
       year
       image_url
+      thumbnail_url
       parents {
         id
         name
@@ -110,10 +116,24 @@ export const GET_DATABASE_OF_THINGS_ITEM_PARENTS = gql`
               type
               year
               image_url
+              thumbnail_url
             }
           }
         }
       }
+    }
+  }
+`;
+
+export const GET_COLLECTION_FILTER_FIELDS = gql`
+  query GetCollectionFilterFields($collectionId: ID!) {
+    databaseOfThingsCollectionFilterFields(collection_id: $collectionId) {
+      field
+      label
+      type
+      values
+      count
+      priority
     }
   }
 `;
@@ -205,14 +225,21 @@ export const SEARCH_ITEMS = gql`
 `;
 
 export const ADD_ITEM_TO_MY_COLLECTION = gql`
-  mutation AddItemToMyCollection($itemId: ID!, $metadata: JSON) {
-    addItemToMyCollection(entity_id: $itemId, metadata: $metadata) {
+  mutation AddItemToMyCollection($itemId: ID!, $metadata: JSON, $notes: String) {
+    addItemToMyCollection(entity_id: $itemId, metadata: $metadata, notes: $notes) {
       id
       entity_id
       user_id
       metadata
+      notes
       created_at
     }
+  }
+`;
+
+export const REMOVE_ITEM_FROM_MY_COLLECTION = gql`
+  mutation RemoveItemFromMyCollection($itemId: ID!) {
+    removeItemFromMyCollection(entity_id: $itemId)
   }
 `;
 
@@ -259,12 +286,43 @@ export const GET_MY_FAVORITE_COLLECTIONS = gql`
         id
         name
         type
+        year
+        image_url
+        thumbnail_url
       }
       stats {
         totalItems
         ownedItems
         completionPercentage
       }
+    }
+  }
+`;
+
+export const GET_MY_ITEMS = gql`
+  query GetMyItems {
+    myItems {
+      id
+      entity_id
+      notes
+      metadata
+      created_at
+    }
+  }
+`;
+
+export const GET_MY_COLLECTION = gql`
+  query GetMyCollection {
+    myCollection {
+      id
+      name
+      type
+      year
+      country
+      attributes
+      image_url
+      thumbnail_url
+      external_ids
     }
   }
 `;

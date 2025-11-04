@@ -1,0 +1,333 @@
+.collection-filter-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.collection-filter-panel {
+  position: relative;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  background: var(--bg-primary);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Desktop: Keep drawer on the right */
+@media (min-width: 769px) {
+  .collection-filter-overlay {
+    align-items: stretch;
+    justify-content: flex-end;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .collection-filter-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 400px;
+    max-height: 100vh;
+    border-radius: 0;
+    animation: slideInRight 0.3s ease;
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+}
+
+.filter-panel-header {
+  position: relative;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-primary);
+  flex-shrink: 0;
+}
+
+.filter-panel-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.filter-close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  color: var(--text-secondary);
+}
+
+.filter-close-button:hover {
+  background: rgba(0, 0, 0, 0.2);
+  transform: rotate(90deg);
+}
+
+.filter-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.filter-empty-state,
+.filter-loading-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--text-secondary);
+}
+
+.filter-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.filter-loading-state .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.filter-field-group {
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.filter-field-header {
+  width: 100%;
+  padding: 1rem;
+  background: transparent;
+  border: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.filter-field-header:hover {
+  background: var(--bg-secondary);
+}
+
+.filter-field-header.has-selection {
+  background: rgba(42, 82, 152, 0.05);
+}
+
+.filter-field-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.filter-field-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+}
+
+.filter-field-count {
+  background: var(--primary);
+  color: white;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.filter-field-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-clear-field-button {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.filter-clear-field-button:hover {
+  background: rgba(42, 82, 152, 0.1);
+}
+
+.filter-expand-icon {
+  color: var(--text-secondary);
+  transition: transform 0.2s;
+}
+
+.filter-expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.filter-field-values {
+  padding: 0.5rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--bg-secondary);
+}
+
+.filter-value-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.filter-value-option:hover {
+  background: var(--bg-primary);
+}
+
+.filter-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+.filter-value-label {
+  flex: 1;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.filter-value-count {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  margin-left: 0.5rem;
+}
+
+.filter-panel-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.filter-clear-all-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-clear-all-button:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.filter-panel-info {
+  padding: 1rem 1.5rem;
+  background: rgba(42, 82, 152, 0.05);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.filter-panel-info svg {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 480px) {
+  .collection-filter-panel {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .filter-panel-header {
+    padding: 1.25rem;
+  }
+
+  .filter-panel-header h3 {
+    font-size: 1.125rem;
+  }
+
+  .filter-panel-body {
+    padding: 0.75rem;
+  }
+}
