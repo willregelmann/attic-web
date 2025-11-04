@@ -1,16 +1,64 @@
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { GET_DATABASE_OF_THINGS_ITEM_PARENTS, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS } from '../queries';
 import { formatEntityType, isCollectionType } from '../utils/formatters';
+import { CollectionTreeSkeleton } from './SkeletonLoader';
 import './ItemDetail.css';
 import './ItemList.css'; // Import for child-images-grid styles
+
+// Recursive component to render collection tree - memoized to prevent unnecessary re-renders
+const CollectionTreeNode = memo(({ collection, depth = 0, onNavigateToCollection, onClose }) => {
+  const hasParents = collection.parents && collection.parents.length > 0;
+
+  return (
+    <li className="tree-item">
+      <button
+        className="tree-collection-link"
+        style={{ paddingLeft: `${12 + (depth * 20)}px` }}
+        onClick={() => {
+          onNavigateToCollection?.(collection);
+          onClose();
+        }}
+        title={`View ${collection.name}`}
+      >
+        {depth > 0 && (
+          <svg className="tree-branch" viewBox="0 0 16 16" width="16" height="16">
+            <path d="M8 0 L8 8 L16 8" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+          </svg>
+        )}
+        <span className="tree-collection-name">
+          {collection.name}
+          {collection.year && <span className="tree-year"> • {collection.year}</span>}
+        </span>
+        <svg className="tree-arrow" viewBox="0 0 24 24" fill="none" width="16" height="16">
+          <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {hasParents && (
+        <ul className="tree-nested-list">
+          {collection.parents.map((parent) => (
+            <CollectionTreeNode
+              key={parent.id}
+              collection={parent}
+              depth={depth + 1}
+              onNavigateToCollection={onNavigateToCollection}
+              onClose={onClose}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+});
 
 function ItemDetail({
   item,
   index,
   isOwned,
   onToggleOwnership,
+  onAddToCollection,
   onClose,
   onNavigateToCollection,
   collection,
@@ -72,48 +120,8 @@ function ItemDetail({
     setChildImages(images);
   }, [childrenData]);
 
-  // Recursive component to render collection tree
-  const CollectionTreeNode = ({ collection, depth = 0 }) => {
-    const hasParents = collection.parents && collection.parents.length > 0;
-
-    return (
-      <li className="tree-item">
-        <button
-          className="tree-collection-link"
-          style={{ paddingLeft: `${12 + (depth * 20)}px` }}
-          onClick={() => {
-            onNavigateToCollection?.(collection);
-            onClose();
-          }}
-          title={`View ${collection.name}`}
-        >
-          {depth > 0 && (
-            <svg className="tree-branch" viewBox="0 0 16 16" width="16" height="16">
-              <path d="M8 0 L8 8 L16 8" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-            </svg>
-          )}
-          <span className="tree-collection-name">
-            {collection.name}
-            {collection.year && <span className="tree-year"> • {collection.year}</span>}
-          </span>
-          <svg className="tree-arrow" viewBox="0 0 24 24" fill="none" width="16" height="16">
-            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-
-        {hasParents && (
-          <ul className="tree-nested-list">
-            {collection.parents.map((parent) => (
-              <CollectionTreeNode key={parent.id} collection={parent} depth={depth + 1} />
-            ))}
-          </ul>
-        )}
-      </li>
-    );
-  };
-
   const getItemImage = () => {
-    // Use image_url from Supabase which provides fully-qualified URLs
+    // Use image_url for detail view (full quality)
     if (item.image_url) {
       return `url(${item.image_url})`;
     }
@@ -216,6 +224,61 @@ function ItemDetail({
                 </div>
               )}
             </div>
+
+            {/* Show "View Full Page" button if this is a collection */}
+            {isCollectionType(item.type) && onNavigateToCollection && (
+              <div className="detail-collection-section">
+                <button
+                  className="view-collection-btn"
+                  onClick={() => {
+                    onNavigateToCollection(item);
+                    onClose();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                    <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  View Full Page
+                </button>
+              </div>
+            )}
+
+            {/* Show "Add to Collection" button for non-collection items */}
+            {!isSuggestionPreview && isAuthenticated && !isCollectionType(item.type) && (
+              <div className="detail-collection-section">
+                <button
+                  className={`ownership-toggle-btn ${isOwned ? 'remove' : 'add'}`}
+                  onClick={(e) => {
+                    if (isOwned) {
+                      onToggleOwnership();
+                    } else {
+                      // Call handler to open add items modal with this item pre-selected
+                      if (onAddToCollection) {
+                        onAddToCollection(item);
+                        onClose(); // Close the detail modal
+                      }
+                    }
+                  }}
+                >
+                  {isOwned ? (
+                    <>
+                      <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                        <path d="M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                      Remove from Collection
+                    </>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                        <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                      Add to Collection
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="detail-info-section">
@@ -241,39 +304,26 @@ function ItemDetail({
             )}
 
             {/* Parent Collections Tree View */}
-            {!isSuggestionPreview && parentCollections.length > 0 && (
+            {!isSuggestionPreview && (parentsLoading || parentCollections.length > 0) && (
               <div className="detail-collections-tree">
                 <h5 className="collections-tree-header">Collections</h5>
                 <div className="collections-tree-list">
                   {parentsLoading ? (
-                    <div className="tree-loading">Loading collections...</div>
+                    <CollectionTreeSkeleton count={3} />
                   ) : (
                     <ul className="tree-list">
                       {parentCollections.map((parent) => (
-                        <CollectionTreeNode key={parent.id} collection={parent} depth={0} />
+                        <CollectionTreeNode
+                          key={parent.id}
+                          collection={parent}
+                          depth={0}
+                          onNavigateToCollection={onNavigateToCollection}
+                          onClose={onClose}
+                        />
                       ))}
                     </ul>
                   )}
                 </div>
-              </div>
-            )}
-
-            {/* Show "View Full Page" button if this is a collection */}
-            {isCollectionType(item.type) && onNavigateToCollection && (
-              <div className="detail-collection-section">
-                <button
-                  className="view-collection-btn"
-                  onClick={() => {
-                    onNavigateToCollection(item);
-                    onClose();
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                    <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                  View Full Collection Page
-                </button>
               </div>
             )}
 
@@ -309,32 +359,7 @@ function ItemDetail({
                   </button>
                 </div>
               </div>
-            ) : (
-              <>
-                {isAuthenticated && (
-                  <button
-                    className={`ownership-toggle-btn ${isOwned ? 'remove' : 'add'}`}
-                    onClick={onToggleOwnership}
-                  >
-                    {isOwned ? (
-                      <>
-                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                          <path d="M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        Remove from Collection
-                      </>
-                    ) : (
-                      <>
-                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                          <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        Add to Collection
-                      </>
-                    )}
-                  </button>
-                )}
-              </>
-            )}
+            ) : null}
 
             {/* Additional details if available */}
             {item.metadata?.description && (

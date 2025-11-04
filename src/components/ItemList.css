@@ -1,6 +1,8 @@
 .item-list {
   background: var(--bg-secondary);
   min-height: calc(100vh - 64px);
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 /* Breadcrumbs */
@@ -17,7 +19,8 @@
   display: flex;
   align-items: center;
   list-style: none;
-  margin: 0;
+  max-width: 1400px;
+  margin: 0 auto;
   padding: 0;
   gap: 8px;
 }
@@ -137,11 +140,28 @@
   justify-content: center;
   transition: all 0.2s;
   border-radius: 8px;
+  position: relative;
 }
 
 .admin-button:hover {
   background: var(--bg-secondary);
   color: var(--primary);
+}
+
+.admin-button.active {
+  color: var(--primary);
+  background: rgba(42, 82, 152, 0.1);
+}
+
+.filter-active-indicator {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: var(--primary);
+  border-radius: 50%;
+  border: 2px solid var(--bg-primary);
 }
 
 .collection-title {
@@ -229,10 +249,12 @@
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 1em;
   padding: 0 2rem;
+  margin-top: 20px;
 }
 
 .items-list {
   padding: 2rem;
+  margin-top: 20px;
 }
 
 .items-list .item-card {
@@ -556,6 +578,7 @@
     flex-direction: column;
     text-align: center;
     padding: 20px;
+    gap: 0;
   }
 
   .collection-image-large {
@@ -569,17 +592,21 @@
     gap: 8px;
   }
 
+  .collection-actions {
+    display: none !important;
+  }
+
   .collection-title {
     font-size: 24px;
   }
 
   .progress-section {
-    flex-direction: column;
-    gap: 8px;
+    justify-content: center;
   }
 
   .progress-bar-detail {
-    max-width: 100%;
+    flex: 1;
+    max-width: 200px;
   }
 
   .items-grid {

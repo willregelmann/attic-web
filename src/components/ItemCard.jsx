@@ -46,8 +46,11 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
   }, [childrenData]);
 
   const getItemImage = () => {
-    if (item.image_url) {
-      return `url(${item.image_url})`;
+    // Use thumbnail_url for cards if available, fallback to image_url
+    const imageUrl = item.thumbnail_url || item.image_url;
+
+    if (imageUrl) {
+      return `url(${imageUrl})`;
     }
     // Only use gradient if no child images are available
     if (childImages.length === 0) {
@@ -133,8 +136,12 @@ export function ItemCard({
   onClick,
   isOwned = false,
   isFavorite = false,
-  showCompletion = false
+  showCompletion = false,
+  completionStats = null
 }) {
+  // Calculate completion percentage
+  const completionPercentage = completionStats?.completionPercentage ?? (isOwned ? 100 : 0);
+
   return (
     <div
       className={`item-card ${isFavorite ? 'item-favorite' : ''} clickable`}
@@ -160,7 +167,7 @@ export function ItemCard({
         {showCompletion && (
           <div className="item-completion-bar">
             <div className="completion-progress">
-              <div className="completion-fill" style={{ width: isOwned ? '100%' : '0%' }}></div>
+              <div className="completion-fill" style={{ width: `${completionPercentage}%` }}></div>
             </div>
           </div>
         )}
