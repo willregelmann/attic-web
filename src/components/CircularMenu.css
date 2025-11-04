@@ -19,8 +19,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 7rem;
+  height: 7rem;
   border-radius: 50%;
   background: var(--navy-blue, #2C4B7B);
   color: var(--yellow-accent, #F5C842);
@@ -51,7 +51,7 @@
 
 /* Briefcase Icon Styling - Yellow briefcase */
 .floating-btn .briefcase-icon {
-  font-size: 18px !important;
+  font-size: 36px !important;
   color: var(--yellow-accent, #F5C842);
   transition: transform 0.3s ease;
 }
@@ -62,7 +62,7 @@
 
 /* Close Icon (X) Styling - Navy X */
 .floating-btn i.fa-times {
-  font-size: 1.25rem;
+  font-size: 2.5rem;
   color: var(--navy-blue, #2C4B7B);
   transition: transform 0.3s ease;
 }
@@ -88,8 +88,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 3rem;
-  height: 3rem;
+  width: 4.5rem;
+  height: 4.5rem;
   border-radius: 50%;
   background: var(--navy-blue, #2C4B7B);
   color: white;
@@ -106,7 +106,7 @@
 }
 
 .menu-item i {
-  font-size: 1.1rem;
+  font-size: 1.5rem;
   transition: transform 0.2s ease;
 }
 
@@ -125,34 +125,34 @@
 /* Menu Item Positions - Circular arrangement */
 /* When active, items fan out in an arc */
 
-/* Item 1 - Add to Collection (upper right) */
+/* Item 1 - Add to Collection (90°, straight up) - 11rem radius */
 .circular-menu.active .menu-item:nth-child(1) {
   opacity: 1;
-  transform: translate(-5rem, -4rem) scale(1);
+  transform: translate(0rem, -11.0rem) scale(1);
   pointer-events: auto;
   transition-delay: 0.05s;
 }
 
-/* Item 2 - Search (left) */
+/* Item 2 - Search (120°, upper-left diagonal) - 11rem radius */
 .circular-menu.active .menu-item:nth-child(2) {
   opacity: 1;
-  transform: translate(-6.5rem, -1rem) scale(1);
+  transform: translate(-5.5rem, -9.5rem) scale(1);
   pointer-events: auto;
   transition-delay: 0.1s;
 }
 
-/* Item 3 - Future action (upper) */
+/* Item 3 - Filter (150°, left-upper diagonal) - 11rem radius */
 .circular-menu.active .menu-item:nth-child(3) {
   opacity: 1;
-  transform: translate(-2rem, -6rem) scale(1);
+  transform: translate(-9.5rem, -5.5rem) scale(1);
   pointer-events: auto;
   transition-delay: 0.15s;
 }
 
-/* Item 4 - Future action (upper left) */
+/* Item 4 - My Account (180°, straight left) - 11rem radius */
 .circular-menu.active .menu-item:nth-child(4) {
   opacity: 1;
-  transform: translate(-1rem, -7rem) scale(1);
+  transform: translate(-11.0rem, 0rem) scale(1);
   pointer-events: auto;
   transition-delay: 0.2s;
 }
@@ -232,30 +232,42 @@
   }
 
   .floating-btn {
-    width: 3rem;
-    height: 3rem;
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+
+  .floating-btn .briefcase-icon {
+    font-size: 22px !important;
+  }
+
+  .floating-btn i.fa-times {
+    font-size: 1.5rem;
   }
 
   .menu-item {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 4rem;
+    height: 4rem;
   }
 
-  /* Adjust positions for smaller screens */
+  .menu-item i {
+    font-size: 1.4rem;
+  }
+
+  /* Adjust positions for smaller screens - same angles, 9rem radius */
   .circular-menu.active .menu-item:nth-child(1) {
-    transform: translate(-4rem, -3.5rem) scale(1);
+    transform: translate(0rem, -9.0rem) scale(1);
   }
 
   .circular-menu.active .menu-item:nth-child(2) {
-    transform: translate(-5.5rem, -0.5rem) scale(1);
+    transform: translate(-4.5rem, -7.8rem) scale(1);
   }
 
   .circular-menu.active .menu-item:nth-child(3) {
-    transform: translate(-1.5rem, -5rem) scale(1);
+    transform: translate(-7.8rem, -4.5rem) scale(1);
   }
 
   .circular-menu.active .menu-item:nth-child(4) {
-    transform: translate(-0.5rem, -6rem) scale(1);
+    transform: translate(-9.0rem, 0rem) scale(1);
   }
 
   .circular-menu.active .menu-item:nth-child(5) {

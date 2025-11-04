@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery, useMutation } from '@apollo/client/react';
+import { useNavigate } from 'react-router-dom';
 import { GET_MY_API_TOKENS, CREATE_API_TOKEN, REVOKE_API_TOKEN } from '../queries';
 import './UserProfile.css';
 
 function UserProfile() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [showNewTokenModal, setShowNewTokenModal] = useState(false);
   const [newTokenName, setNewTokenName] = useState('');
   const [generatedToken, setGeneratedToken] = useState(null);
@@ -72,19 +74,33 @@ function UserProfile() {
     setCopiedToken(false);
   };
 
+  const handleClose = () => {
+    navigate(-1);
+  };
+
   if (!user) {
     return (
-      <div className="profile-container">
-        <p>Please log in to view your profile.</p>
-      </div>
+      <>
+        <div className="profile-backdrop" onClick={handleClose} />
+        <div className="profile-container">
+          <p>Please log in to view your profile.</p>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="profile-container">
-      <div className="profile-header">
-        <h1>User Profile</h1>
-      </div>
+    <>
+      <div className="profile-backdrop" onClick={handleClose} />
+      <div className="profile-container">
+        <div className="profile-header">
+          <h1>User Profile</h1>
+          <button className="profile-close-button" onClick={handleClose} aria-label="Close profile">
+            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
 
       <div className="profile-section">
         <h2>Account Information</h2>
@@ -164,6 +180,7 @@ function UserProfile() {
           </div>
         )}
       </div>
+    </div>
 
       {/* New Token Modal */}
       {showNewTokenModal && (
@@ -258,7 +275,7 @@ function UserProfile() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
