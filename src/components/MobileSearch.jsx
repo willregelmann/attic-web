@@ -3,19 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useLazyQuery } from '@apollo/client/react';
 import { SEMANTIC_SEARCH_DATABASE_OF_THINGS } from '../queries';
 import { isCollectionType, formatEntityType } from '../utils/formatters';
+import ItemDetail from './ItemDetail';
 import './MobileSearch.css';
 
-function MobileSearch({ isOpen, onClose }) {
+function MobileSearch({ isOpen, onClose, onAddToCollection }) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedItem, setSelectedItem] = useState(null);
 
   const [searchItems, { data: searchData, loading: searchLoading, error: searchError }] = useLazyQuery(
     SEMANTIC_SEARCH_DATABASE_OF_THINGS,
     {
       fetchPolicy: 'network-only',
-      onCompleted: (data) => {
-        console.log('Search completed successfully:', data);
-      },
       onError: (error) => {
         console.error('Search error:', error);
         console.error('Error details:', error.message);
@@ -29,7 +28,6 @@ function MobileSearch({ isOpen, onClose }) {
   useEffect(() => {
     if (searchQuery.length > 2) {
       const timeoutId = setTimeout(() => {
-        console.log('Triggering search for:', searchQuery);
         searchItems({ variables: { query: searchQuery, first: 20 } });
       }, 500);
 
@@ -37,21 +35,15 @@ function MobileSearch({ isOpen, onClose }) {
     }
   }, [searchQuery, searchItems]);
 
-  // Debug search data
-  useEffect(() => {
-    console.log('Search loading:', searchLoading);
-    console.log('Search data:', searchData);
-    console.log('Search error:', searchError);
-  }, [searchLoading, searchData, searchError]);
-
   const handleResultClick = (item) => {
     setSearchQuery('');
-    onClose();
 
     if (isCollectionType(item.type)) {
+      onClose();
       navigate(`/collection/${item.id}`);
     } else {
-      navigate(`/item/${item.id}`);
+      // For individual items, show detail modal
+      setSelectedItem(item);
     }
   };
 
@@ -155,6 +147,22 @@ function MobileSearch({ isOpen, onClose }) {
         )}
       </div>
     </div>
+
+    {/* Item Detail Modal */}
+    {selectedItem && (
+      <ItemDetail
+        item={selectedItem}
+        isOwned={false}
+        onToggleOwnership={() => {}}
+        onAddToCollection={onAddToCollection}
+        onNavigateToCollection={(collection) => {
+          navigate(`/collection/${collection.id}`);
+          setSelectedItem(null);
+          onClose();
+        }}
+        onClose={() => setSelectedItem(null)}
+      />
+    )}
     </>
   );
 }

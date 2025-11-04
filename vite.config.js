@@ -13,12 +13,12 @@ export default defineConfig({
       ignored: ['**/node_modules/**', '**/.git/**']
     },
     hmr: {
-      // Let the browser connect to the HMR server through the same host it's accessing the app from
-      clientPort: 5173
+      // Auto-detect the correct port based on where the server is actually running
+      // clientPort: 5173  // Removed: causes issues when port 5173 is in use
     },
     proxy: {
       '/graphql': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:80',
         changeOrigin: true,
       }
     }

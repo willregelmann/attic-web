@@ -7,10 +7,13 @@ import './CircularMenu.css';
  *
  * @param {Function} onAddToCollection - Callback when "Add to Collection" is clicked
  * @param {Function} onSearch - Callback when "Search" is clicked
+ * @param {Function} onAccount - Callback when "My Account" is clicked
+ * @param {Function} onFilter - Callback when "Filter" is clicked
  * @param {Function} onBackdropClick - Callback when backdrop is clicked
  * @param {Boolean} showOnDesktop - Whether to show menu on desktop (default: false)
+ * @param {Boolean} showFilter - Whether to show the filter button (default: false)
  */
-const CircularMenu = ({ onAddToCollection, onSearch, onBackdropClick, showOnDesktop = false }) => {
+const CircularMenu = ({ onAddToCollection, onSearch, onAccount, onFilter, onBackdropClick, showOnDesktop = false, showFilter = false }) => {
   const [isActive, setIsActive] = useState(false);
 
   const toggleMenu = () => {
@@ -67,8 +70,27 @@ const CircularMenu = ({ onAddToCollection, onSearch, onBackdropClick, showOnDesk
           <i className="fas fa-search"></i>
         </button>
 
-        {/* Placeholder for future actions */}
-        {/* Add more menu items here as needed */}
+        {/* Filter (conditional) */}
+        {showFilter && (
+          <button
+            className="menu-item"
+            onClick={() => handleMenuItemClick(onFilter)}
+            aria-label="Filter collection"
+            title="Filter collection"
+          >
+            <i className="fas fa-filter"></i>
+          </button>
+        )}
+
+        {/* My Account */}
+        <button
+          className="menu-item"
+          onClick={() => handleMenuItemClick(onAccount)}
+          aria-label="My account"
+          title="My account"
+        >
+          <i className="fas fa-user"></i>
+        </button>
       </nav>
 
       {/* Backdrop - closes menu when clicking outside */}

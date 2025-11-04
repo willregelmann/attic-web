@@ -105,3 +105,46 @@ export function SearchResultsSkeleton({ count = 5 }) {
     </div>
   );
 }
+
+// Collection Tree Skeleton
+export function CollectionTreeSkeleton({ count = 3 }) {
+  return (
+    <ul className="tree-list">
+      {Array.from({ length: count }).map((_, index) => (
+        <li key={index} className="tree-item">
+          <div className="tree-collection-link" style={{ paddingLeft: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Skeleton width="60%" height="20px" />
+            <Skeleton width="16px" height="16px" borderRadius="50%" style={{ marginLeft: 'auto' }} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// Filter Fields Skeleton
+export function FilterFieldsSkeleton({ count = 5 }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      {Array.from({ length: count }).map((_, index) => (
+        <div
+          key={index}
+          style={{
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            padding: '1rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: 'var(--bg-primary)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+            <Skeleton width="30%" height="18px" />
+          </div>
+          <Skeleton width="16px" height="16px" />
+        </div>
+      ))}
+    </div>
+  );
+}

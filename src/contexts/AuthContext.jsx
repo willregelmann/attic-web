@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { useMutation } from '@apollo/client/react';
+import { useMutation, useApolloClient } from '@apollo/client/react';
 import { GOOGLE_LOGIN } from '../queries';
 
 const AuthContext = createContext({});
@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [googleLoginMutation] = useMutation(GOOGLE_LOGIN);
+  const apolloClient = useApolloClient();
 
   useEffect(() => {
     // Check for stored user on mount
@@ -67,6 +68,9 @@ export function AuthProvider({ children }) {
         localStorage.setItem('user_data', JSON.stringify(userData));
         setUser(userData);
 
+        // Clear Apollo cache to ensure fresh data is fetched for the new user
+        await apolloClient.resetStore();
+
         return userData;
       }
     } catch (error) {
@@ -75,10 +79,13 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user_data');
     setUser(null);
+
+    // Clear Apollo cache to remove any cached user data
+    await apolloClient.clearStore();
   };
 
   const isAuthenticated = !!user;

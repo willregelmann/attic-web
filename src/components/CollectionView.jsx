@@ -1,17 +1,19 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@apollo/client/react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { GET_DATABASE_OF_THINGS_ENTITY } from '../queries';
 import { useAuth } from '../contexts/AuthContext';
+import { useCollectionFilter } from '../contexts/CollectionFilterContext';
 import ItemList from './ItemList';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { addToRecentlyViewed } from '../utils/recentlyViewed';
 
-function CollectionView() {
+function CollectionView({ onAddToCollection }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
+  const { setActiveCollection } = useCollectionFilter();
 
   // If no ID, we're at the root
   const isRoot = !id || id === 'root';
@@ -19,12 +21,15 @@ function CollectionView() {
   // Get navigation path from URL query params
   // Path format: "id1:name1,id2:name2,id3:name3"
   const pathParam = searchParams.get('path');
-  const navigationPath = pathParam
-    ? pathParam.split(',').map(item => {
-        const [id, ...nameParts] = item.split(':');
-        return { id, name: decodeURIComponent(nameParts.join(':')) }; // Join back in case name contains ':'
-      })
-    : [];
+  const navigationPath = useMemo(() =>
+    pathParam
+      ? pathParam.split(',').map(item => {
+          const [id, ...nameParts] = item.split(':');
+          return { id, name: decodeURIComponent(nameParts.join(':')) }; // Join back in case name contains ':'
+        })
+      : [],
+    [pathParam]
+  );
 
   // Fetch collection data if not root
   const { data, loading, error, refetch } = useQuery(GET_DATABASE_OF_THINGS_ENTITY, {
@@ -64,6 +69,18 @@ function CollectionView() {
       addToRecentlyViewed(collection);
     }
   }, [collection, isRoot]);
+
+  // Set active collection for filter inheritance
+  useEffect(() => {
+    if (!isRoot && id) {
+      // Extract ancestor IDs from navigation path (up to 3 levels for inheritance)
+      const ancestorIds = navigationPath
+        .slice(-3) // Take last 3 ancestors (limit inheritance depth)
+        .map(p => p.id);
+
+      setActiveCollection(id, ancestorIds);
+    }
+  }, [id, isRoot, navigationPath, setActiveCollection]);
 
   const handleSelectCollection = (selectedCollection) => {
     // Build new path: ancestors + current collection
@@ -130,6 +147,7 @@ function CollectionView() {
       isRootView={isRoot}
       onRefresh={refetch}
       navigationPath={navigationPath}
+      onAddToCollection={onAddToCollection}
     />
   );
 }

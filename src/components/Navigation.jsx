@@ -1,22 +1,29 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useFilters } from '../contexts/FilterContext';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { useLazyQuery } from '@apollo/client/react';
 import { SEMANTIC_SEARCH_DATABASE_OF_THINGS } from '../queries';
 import { isCollectionType, formatEntityType } from '../utils/formatters';
+import { filterEntities } from '../utils/filterUtils';
 import Breadcrumbs from './Breadcrumbs';
+import ItemDetail from './ItemDetail';
+import FilterModal from './FilterModal';
 import './Navigation.css';
 
 function Navigation({ onLogin, onSignup, onAddToCollection }) {
   const { user, logout } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { filters, hasActiveFilters } = useFilters();
   const { breadcrumbItems, loading: breadcrumbsLoading } = useBreadcrumbs();
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
 
@@ -31,6 +38,12 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
       }
     }
   );
+
+  // Apply filters to search results
+  const filteredSearchResults = useMemo(() => {
+    if (!searchData?.databaseOfThingsSemanticSearch) return [];
+    return filterEntities(searchData.databaseOfThingsSemanticSearch, filters);
+  }, [searchData, filters]);
 
   // Debounce search input
   useEffect(() => {
@@ -102,9 +115,8 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
     if (isCollectionType(item.type)) {
       navigate(`/collection/${item.id}`);
     } else {
-      // For individual items, navigate to their parent collection
-      // This would need to be implemented based on your needs
-      navigate(`/item/${item.id}`);
+      // For individual items, show detail modal
+      setSelectedItem(item);
     }
   };
 
@@ -157,15 +169,15 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
               )}
               {!searchLoading && searchData?.databaseOfThingsSemanticSearch && (
                 <>
-                  {searchData.databaseOfThingsSemanticSearch.length === 0 ? (
+                  {filteredSearchResults.length === 0 ? (
                     <div className="search-empty">No results found</div>
                   ) : (
                     <>
                       <div className="search-results-header">
-                        Found {searchData.databaseOfThingsSemanticSearch.length} result{searchData.databaseOfThingsSemanticSearch.length !== 1 ? 's' : ''}
+                        Found {filteredSearchResults.length} result{filteredSearchResults.length !== 1 ? 's' : ''}
                       </div>
                       <div className="search-results-list" role="group">
-                        {searchData.databaseOfThingsSemanticSearch.map(item => (
+                        {filteredSearchResults.map(item => (
                           <button
                             key={item.id}
                             className="search-result-item"
@@ -211,6 +223,19 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
         </div>
 
         <div className="nav-actions">
+          {/* Filter Toggle */}
+          <button
+            className={`filter-toggle-button ${hasActiveFilters ? 'active' : ''}`}
+            onClick={() => setShowFilterModal(true)}
+            aria-label="Filters"
+            title="Filters"
+          >
+            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+              <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            {hasActiveFilters && <span className="filter-badge"></span>}
+          </button>
+
           {/* Dark Mode Toggle */}
           <button
             className="theme-toggle-button"
@@ -283,7 +308,22 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
                     <div className="dropdown-divider" role="separator"></div>
                     <button
                       className="dropdown-item"
-                      onClick={handleAddToCollection}
+                      onClick={() => {
+                        navigate('/my-collection');
+                        setShowMenu(false);
+                      }}
+                      role="menuitem"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                        <path d="M20 21v-2a4 4 0 00-3-3.87M15 3a4 4 0 010 7.75M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      My Collection
+                    </button>
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        handleAddToCollection();
+                      }}
                       role="menuitem"
                     >
                       <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
@@ -353,6 +393,27 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
     {breadcrumbItems.length > 0 && (
       <Breadcrumbs items={breadcrumbItems} loading={breadcrumbsLoading} />
     )}
+
+    {/* Item Detail Modal */}
+    {selectedItem && (
+      <ItemDetail
+        item={selectedItem}
+        isOwned={false}
+        onToggleOwnership={() => {}}
+        onAddToCollection={onAddToCollection}
+        onNavigateToCollection={(collection) => {
+          navigate(`/collection/${collection.id}`);
+          setSelectedItem(null);
+        }}
+        onClose={() => setSelectedItem(null)}
+      />
+    )}
+
+    {/* Filter Modal */}
+    <FilterModal
+      isOpen={showFilterModal}
+      onClose={() => setShowFilterModal(false)}
+    />
     </>
   );
 }
