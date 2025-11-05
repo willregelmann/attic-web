@@ -123,21 +123,32 @@ function AppContent() {
 
 // Main App component that provides routing context
 function App() {
-  return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <ApolloProvider client={client}>
-        <ThemeProvider>
-          <FilterProvider>
-            <CollectionFilterProvider>
-              <AuthProvider>
-                <AppContent />
-              </AuthProvider>
-            </CollectionFilterProvider>
-          </FilterProvider>
-        </ThemeProvider>
-      </ApolloProvider>
-    </GoogleOAuthProvider>
+  // Core providers (always needed)
+  const coreProviders = (
+    <ApolloProvider client={client}>
+      <ThemeProvider>
+        <FilterProvider>
+          <CollectionFilterProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </CollectionFilterProvider>
+        </FilterProvider>
+      </ThemeProvider>
+    </ApolloProvider>
   );
+
+  // Conditionally wrap with GoogleOAuthProvider only if client ID is configured
+  if (GOOGLE_CLIENT_ID) {
+    return (
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        {coreProviders}
+      </GoogleOAuthProvider>
+    );
+  }
+
+  // Run without Google OAuth if not configured
+  return coreProviders;
 }
 
 export default App;
