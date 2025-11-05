@@ -134,7 +134,7 @@ export function CollectionFilterProvider({ children }) {
    */
   const hasActiveFilters = useCallback((collectionId) => {
     const filters = collectionFilters[collectionId];
-    return filters && Object.keys(filters).length > 0;
+    return !!(filters && Object.keys(filters).length > 0);
   }, [collectionFilters]);
 
   /**
