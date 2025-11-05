@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { useMutation, useApolloClient } from '@apollo/client';
+import { useMutation, useApolloClient } from '@apollo/client/react';
 import { GOOGLE_LOGIN } from '../queries';
 
 const AuthContext = createContext({});
