@@ -7,7 +7,7 @@
 /* Header and Breadcrumbs */
 .my-collection-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
