@@ -12,7 +12,8 @@ import {
   ADD_ITEM_TO_MY_COLLECTION,
   REMOVE_ITEM_FROM_MY_COLLECTION,
   FAVORITE_COLLECTION,
-  UNFAVORITE_COLLECTION
+  UNFAVORITE_COLLECTION,
+  GET_COLLECTION_PARENT_COLLECTIONS
 } from '../queries';
 import ItemDetail from './ItemDetail';
 import CollectionFilterPanel from './CollectionFilterPanel';
@@ -27,7 +28,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { setBreadcrumbItems, setLoading: setBreadcrumbsLoading } = useBreadcrumbs();
-  const { getFiltersForCollection, applyFilters, hasEffectiveFilters } = useCollectionFilter();
+  const { getFiltersForCollection, applyFilters, hasActiveFilters } = useCollectionFilter();
   const [filter, setFilter] = useState('all'); // all, owned, missing
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // grid, list
@@ -45,6 +46,13 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [unfavoriteCollectionMutation] = useMutation(UNFAVORITE_COLLECTION);
   const [addItemMutation] = useMutation(ADD_ITEM_TO_MY_COLLECTION);
   const [removeItemMutation] = useMutation(REMOVE_ITEM_FROM_MY_COLLECTION);
+
+  // Fetch parent collections for filtering
+  const { data: parentCollectionsData } = useQuery(GET_COLLECTION_PARENT_COLLECTIONS, {
+    variables: { collectionId: collection?.id },
+    skip: !collection?.id || isRootView,
+    fetchPolicy: 'cache-first'
+  });
 
   // Fetch user's favorite collections from database
   const { data: favoritesData, refetch: refetchFavorites } = useQuery(GET_MY_FAVORITE_COLLECTIONS, {
@@ -223,8 +231,9 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     // Note: Collections always pass through filters so users can navigate into them
     // Only non-collection items are filtered based on their attributes
     if (!isRoot && collection?.id) {
-      const collectionFilters = getFiltersForCollection(collection.id, true);
-      filtered = applyFilters(filtered, collectionFilters);
+      const collectionFilters = getFiltersForCollection(collection.id);
+      const parentCollections = parentCollectionsData?.databaseOfThingsCollectionParentCollections || [];
+      filtered = applyFilters(filtered, collectionFilters, parentCollections);
     }
 
     // Apply ownership filter
@@ -303,7 +312,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     }
 
     return { favorites: [], others: filtered };
-  }, [items, favoriteItems, otherItems, isRoot, filter, searchTerm, userOwnership, userFavorites, sortBy, collection?.id, getFiltersForCollection, applyFilters]);
+  }, [items, favoriteItems, otherItems, isRoot, filter, searchTerm, userOwnership, userFavorites, sortBy, collection?.id, getFiltersForCollection, applyFilters, parentCollectionsData]);
 
   // Calculate stats based on filtered items
   const stats = useMemo(() => {
@@ -431,7 +440,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
                 <div className="collection-actions">
                   {/* Collection Filter Button */}
                   <button
-                    className={`admin-button ${hasEffectiveFilters(collection.id) ? 'active' : ''}`}
+                    className={`admin-button ${hasActiveFilters(collection.id) ? 'active' : ''}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowCollectionFilters(true);
@@ -441,7 +450,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
                     <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
                       <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                     </svg>
-                    {hasEffectiveFilters(collection.id) && (
+                    {hasActiveFilters(collection.id) && (
                       <span className="filter-active-indicator"></span>
                     )}
                   </button>
@@ -564,10 +573,17 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
           index={selectedItemIndex}
           collection={collection}
           isOwned={userOwnership.has(selectedItem.id)}
+          isUserItem={isMyCollection}  // Pass flag for My Collection items
           onToggleOwnership={() => {
             toggleItemOwnership(selectedItem.id);
           }}
           onAddToCollection={onAddToCollection}
+          onEditItem={(item) => {
+            // Open AddItemsModal in edit mode with this item
+            if (onAddToCollection) {
+              onAddToCollection(item);
+            }
+          }}
           onNavigateToCollection={(collection) => {
             // Navigate directly without appending to current path
             // This is used from tree navigation in the detail modal

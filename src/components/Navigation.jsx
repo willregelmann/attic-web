@@ -186,9 +186,9 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
                             aria-label={`${item.name} - ${item.type}`}
                           >
                             <div className="search-result-image">
-                              {item.image_url ? (
+                              {(item.thumbnail_url || item.image_url) ? (
                                 <img
-                                  src={item.image_url}
+                                  src={item.thumbnail_url || item.image_url}
                                   alt={item.name}
                                   className="search-result-thumbnail"
                                   onError={(e) => {
@@ -199,7 +199,7 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
                               ) : null}
                               <div
                                 className="search-result-emoji"
-                                style={{ display: item.image_url ? 'none' : 'flex' }}
+                                style={{ display: (item.thumbnail_url || item.image_url) ? 'none' : 'flex' }}
                               >
                                 {isCollectionType(item.type) ? '📦' : '🎴'}
                               </div>

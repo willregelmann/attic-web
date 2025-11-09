@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@apollo/client/react';
-import { GET_COLLECTION_FILTER_FIELDS } from '../queries';
+import { GET_COLLECTION_FILTER_FIELDS, GET_COLLECTION_PARENT_COLLECTIONS } from '../queries';
 import { useCollectionFilter } from '../contexts/CollectionFilterContext';
-import { countFilterValues, formatFilterValue } from '../utils/collectionFilterUtils';
+import { countFilterValues, formatFilterValue, countParentCollections } from '../utils/collectionFilterUtils';
 import { FilterFieldsSkeleton } from './SkeletonLoader';
 import './CollectionFilterPanel.css';
 
@@ -11,17 +11,15 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
     getFiltersForCollection,
     updateCollectionFilter,
     clearFiltersForCollection,
-    hasActiveFilters,
-    hasEffectiveFilters
+    hasActiveFilters
   } = useCollectionFilter();
 
   const [expandedFields, setExpandedFields] = useState(new Set());
 
-  // Get current filters (including inherited)
-  const activeFilters = getFiltersForCollection(collectionId, true);
-  const ownFilters = getFiltersForCollection(collectionId, false);
-  const hasOwn = hasActiveFilters(collectionId);
-  const hasEffective = hasEffectiveFilters(collectionId);
+  // Get current filters
+  const activeFilters = getFiltersForCollection(collectionId);
+  const hasFilters = hasActiveFilters(collectionId);
+  const textSearch = activeFilters._text_search || '';
 
   // Fetch filterable fields from server (with caching)
   // Note: Only discovers fields from direct children, not nested subcollections
@@ -34,16 +32,51 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
     }
   );
 
-  // Get filterable fields from server response
+  // Fetch parent collections for this collection
+  const { data: parentCollectionsData, loading: isLoadingParentCollections } = useQuery(
+    GET_COLLECTION_PARENT_COLLECTIONS,
+    {
+      variables: { collectionId },
+      skip: !isOpen || !collectionId,
+      fetchPolicy: 'cache-and-network',
+    }
+  );
+
+  // Get filterable fields from server response, plus parent collections
   const filterableFields = useMemo(() => {
-    return filterFieldsData?.databaseOfThingsCollectionFilterFields || [];
-  }, [filterFieldsData]);
+    const metadataFields = filterFieldsData?.databaseOfThingsCollectionFilterFields || [];
+    const parentCollections = parentCollectionsData?.databaseOfThingsCollectionParentCollections || [];
+
+    // If there are parent collections, add them as a special filter field
+    if (parentCollections.length > 0) {
+      const parentCollectionField = {
+        field: 'parent_collections',
+        label: 'Collection(s)',
+        type: 'multiselect',
+        values: parentCollections.map(c => c.id), // Use IDs as values
+        priority: 100, // High priority - appears at top
+        parentCollectionsData: parentCollections // Store full collection data for lookup
+      };
+
+      // Merge and sort by priority (higher priority first)
+      return [parentCollectionField, ...metadataFields].sort((a, b) =>
+        (b.priority || 0) - (a.priority || 0)
+      );
+    }
+
+    return metadataFields;
+  }, [filterFieldsData, parentCollectionsData]);
 
   // Pre-compute value counts for all fields
   const allValueCounts = useMemo(() => {
     const counts = {};
     filterableFields.forEach(fieldInfo => {
-      counts[fieldInfo.field] = countFilterValues(items, fieldInfo.field);
+      if (fieldInfo.field === 'parent_collections') {
+        // Special handling for parent collections
+        counts[fieldInfo.field] = countParentCollections(items, fieldInfo.parentCollectionsData);
+      } else {
+        counts[fieldInfo.field] = countFilterValues(items, fieldInfo.field);
+      }
     });
     return counts;
   }, [items, filterableFields]);
@@ -91,6 +124,15 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
     updateCollectionFilter(collectionId, field, []);
   };
 
+  const handleTextSearchChange = (e) => {
+    const value = e.target.value;
+    updateCollectionFilter(collectionId, '_text_search', value);
+  };
+
+  const handleClearTextSearch = () => {
+    updateCollectionFilter(collectionId, '_text_search', '');
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -106,7 +148,35 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
         </div>
 
         <div className="filter-panel-body">
-          {isLoadingFilterFields ? (
+          {/* Text Search Filter */}
+          <div className="filter-text-search">
+            <div className="filter-text-search-input-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" width="16" height="16" className="search-icon">
+                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+                <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              <input
+                type="text"
+                className="filter-text-search-input"
+                placeholder="Search items..."
+                value={textSearch}
+                onChange={handleTextSearchChange}
+              />
+              {textSearch && (
+                <button
+                  className="filter-text-search-clear"
+                  onClick={handleClearTextSearch}
+                  aria-label="Clear text search"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {(isLoadingFilterFields || isLoadingParentCollections) ? (
             <FilterFieldsSkeleton count={5} />
           ) : filterableFields.length === 0 ? (
             <div className="filter-empty-state">
@@ -172,6 +242,13 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
                           const isSelected = selectedValues.includes(value);
                           const count = valueCounts[value] || 0;
 
+                          // For parent_collections, display collection name instead of ID
+                          let displayValue = formatFilterValue(value);
+                          if (field === 'parent_collections' && fieldInfo.parentCollectionsData) {
+                            const collection = fieldInfo.parentCollectionsData.find(c => c.id === value);
+                            displayValue = collection?.name || value;
+                          }
+
                           return (
                             <label key={value} className="filter-value-option">
                               <input
@@ -181,7 +258,7 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
                                 className="filter-checkbox"
                               />
                               <span className="filter-value-label">
-                                {formatFilterValue(value)}
+                                {displayValue}
                                 <span className="filter-value-count">({count})</span>
                               </span>
                             </label>
@@ -196,21 +273,11 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
           )}
         </div>
 
-        {hasOwn && (
+        {hasFilters && (
           <div className="filter-panel-footer">
             <button className="filter-clear-all-button" onClick={handleClearAll}>
               Clear All Filters
             </button>
-          </div>
-        )}
-
-        {!hasOwn && hasEffective && (
-          <div className="filter-panel-info">
-            <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-              <path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-            <span>Filters inherited from parent collection</span>
           </div>
         )}
       </div>

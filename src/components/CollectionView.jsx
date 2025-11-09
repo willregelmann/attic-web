@@ -70,17 +70,12 @@ function CollectionView({ onAddToCollection }) {
     }
   }, [collection, isRoot]);
 
-  // Set active collection for filter inheritance
+  // Set active collection
   useEffect(() => {
     if (!isRoot && id) {
-      // Extract ancestor IDs from navigation path (up to 3 levels for inheritance)
-      const ancestorIds = navigationPath
-        .slice(-3) // Take last 3 ancestors (limit inheritance depth)
-        .map(p => p.id);
-
-      setActiveCollection(id, ancestorIds);
+      setActiveCollection(id);
     }
-  }, [id, isRoot, navigationPath, setActiveCollection]);
+  }, [id, isRoot, setActiveCollection]);
 
   const handleSelectCollection = (selectedCollection) => {
     // Build new path: ancestors + current collection

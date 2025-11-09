@@ -13,6 +13,7 @@ export const GET_DATABASE_OF_THINGS_COLLECTIONS = gql`
       attributes
       image_url
       thumbnail_url
+      representative_image_urls
       external_ids
     }
   }
@@ -29,6 +30,7 @@ export const GET_DATABASE_OF_THINGS_COLLECTION_ITEMS = gql`
       attributes
       image_url
       thumbnail_url
+      representative_image_urls
       external_ids
     }
   }
@@ -45,6 +47,7 @@ export const SEARCH_DATABASE_OF_THINGS_ENTITIES = gql`
       attributes
       image_url
       thumbnail_url
+      representative_image_urls
       external_ids
     }
   }
@@ -61,6 +64,7 @@ export const SEMANTIC_SEARCH_DATABASE_OF_THINGS = gql`
       attributes
       image_url
       thumbnail_url
+      representative_image_urls
       external_ids
       similarity
     }
@@ -78,6 +82,7 @@ export const GET_DATABASE_OF_THINGS_ENTITY = gql`
       attributes
       image_url
       thumbnail_url
+      representative_image_urls
       external_ids
     }
   }
@@ -134,6 +139,20 @@ export const GET_COLLECTION_FILTER_FIELDS = gql`
       values
       count
       priority
+    }
+  }
+`;
+
+export const GET_COLLECTION_PARENT_COLLECTIONS = gql`
+  query GetCollectionParentCollections($collectionId: ID!) {
+    databaseOfThingsCollectionParentCollections(collection_id: $collectionId) {
+      id
+      name
+      type
+      year
+      image_url
+      thumbnail_url
+      attributes
     }
   }
 `;
@@ -237,6 +256,20 @@ export const ADD_ITEM_TO_MY_COLLECTION = gql`
   }
 `;
 
+export const UPDATE_MY_ITEM = gql`
+  mutation UpdateMyItem($userItemId: ID!, $metadata: JSON, $notes: String) {
+    updateMyItem(user_item_id: $userItemId, metadata: $metadata, notes: $notes) {
+      id
+      entity_id
+      user_id
+      metadata
+      notes
+      images
+      updated_at
+    }
+  }
+`;
+
 export const REMOVE_ITEM_FROM_MY_COLLECTION = gql`
   mutation RemoveItemFromMyCollection($itemId: ID!) {
     removeItemFromMyCollection(entity_id: $itemId)
@@ -289,6 +322,7 @@ export const GET_MY_FAVORITE_COLLECTIONS = gql`
         year
         image_url
         thumbnail_url
+        representative_image_urls
       }
       stats {
         totalItems
@@ -314,6 +348,16 @@ export const GET_MY_ITEMS = gql`
 export const GET_MY_COLLECTION = gql`
   query GetMyCollection {
     myCollection {
+      # UserItem fields
+      user_item_id
+      user_id
+      user_metadata
+      user_notes
+      user_images
+      user_created_at
+      user_updated_at
+
+      # Entity fields (from Database of Things)
       id
       name
       type
@@ -322,6 +366,7 @@ export const GET_MY_COLLECTION = gql`
       attributes
       image_url
       thumbnail_url
+      representative_image_urls
       external_ids
     }
   }
@@ -452,5 +497,122 @@ export const ADD_ITEM_TO_WISHLIST = gql`
 export const REMOVE_ITEM_FROM_WISHLIST = gql`
   mutation RemoveItemFromWishlist($itemId: ID!) {
     removeItemFromWishlist(entity_id: $itemId)
+  }
+`;
+
+// ===== CUSTOM COLLECTIONS =====
+
+export const MY_COLLECTION_TREE = gql`
+  query MyCollectionTree($parentId: ID) {
+    myCollectionTree(parent_id: $parentId) {
+      collections {
+        id
+        name
+        description
+        custom_image
+        progress {
+          owned_count
+          wishlist_count
+          total_count
+          percentage
+        }
+        representative_images
+        created_at
+      }
+      items {
+        user_item_id
+        user_id
+        user_metadata
+        user_notes
+        user_images
+        id
+        type
+        name
+        year
+        image_url
+        thumbnail_url
+      }
+      wishlists {
+        wishlist_id
+        wishlist_created_at
+        id
+        type
+        name
+        year
+        image_url
+        thumbnail_url
+      }
+      current_collection {
+        id
+        name
+        parent_collection_id
+      }
+    }
+  }
+`;
+
+export const CREATE_USER_COLLECTION = gql`
+  mutation CreateUserCollection(
+    $name: String!
+    $description: String
+    $parentId: ID
+    $linkedDbotCollectionId: ID
+  ) {
+    createUserCollection(
+      name: $name
+      description: $description
+      parent_id: $parentId
+      linked_dbot_collection_id: $linkedDbotCollectionId
+    ) {
+      id
+      name
+      description
+      parent_collection_id
+      linked_dbot_collection_id
+      created_at
+    }
+  }
+`;
+
+export const MOVE_USER_COLLECTION = gql`
+  mutation MoveUserCollection($id: ID!, $newParentId: ID) {
+    moveUserCollection(id: $id, new_parent_id: $newParentId) {
+      id
+      name
+      parent_collection_id
+    }
+  }
+`;
+
+export const DELETE_USER_COLLECTION = gql`
+  mutation DeleteUserCollection($id: ID!, $deleteContents: Boolean!) {
+    deleteUserCollection(id: $id, delete_contents: $deleteContents) {
+      success
+      message
+    }
+  }
+`;
+
+export const MOVE_USER_ITEM = gql`
+  mutation MoveUserItem($itemId: ID!, $newParentCollectionId: ID) {
+    moveUserItem(
+      item_id: $itemId
+      new_parent_collection_id: $newParentCollectionId
+    ) {
+      id
+      parent_collection_id
+    }
+  }
+`;
+
+export const MOVE_WISHLIST_ITEM = gql`
+  mutation MoveWishlistItem($wishlistId: ID!, $newParentCollectionId: ID) {
+    moveWishlistItem(
+      wishlist_id: $wishlistId
+      new_parent_collection_id: $newParentCollectionId
+    ) {
+      id
+      parent_collection_id
+    }
   }
 `;

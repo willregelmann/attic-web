@@ -111,9 +111,9 @@ function MobileSearch({ isOpen, onClose, onAddToCollection }) {
                           onClick={() => handleResultClick(item)}
                         >
                           <div className="mobile-search-result-image">
-                            {item.image_url ? (
+                            {(item.thumbnail_url || item.image_url) ? (
                               <img
-                                src={item.image_url}
+                                src={item.thumbnail_url || item.image_url}
                                 alt={item.name}
                                 className="mobile-search-result-thumbnail"
                                 onError={(e) => {
@@ -124,7 +124,7 @@ function MobileSearch({ isOpen, onClose, onAddToCollection }) {
                             ) : null}
                             <div
                               className="mobile-search-result-emoji"
-                              style={{ display: item.image_url ? 'none' : 'flex' }}
+                              style={{ display: (item.thumbnail_url || item.image_url) ? 'none' : 'flex' }}
                             >
                               {isCollectionType(item.type) ? '📦' : '🎴'}
                             </div>

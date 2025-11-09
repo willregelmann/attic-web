@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 const CollectionFilterContext = createContext();
 
 /**
- * CollectionFilterProvider - manages collection-specific filters with inheritance
+ * CollectionFilterProvider - manages collection-specific filters
  *
  * Storage format in localStorage:
  * {
@@ -30,9 +30,8 @@ export function CollectionFilterProvider({ children }) {
     }
   });
 
-  // Current active collection and inherited path
+  // Current active collection
   const [currentCollectionId, setCurrentCollectionId] = useState(null);
-  const [parentPath, setParentPath] = useState([]); // Array of parent collection IDs
 
   // Save to localStorage whenever filters change
   useEffect(() => {
@@ -40,41 +39,21 @@ export function CollectionFilterProvider({ children }) {
   }, [collectionFilters]);
 
   /**
-   * Set the current collection and its parent path for inheritance
+   * Set the current collection
    * @param {string} collectionId - Current collection ID
-   * @param {Array} ancestors - Array of ancestor collection IDs [grandparent, parent]
    */
-  const setActiveCollection = useCallback((collectionId, ancestors = []) => {
+  const setActiveCollection = useCallback((collectionId) => {
     setCurrentCollectionId(collectionId);
-    setParentPath(ancestors);
   }, []);
 
   /**
-   * Get filters for a specific collection, including inherited filters
+   * Get filters for a specific collection
    * @param {string} collectionId - Collection ID to get filters for
-   * @param {boolean} includeInherited - Whether to include inherited filters from ancestors
    */
-  const getFiltersForCollection = useCallback((collectionId, includeInherited = true) => {
+  const getFiltersForCollection = useCallback((collectionId) => {
     if (!collectionId) return {};
-
-    // Start with inherited filters if enabled
-    let mergedFilters = {};
-
-    if (includeInherited && parentPath.length > 0) {
-      // Merge filters from ancestors (grandparent -> parent -> current)
-      // Later filters override earlier ones for the same field
-      for (const ancestorId of parentPath) {
-        const ancestorFilters = collectionFilters[ancestorId] || {};
-        mergedFilters = { ...mergedFilters, ...ancestorFilters };
-      }
-    }
-
-    // Apply current collection's filters (overriding inherited ones)
-    const ownFilters = collectionFilters[collectionId] || {};
-    mergedFilters = { ...mergedFilters, ...ownFilters };
-
-    return mergedFilters;
-  }, [collectionFilters, parentPath]);
+    return collectionFilters[collectionId] || {};
+  }, [collectionFilters]);
 
   /**
    * Set filters for a specific collection
@@ -91,15 +70,19 @@ export function CollectionFilterProvider({ children }) {
   /**
    * Update a single filter field for a collection
    * @param {string} collectionId - Collection ID
-   * @param {string} field - Field name (e.g., "year", "country", "attributes.rarity")
-   * @param {Array} values - Array of values to filter by
+   * @param {string} field - Field name (e.g., "year", "country", "attributes.rarity", "_text_search")
+   * @param {Array|string} values - Array of values to filter by, or string for text search
    */
   const updateCollectionFilter = useCallback((collectionId, field, values) => {
     setCollectionFilters(prev => {
       const collectionData = prev[collectionId] || {};
 
       // If values is empty, remove the filter field
-      if (!values || values.length === 0) {
+      const isEmpty = Array.isArray(values)
+        ? values.length === 0
+        : (typeof values === 'string' ? values.trim() === '' : !values);
+
+      if (isEmpty) {
         const { [field]: removed, ...rest } = collectionData;
         return {
           ...prev,
@@ -129,22 +112,13 @@ export function CollectionFilterProvider({ children }) {
   }, []);
 
   /**
-   * Check if a collection has any active filters (not including inherited)
+   * Check if a collection has any active filters
    * @param {string} collectionId - Collection ID
    */
   const hasActiveFilters = useCallback((collectionId) => {
     const filters = collectionFilters[collectionId];
     return !!(filters && Object.keys(filters).length > 0);
   }, [collectionFilters]);
-
-  /**
-   * Check if a collection has any effective filters (including inherited)
-   * @param {string} collectionId - Collection ID
-   */
-  const hasEffectiveFilters = useCallback((collectionId) => {
-    const filters = getFiltersForCollection(collectionId, true);
-    return Object.keys(filters).length > 0;
-  }, [getFiltersForCollection]);
 
   /**
    * Get all unique values for a field across items
@@ -185,10 +159,25 @@ export function CollectionFilterProvider({ children }) {
    * Apply filters to a list of items
    * @param {Array} items - Items to filter
    * @param {Object} filters - Filters to apply
+   * @param {Array} parentCollections - Parent collections data (for parent_collections filter)
    */
-  const applyFilters = useCallback((items, filters) => {
+  const applyFilters = useCallback((items, filters, parentCollections = []) => {
     if (!filters || Object.keys(filters).length === 0) {
       return items;
+    }
+
+    // Build a map of item_id -> parent_collection_ids for parent_collections filtering
+    const itemToParentsMap = {};
+    if (filters.parent_collections && parentCollections.length > 0) {
+      parentCollections.forEach(collection => {
+        const itemIds = collection.attributes?.item_ids || [];
+        itemIds.forEach(itemId => {
+          if (!itemToParentsMap[itemId]) {
+            itemToParentsMap[itemId] = [];
+          }
+          itemToParentsMap[itemId].push(collection.id);
+        });
+      });
     }
 
     return items.filter(item => {
@@ -197,7 +186,35 @@ export function CollectionFilterProvider({ children }) {
 
       // Check all filter conditions
       return Object.entries(filters).every(([field, allowedValues]) => {
-        if (!allowedValues || allowedValues.length === 0) return true;
+        if (!allowedValues || (Array.isArray(allowedValues) && allowedValues.length === 0)) return true;
+
+        // Special handling for text search filter
+        if (field === '_text_search' && typeof allowedValues === 'string') {
+          const searchTerm = allowedValues.toLowerCase().trim();
+          if (!searchTerm) return true;
+
+          // Search in name
+          const name = item.name?.toLowerCase() || '';
+          if (name.includes(searchTerm)) return true;
+
+          // Search in description
+          const description = item.metadata?.description?.toLowerCase() ||
+                             item.description?.toLowerCase() || '';
+          if (description.includes(searchTerm)) return true;
+
+          // Keep collections (they might have matching descendants)
+          if (isCollection) return true;
+
+          // Didn't match text search
+          return false;
+        }
+
+        // Special handling for parent_collections filter
+        if (field === 'parent_collections') {
+          const itemParents = itemToParentsMap[item.id] || [];
+          // Item matches if it belongs to ANY of the selected parent collections (OR logic)
+          return itemParents.some(parentId => allowedValues.includes(parentId));
+        }
 
         // Get item value for this field
         const fieldParts = field.split('.');
@@ -238,7 +255,6 @@ export function CollectionFilterProvider({ children }) {
     updateCollectionFilter,
     clearFiltersForCollection,
     hasActiveFilters,
-    hasEffectiveFilters,
     getFieldValues,
     applyFilters
   };

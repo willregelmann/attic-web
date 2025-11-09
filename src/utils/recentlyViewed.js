@@ -21,7 +21,7 @@ export const getRecentlyViewed = () => {
 
 /**
  * Add a collection to recently viewed
- * @param {Object} collection - Collection object with id, name, type, year, image_url
+ * @param {Object} collection - Collection object with id, name, type, year, image_url, thumbnail_url, representative_image_urls
  */
 export const addToRecentlyViewed = (collection) => {
   try {
@@ -38,6 +38,8 @@ export const addToRecentlyViewed = (collection) => {
         type: collection.type,
         year: collection.year,
         image_url: collection.image_url,
+        thumbnail_url: collection.thumbnail_url,
+        representative_image_urls: collection.representative_image_urls,
         viewedAt: Date.now()
       },
       ...filtered

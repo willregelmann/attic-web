@@ -287,3 +287,29 @@ export function formatFilterValue(value) {
     })
     .join(' ');
 }
+
+/**
+ * Count how many items belong to each parent collection
+ * @param {Array} items - Items to count (current filtered view)
+ * @param {Array} parentCollections - Parent collections with item_ids in attributes
+ * @returns {Object} Map of collection_id -> count
+ */
+export function countParentCollections(items, parentCollections) {
+  const counts = {};
+
+  // Create a Set of item IDs in the current view for fast lookup
+  const currentItemIds = new Set(items.map(item => item.id));
+
+  // For each parent collection, count how many of its items are in the current view
+  parentCollections.forEach(collection => {
+    // item_ids are stored in attributes.item_ids by the backend
+    const itemIds = collection.attributes?.item_ids || [];
+
+    // Count how many of these items are in the current filtered view
+    const count = itemIds.filter(id => currentItemIds.has(id)).length;
+
+    counts[collection.id] = count;
+  });
+
+  return counts;
+}

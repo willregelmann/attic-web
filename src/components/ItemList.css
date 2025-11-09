@@ -358,17 +358,20 @@
 }
 
 .child-image-more {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.05);
+  position: relative;
 }
 
 .more-indicator {
-  font-size: 32px;
-  font-weight: bold;
-  color: var(--text-secondary);
-  letter-spacing: 2px;
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #555;
+  border-radius: 4px;
 }
 
 /* Single child image - fills entire space */

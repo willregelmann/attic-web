@@ -174,8 +174,8 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }
                       onClick={() => handleSelectItem(item)}
                     >
                       <div className="item-image-small">
-                        {item.image_url ? (
-                          <img src={item.image_url} alt={item.name} />
+                        {(item.thumbnail_url || item.image_url) ? (
+                          <img src={item.thumbnail_url || item.image_url} alt={item.name} />
                         ) : (
                           <div className="image-placeholder-small">
                             <svg viewBox="0 0 24 24" fill="none" width="24" height="24">

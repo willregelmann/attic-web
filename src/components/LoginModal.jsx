@@ -5,9 +5,9 @@ import './LoginModal.css';
 function LoginModal({ isOpen, onClose }) {
   const { login } = useAuth();
 
-  const handleGoogleSuccess = (credentialResponse) => {
+  const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      login(credentialResponse.credential);
+      await login(credentialResponse.credential);
       onClose();
     } catch (error) {
       console.error('Login failed:', error);
