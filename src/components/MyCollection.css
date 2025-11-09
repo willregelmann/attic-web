@@ -21,6 +21,8 @@
   gap: 0.5rem;
   font-size: 0.95rem;
   color: #666;
+  flex: 1;
+  width: 100%;
 }
 
 .breadcrumbs button {
