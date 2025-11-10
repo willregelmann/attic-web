@@ -23,6 +23,7 @@ import Toast from './Toast';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { formatEntityType, isCollectionType } from '../utils/formatters';
 import { ItemCard, ItemCardImage } from './ItemCard';
+import { CollectionHeader } from './CollectionHeader';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { Heart } from 'lucide-react';
 import './ItemList.css';
@@ -424,86 +425,58 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     );
   }
 
+  // Collection header action buttons
+  const headerActions = !isRootView && (
+    <>
+      {/* Collection Filter Button */}
+      <button
+        className={`admin-button ${hasActiveFilters(collection.id) ? 'active' : ''}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          setShowCollectionFilters(true);
+        }}
+        title="Filter collection items"
+      >
+        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+          <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+        {hasActiveFilters(collection.id) && (
+          <span className="filter-active-indicator"></span>
+        )}
+      </button>
+
+      {/* Wishlist Button */}
+      {isAuthenticated && (
+        <button
+          className="wishlist-button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsAddModalOpen(true);
+          }}
+          title="Add collection to wishlist"
+        >
+          <Heart size={20} />
+        </button>
+      )}
+    </>
+  );
+
   return (
     <div className="item-list">
       {/* Collection Header */}
-      {(
-        <div
-          className="collection-header-detail clickable"
-          onClick={() => {
-            setSelectedItem(collection);
-            setSelectedItemIndex(null);
-          }}
-          title="Click to view collection details"
-          style={{ cursor: 'pointer' }}
-        >
-          {(collection?.thumbnail_url || collection?.image_url) && (
-            <div
-              className="collection-image-large"
-              style={{
-                backgroundImage: `url(${collection.thumbnail_url || collection.image_url})`,
-                backgroundSize: 'contain',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                backgroundColor: 'transparent'
-              }}
-            />
-          )}
-          <div className="collection-details">
-            <div className="collection-title-row">
-              <div>
-                <h1 className="collection-title">{collection.name}</h1>
-                <p className="collection-subtitle">
-                  {formatEntityType(collection.type)}
-                  {collection.year && ` • ${collection.year}`}
-                </p>
-              </div>
-              {!isRootView && (
-                <div className="collection-actions">
-                  {/* Collection Filter Button */}
-                  <button
-                    className={`admin-button ${hasActiveFilters(collection.id) ? 'active' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowCollectionFilters(true);
-                    }}
-                    title="Filter collection items"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                      <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                    {hasActiveFilters(collection.id) && (
-                      <span className="filter-active-indicator"></span>
-                    )}
-                  </button>
-
-                  {/* Wishlist Button */}
-                  {isAuthenticated && (
-                    <button
-                      className="wishlist-button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsAddModalOpen(true);
-                      }}
-                      title="Add collection to wishlist"
-                    >
-                      <Heart size={20} />
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="progress-section">
-              <div className="progress-bar-detail">
-                <div className="progress-fill-detail" style={{ width: `${stats.percentage}%` }}></div>
-              </div>
-              <span className="completion-badge">
-                {stats.owned} / {stats.total}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
+      <CollectionHeader
+        collection={collection}
+        subtitle={`${formatEntityType(collection.type)}${collection.year ? ` • ${collection.year}` : ''}`}
+        ownedCount={stats.owned}
+        totalCount={stats.total}
+        actions={headerActions}
+        onClick={() => {
+          setSelectedItem(collection);
+          setSelectedItemIndex(null);
+        }}
+        clickable={true}
+        showProgress={!isRootView}
+      />
 
       {/* Items Grid/List */}
       {(filteredItems.favorites?.length > 0 || filteredItems.others?.length > 0) ? (
