@@ -110,22 +110,6 @@ function MyCollection({ onAddToCollection }) {
         )}
       </div>
 
-      {/* Stats */}
-      <div className="collection-stats">
-        <div className="stat">
-          <span className="stat-value">{collections.length}</span>
-          <span className="stat-label">Collections</span>
-        </div>
-        <div className="stat">
-          <span className="stat-value">{items.length}</span>
-          <span className="stat-label">Items Owned</span>
-        </div>
-        <div className="stat">
-          <span className="stat-value">{wishlists.length}</span>
-          <span className="stat-label">Wishlisted</span>
-        </div>
-      </div>
-
       {/* Collections and Items Grid */}
       <div className="collections-items-grid">
         {/* Custom Collections */}
