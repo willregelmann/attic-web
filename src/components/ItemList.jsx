@@ -22,7 +22,7 @@ import AddCollectionModal from './AddCollectionModal';
 import Toast from './Toast';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { formatEntityType, isCollectionType } from '../utils/formatters';
-import { ItemCardImage } from './ItemCard';
+import { ItemCard, ItemCardImage } from './ItemCard';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { Heart } from 'lucide-react';
 import './ItemList.css';
@@ -511,43 +511,34 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
           {[...filteredItems.favorites, ...filteredItems.others].map((item, index) => {
             const isOwned = userOwnership.has(item.id);
             const isFavorite = isRoot && userFavorites.has(item.id);
-            return (
-              <div
-                key={item.id}
-                className={`item-card ${isFavorite ? 'item-favorite' : ''} clickable`}
-                onClick={() => {
-                  if (isCollectionType(item.type)) {
-                    onSelectCollection(item);
-                  } else {
-                    setSelectedItem(item);
-                    setSelectedItemIndex(index);
-                  }
-                }}
-                title="Click to view details"
-              >
-                <ItemCardImage
+
+            // Handle collection navigation
+            if (isCollectionType(item.type)) {
+              return (
+                <ItemCard
+                  key={item.id}
                   item={item}
                   index={index}
+                  onClick={() => onSelectCollection(item)}
                   isOwned={isOwned}
                   isFavorite={isFavorite}
                 />
+              );
+            }
 
-                <div className="item-content">
-                  <h4 className="item-name">{item.name}</h4>
-                  <div className="item-meta">
-                    <span className="item-type">
-                      {formatEntityType(item.type)}
-                      {item.year && ` • ${item.year}`}
-                    </span>
-                  </div>
-
-                  <div className="item-completion-bar">
-                    <div className="completion-progress">
-                      <div className="completion-fill" style={{ width: isOwned ? '100%' : '0%' }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            // Handle item detail modal
+            return (
+              <ItemCard
+                key={item.id}
+                item={item}
+                index={index}
+                onClick={() => {
+                  setSelectedItem(item);
+                  setSelectedItemIndex(index);
+                }}
+                isOwned={isOwned}
+                isFavorite={isFavorite}
+              />
             );
           })}
         </div>
