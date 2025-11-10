@@ -1,0 +1,126 @@
+/* Collection Header */
+.collection-header-detail {
+  padding: 0 32px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.collection-header-detail.clickable {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.collection-header-detail.clickable:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.collection-image-large {
+  width: 100px;
+  height: 130px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collection-details {
+  flex: 1;
+}
+
+.collection-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.collection-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.collection-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 4px 0 0 0;
+  font-weight: 500;
+}
+
+.collection-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.progress-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.progress-bar-detail {
+  flex: 1;
+  max-width: 300px;
+  height: 8px;
+  background: var(--medium-gray);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill-detail {
+  height: 100%;
+  background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.completion-badge {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .collection-header-detail {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+    gap: 0;
+  }
+
+  .collection-image-large {
+    width: 100px;
+    height: 130px;
+    margin: 0 auto;
+  }
+
+  .collection-title-row {
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .collection-actions {
+    display: none !important;
+  }
+
+  .collection-title {
+    font-size: 24px;
+  }
+
+  .progress-section {
+    justify-content: center;
+  }
+
+  .progress-bar-detail {
+    flex: 1;
+    max-width: 200px;
+  }
+}
