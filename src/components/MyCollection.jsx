@@ -5,6 +5,7 @@ import { MY_COLLECTION_TREE, CREATE_USER_COLLECTION } from '../queries';
 import { CollectionCard } from './CollectionCard';
 import { ItemCard } from './ItemCard';
 import { CollectionHeader } from './CollectionHeader';
+import { ItemGrid } from './ItemGrid';
 import ItemDetail from './ItemDetail';
 import CircularMenu from './CircularMenu';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
@@ -161,6 +162,12 @@ function MyCollection({ onAddToCollection }) {
   const ownedCount = items.length;
   const totalCount = allItems.length;
 
+  // Combine collections and items for rendering
+  const displayItems = [...collections, ...allItems];
+
+  // Create ownership set for ItemGrid
+  const userOwnership = new Set(items.map(item => item.id));
+
   // Collection header action buttons
   const headerActions = (
     <>
@@ -195,49 +202,29 @@ function MyCollection({ onAddToCollection }) {
       />
 
       {/* Collections and Items Grid */}
-      <div className="collections-items-grid">
-        {/* Custom Collections */}
-        {collections.map((collection) => (
-          <CollectionCard
-            key={collection.id}
-            collection={collection}
-            onClick={() => handleCollectionClick(collection)}
-          />
-        ))}
-
-        {/* Owned Items */}
-        {items.map((item, index) => (
-          <ItemCard
-            key={item.user_item_id}
-            item={item}
-            index={index}
-            onClick={() => handleItemClick(item, index)}
-            isOwned={true}
-          />
-        ))}
-
-        {/* Wishlist Items */}
-        {wishlists.map((wishlist, index) => (
-          <ItemCard
-            key={wishlist.wishlist_id}
-            item={wishlist}
-            index={items.length + index}
-            onClick={() => handleItemClick(wishlist, items.length + index)}
-            isOwned={false}
-          />
-        ))}
-
-        {/* Empty State */}
-        {collections.length === 0 && allItems.length === 0 && (
-          <div className="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" width="64" height="64" stroke="currentColor" strokeWidth="2">
-              <path d="M3 7v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7M3 7l9-4 9 4M3 7h18"/>
-            </svg>
-            <h3>No items yet</h3>
-            <p>Start building your collection by browsing and adding items</p>
-          </div>
-        )}
-      </div>
+      {displayItems.length > 0 ? (
+        <ItemGrid
+          items={displayItems}
+          onItemClick={(item, index) => {
+            // Calculate actual index in allItems array (skip collections)
+            const itemIndex = index - collections.length;
+            handleItemClick(item, itemIndex >= 0 ? itemIndex : 0);
+          }}
+          onCollectionClick={handleCollectionClick}
+          userOwnership={userOwnership}
+          userFavorites={new Set()}
+          isRoot={false}
+          viewMode="grid"
+        />
+      ) : (
+        <div className="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" width="64" height="64" stroke="currentColor" strokeWidth="2">
+            <path d="M3 7v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7M3 7l9-4 9 4M3 7h18"/>
+          </svg>
+          <h3>No items yet</h3>
+          <p>Start building your collection by browsing and adding items</p>
+        </div>
+      )}
 
       {/* Item Detail Modal */}
       {selectedItem && (
