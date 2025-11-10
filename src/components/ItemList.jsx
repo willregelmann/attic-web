@@ -26,7 +26,7 @@ import { ItemCard, ItemCardImage } from './ItemCard';
 import { CollectionHeader } from './CollectionHeader';
 import { ItemGrid } from './ItemGrid';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
-import { Heart } from 'lucide-react';
+import { Heart, Pin } from 'lucide-react';
 import './ItemList.css';
 
 function ItemList({ collection, onBack, onSelectCollection, isRootView = false, onRefresh, navigationPath = [], onAddToCollection }) {
@@ -159,7 +159,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     try {
       if (isFavorited) {
         await unfavoriteCollectionMutation({
-          variables: { collectionId: collection.id }
+          variables: { entityId: collection.id }
         });
 
         setUserFavorites(prev => {
@@ -169,7 +169,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
         });
       } else {
         await favoriteCollectionMutation({
-          variables: { collectionId: collection.id }
+          variables: { entityId: collection.id }
         });
 
         setUserFavorites(prev => {
@@ -446,18 +446,32 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
         )}
       </button>
 
-      {/* Wishlist Button */}
+      {/* Pin Collection Button */}
       {isAuthenticated && (
-        <button
-          className="wishlist-button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsAddModalOpen(true);
-          }}
-          title="Add collection to wishlist"
-        >
-          <Heart size={20} />
-        </button>
+        <>
+          <button
+            className={`icon-button ${userFavorites.has(collection.id) ? 'active' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite();
+            }}
+            title={userFavorites.has(collection.id) ? "Unpin collection" : "Pin collection"}
+          >
+            <Pin size={20} fill={userFavorites.has(collection.id) ? 'currentColor' : 'none'} />
+          </button>
+
+          {/* Wishlist Button */}
+          <button
+            className="wishlist-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsAddModalOpen(true);
+            }}
+            title="Add collection to wishlist"
+          >
+            <Heart size={20} />
+          </button>
+        </>
       )}
     </>
   );
