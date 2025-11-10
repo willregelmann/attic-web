@@ -19,6 +19,7 @@ export const isCollectionType = (type) => {
   const normalizedType = type.toLowerCase();
   const collectionTypes = [
     'collection',
+    'custom_collection',
     'trading_card_game',
     'franchise',
     'video_game_series'

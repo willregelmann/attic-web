@@ -508,6 +508,7 @@ export const MY_COLLECTION_TREE = gql`
       collections {
         id
         name
+        type
         description
         custom_image
         progress {
@@ -546,6 +547,7 @@ export const MY_COLLECTION_TREE = gql`
         id
         name
         parent_collection_id
+        linked_dbot_collection_id
       }
     }
   }
@@ -613,6 +615,30 @@ export const MOVE_WISHLIST_ITEM = gql`
     ) {
       id
       parent_collection_id
+    }
+  }
+`;
+
+export const ADD_COLLECTION_TO_WISHLIST = gql`
+  mutation AddCollectionToWishlist(
+    $dbot_collection_id: ID!
+    $mode: WishlistMode!
+    $new_collection_name: String
+    $target_collection_id: ID
+  ) {
+    addCollectionToWishlist(
+      dbot_collection_id: $dbot_collection_id
+      mode: $mode
+      new_collection_name: $new_collection_name
+      target_collection_id: $target_collection_id
+    ) {
+      created_collection {
+        id
+        name
+      }
+      items_added
+      items_already_owned
+      items_skipped
     }
   }
 `;
