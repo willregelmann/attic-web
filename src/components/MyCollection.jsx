@@ -215,6 +215,7 @@ function MyCollection({ onAddToCollection }) {
           userFavorites={new Set()}
           isRoot={false}
           viewMode="grid"
+          showWishlistStyling={true}
         />
       ) : (
         <div className="empty-state">

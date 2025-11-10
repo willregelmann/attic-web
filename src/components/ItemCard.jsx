@@ -170,14 +170,15 @@ export function ItemCard({
   isOwned = false,
   isFavorite = false,
   showCompletion = false,
-  completionStats = null
+  completionStats = null,
+  showAsWishlist = false
 }) {
   // Calculate completion percentage
   const completionPercentage = completionStats?.completionPercentage ?? (isOwned ? 100 : 0);
 
   return (
     <div
-      className={`item-card ${isFavorite ? 'item-favorite' : ''} clickable`}
+      className={`item-card ${isFavorite ? 'item-favorite' : ''} ${showAsWishlist ? 'item-wishlist' : ''} clickable`}
       onClick={onClick}
       title="Click to view details"
     >

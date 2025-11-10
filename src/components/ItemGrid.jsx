@@ -12,6 +12,7 @@ import { isCollectionType } from '../utils/formatters';
  * @param {Set} userFavorites - Set of favorited collection IDs
  * @param {Boolean} isRoot - Whether this is root view (for favorites styling)
  * @param {String} viewMode - 'grid' or 'list'
+ * @param {Boolean} showWishlistStyling - Whether to dim non-owned items (MyCollection context)
  */
 export function ItemGrid({
   items = [],
@@ -20,7 +21,8 @@ export function ItemGrid({
   userOwnership = new Set(),
   userFavorites = new Set(),
   isRoot = false,
-  viewMode = 'grid'
+  viewMode = 'grid',
+  showWishlistStyling = false
 }) {
   const gridClass = viewMode === 'grid' ? 'items-grid' : 'items-list';
 
@@ -50,6 +52,7 @@ export function ItemGrid({
             onClick={() => onItemClick?.(item, index)}
             isOwned={isOwned}
             isFavorite={isFavorite}
+            showAsWishlist={showWishlistStyling && !isOwned}
           />
         );
       })}
