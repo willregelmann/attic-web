@@ -1,35 +1,78 @@
-import { useState } from 'react';
-import { useQuery } from '@apollo/client/react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@apollo/client/react';
 import { useNavigate } from 'react-router-dom';
-import { MY_COLLECTION_TREE } from '../queries';
+import { MY_COLLECTION_TREE, CREATE_USER_COLLECTION } from '../queries';
 import { CollectionCard } from './CollectionCard';
-import { ItemCardImage } from './ItemCard';
+import { ItemCard } from './ItemCard';
+import { CollectionHeader } from './CollectionHeader';
 import ItemDetail from './ItemDetail';
 import CircularMenu from './CircularMenu';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
+import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import './MyCollection.css';
 
 function MyCollection({ onAddToCollection }) {
   const navigate = useNavigate();
+  const { setBreadcrumbItems, setLoading: setBreadcrumbsLoading } = useBreadcrumbs();
   const [currentParentId, setCurrentParentId] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
+  const [showCreateCollectionPrompt, setShowCreateCollectionPrompt] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [newCollectionDescription, setNewCollectionDescription] = useState('');
+  const [navigationPath, setNavigationPath] = useState([]); // Track navigation breadcrumb trail
 
   const { loading, error, data, refetch } = useQuery(MY_COLLECTION_TREE, {
     variables: { parentId: currentParentId },
     fetchPolicy: 'cache-and-network'
   });
 
-  const handleCollectionClick = (collectionId) => {
-    setCurrentParentId(collectionId);
+  const [createCollection] = useMutation(CREATE_USER_COLLECTION, {
+    onCompleted: () => {
+      refetch();
+      setShowCreateCollectionPrompt(false);
+      setNewCollectionName('');
+      setNewCollectionDescription('');
+    },
+    onError: (error) => {
+      console.error('Error creating collection:', error);
+      if (error.message.includes('Unauthenticated') || error.networkError?.statusCode === 401) {
+        alert('You must be logged in to create collections. Please log in and try again.');
+      } else if (error.networkError?.statusCode === 500) {
+        alert('Server error. Please try logging out and logging back in, then try again.');
+      } else {
+        alert('Failed to create collection: ' + error.message);
+      }
+    }
+  });
+
+  const handleCollectionClick = (collection) => {
+    setCurrentParentId(collection.id);
+    // Add to navigation path
+    setNavigationPath(prev => [...prev, { id: collection.id, name: collection.name }]);
   };
 
-  const handleBackClick = () => {
-    if (data?.myCollectionTree?.current_collection?.parent_collection_id) {
-      setCurrentParentId(data.myCollectionTree.current_collection.parent_collection_id);
-    } else {
-      setCurrentParentId(null);
+  const handleCreateCollection = async () => {
+    if (!newCollectionName.trim()) {
+      alert('Please enter a collection name');
+      return;
     }
+
+    const variables = {
+      name: newCollectionName.trim(),
+    };
+
+    // Only include description if provided
+    if (newCollectionDescription.trim()) {
+      variables.description = newCollectionDescription.trim();
+    }
+
+    // Only include parentId if we're in a subcollection
+    if (currentParentId) {
+      variables.parentId = currentParentId;
+    }
+
+    await createCollection({ variables });
   };
 
   const handleItemClick = (item, index) => {
@@ -58,6 +101,39 @@ function MyCollection({ onAddToCollection }) {
     setSelectedItem(allItems[newIndex]);
   };
 
+  // Update breadcrumbs in context
+  useEffect(() => {
+    const items = [
+      {
+        label: 'My Collection',
+        onClick: () => {
+          setCurrentParentId(null);
+          setNavigationPath([]);
+        }
+      }
+    ];
+
+    // Add navigation path items
+    navigationPath.forEach((pathItem, index) => {
+      items.push({
+        label: pathItem.name,
+        onClick: () => {
+          // Navigate to this collection
+          setCurrentParentId(pathItem.id);
+          // Trim navigation path to this point
+          setNavigationPath(navigationPath.slice(0, index + 1));
+        }
+      });
+    });
+
+    setBreadcrumbItems(items);
+  }, [navigationPath, setBreadcrumbItems]);
+
+  // Update breadcrumbs loading state
+  useEffect(() => {
+    setBreadcrumbsLoading(loading);
+  }, [loading, setBreadcrumbsLoading]);
+
   if (loading) {
     return (
       <div className="my-collection">
@@ -81,34 +157,42 @@ function MyCollection({ onAddToCollection }) {
   const { collections = [], items = [], wishlists = [], current_collection } = data?.myCollectionTree || {};
   const allItems = [...items, ...wishlists];
 
+  // Calculate progress
+  const ownedCount = items.length;
+  const totalCount = allItems.length;
+
+  // Collection header action buttons
+  const headerActions = (
+    <>
+      <button className="create-collection-button" onClick={() => setShowCreateCollectionPrompt(true)}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 7v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7M3 7l9-4 9 4M3 7h18" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M12 11v6m-3-3h6" strokeLinecap="round"/>
+        </svg>
+        Create Collection
+      </button>
+      {onAddToCollection && (
+        <button className="add-item-button" onClick={onAddToCollection}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 5v14m-7-7h14" strokeLinecap="round"/>
+          </svg>
+          Add Item
+        </button>
+      )}
+    </>
+  );
+
   return (
     <div className="my-collection">
-      {/* Header with breadcrumbs */}
-      <div className="my-collection-header">
-        <div className="my-collection-breadcrumbs">
-          <button
-            className={!current_collection ? 'active' : ''}
-            onClick={() => setCurrentParentId(null)}
-          >
-            My Collection
-          </button>
-          {current_collection && (
-            <>
-              <span className="breadcrumb-separator">/</span>
-              <span className="active">{current_collection.name}</span>
-            </>
-          )}
-        </div>
-
-        {current_collection && (
-          <button className="back-button" onClick={handleBackClick}>
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            Back
-          </button>
-        )}
-      </div>
+      {/* Collection Header */}
+      <CollectionHeader
+        collection={current_collection || { name: 'My Collection' }}
+        subtitle={current_collection ? 'Custom Collection' : 'Your personal collection of items'}
+        ownedCount={ownedCount}
+        totalCount={totalCount}
+        actions={headerActions}
+        showProgress={totalCount > 0}
+      />
 
       {/* Collections and Items Grid */}
       <div className="collections-items-grid">
@@ -117,40 +201,30 @@ function MyCollection({ onAddToCollection }) {
           <CollectionCard
             key={collection.id}
             collection={collection}
-            onClick={() => handleCollectionClick(collection.id)}
+            onClick={() => handleCollectionClick(collection)}
           />
         ))}
 
         {/* Owned Items */}
         {items.map((item, index) => (
-          <div
+          <ItemCard
             key={item.user_item_id}
-            className="item-card owned"
+            item={item}
+            index={index}
             onClick={() => handleItemClick(item, index)}
-          >
-            <ItemCardImage item={item} />
-            <div className="item-card-content">
-              <h4 className="item-card-name">{item.name}</h4>
-              {item.year && <p className="item-card-year">{item.year}</p>}
-              <div className="ownership-badge owned-badge">Owned</div>
-            </div>
-          </div>
+            isOwned={true}
+          />
         ))}
 
         {/* Wishlist Items */}
         {wishlists.map((wishlist, index) => (
-          <div
+          <ItemCard
             key={wishlist.wishlist_id}
-            className="item-card wishlist"
+            item={wishlist}
+            index={items.length + index}
             onClick={() => handleItemClick(wishlist, items.length + index)}
-          >
-            <ItemCardImage item={wishlist} />
-            <div className="item-card-content">
-              <h4 className="item-card-name">{wishlist.name}</h4>
-              {wishlist.year && <p className="item-card-year">{wishlist.year}</p>}
-              <div className="ownership-badge wishlist-badge">Wishlist</div>
-            </div>
-          </div>
+            isOwned={false}
+          />
         ))}
 
         {/* Empty State */}
@@ -161,9 +235,6 @@ function MyCollection({ onAddToCollection }) {
             </svg>
             <h3>No items yet</h3>
             <p>Start building your collection by browsing and adding items</p>
-            <button className="browse-button" onClick={() => navigate('/browse')}>
-              Browse Collections
-            </button>
           </div>
         )}
       </div>
@@ -183,6 +254,64 @@ function MyCollection({ onAddToCollection }) {
       {/* Circular Menu */}
       {onAddToCollection && (
         <CircularMenu onAddToCollection={onAddToCollection} />
+      )}
+
+      {/* Create Collection Modal */}
+      {showCreateCollectionPrompt && (
+        <div className="modal-overlay" onClick={() => setShowCreateCollectionPrompt(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Create New Collection</h2>
+            <p className="modal-description">
+              {currentParentId
+                ? `This will create a new collection under "${data?.myCollectionTree?.current_collection?.name}"`
+                : 'This will create a new collection at the root level'}
+            </p>
+
+            <div className="form-group">
+              <label htmlFor="collection-name">Collection Name *</label>
+              <input
+                id="collection-name"
+                type="text"
+                value={newCollectionName}
+                onChange={(e) => setNewCollectionName(e.target.value)}
+                placeholder="e.g., Pokémon Cards, Action Figures"
+                autoFocus
+                onKeyPress={(e) => e.key === 'Enter' && handleCreateCollection()}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="collection-description">Description (optional)</label>
+              <textarea
+                id="collection-description"
+                value={newCollectionDescription}
+                onChange={(e) => setNewCollectionDescription(e.target.value)}
+                placeholder="Add a description for your collection"
+                rows={3}
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="cancel-button"
+                onClick={() => {
+                  setShowCreateCollectionPrompt(false);
+                  setNewCollectionName('');
+                  setNewCollectionDescription('');
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="create-button"
+                onClick={handleCreateCollection}
+                disabled={!newCollectionName.trim()}
+              >
+                Create Collection
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
