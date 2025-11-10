@@ -14,7 +14,7 @@
   gap: 1rem;
 }
 
-.breadcrumbs {
+.my-collection-breadcrumbs {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -22,10 +22,9 @@
   font-size: 0.95rem;
   color: #666;
   flex: 1;
-  width: 100%;
 }
 
-.breadcrumbs button {
+.my-collection-breadcrumbs button {
   background: none;
   border: none;
   padding: 0.5rem 1rem;
@@ -36,13 +35,13 @@
   transition: all 0.2s;
 }
 
-.breadcrumbs button:hover {
+.my-collection-breadcrumbs button:hover {
   background-color: #f0f0f0;
   color: #0056b3;
 }
 
-.breadcrumbs button.active,
-.breadcrumbs span.active {
+.my-collection-breadcrumbs button.active,
+.my-collection-breadcrumbs span.active {
   color: #333;
   font-weight: 600;
 }
@@ -270,7 +269,7 @@
     font-size: 1.75rem;
   }
 
-  .breadcrumbs {
+  .my-collection-breadcrumbs {
     flex-wrap: wrap;
   }
 }

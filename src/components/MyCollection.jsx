@@ -85,7 +85,7 @@ function MyCollection({ onAddToCollection }) {
     <div className="my-collection">
       {/* Header with breadcrumbs */}
       <div className="my-collection-header">
-        <div className="breadcrumbs">
+        <div className="my-collection-breadcrumbs">
           <button
             className={!current_collection ? 'active' : ''}
             onClick={() => setCurrentParentId(null)}
