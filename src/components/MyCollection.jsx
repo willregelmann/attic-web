@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
 import { useNavigate } from 'react-router-dom';
-import { MY_COLLECTION_TREE, CREATE_USER_COLLECTION } from '../queries';
+import { MY_COLLECTION_TREE, CREATE_USER_COLLECTION, GET_DATABASE_OF_THINGS_ENTITY } from '../queries';
 import { CollectionCard } from './CollectionCard';
 import { ItemCard } from './ItemCard';
 import { CollectionHeader } from './CollectionHeader';
@@ -26,6 +26,14 @@ function MyCollection({ onAddToCollection }) {
   const { loading, error, data, refetch } = useQuery(MY_COLLECTION_TREE, {
     variables: { parentId: currentParentId },
     fetchPolicy: 'cache-and-network'
+  });
+
+  // Fetch DBoT collection metadata for linked collections
+  const linkedDbotCollectionId = data?.myCollectionTree?.current_collection?.linked_dbot_collection_id;
+  const { data: dbotCollectionData } = useQuery(GET_DATABASE_OF_THINGS_ENTITY, {
+    variables: { id: linkedDbotCollectionId },
+    skip: !linkedDbotCollectionId,
+    fetchPolicy: 'cache-first'
   });
 
   const [createCollection] = useMutation(CREATE_USER_COLLECTION, {
@@ -158,6 +166,11 @@ function MyCollection({ onAddToCollection }) {
   const { collections = [], items = [], wishlists = [], current_collection } = data?.myCollectionTree || {};
   const allItems = [...items, ...wishlists];
 
+  // For linked collections, use DBoT collection data for display
+  const isLinkedCollection = current_collection?.linked_dbot_collection_id;
+  const dbotCollection = dbotCollectionData?.databaseOfThingsEntity;
+  const displayCollection = isLinkedCollection && dbotCollection ? dbotCollection : current_collection;
+
   // Calculate progress
   const ownedCount = items.length;
   const totalCount = allItems.length;
@@ -193,8 +206,14 @@ function MyCollection({ onAddToCollection }) {
     <div className="my-collection">
       {/* Collection Header */}
       <CollectionHeader
-        collection={current_collection || { name: 'My Collection' }}
-        subtitle={current_collection ? 'Custom Collection' : 'Your personal collection of items'}
+        collection={displayCollection || { name: 'My Collection' }}
+        subtitle={
+          displayCollection
+            ? isLinkedCollection
+              ? `${displayCollection.type?.replace(/_/g, ' ').toUpperCase()}${displayCollection.year ? ` • ${displayCollection.year}` : ''}`
+              : 'Custom Collection'
+            : 'Your personal collection of items'
+        }
         ownedCount={ownedCount}
         totalCount={totalCount}
         actions={headerActions}
