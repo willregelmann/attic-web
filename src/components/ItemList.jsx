@@ -18,10 +18,13 @@ import {
 import ItemDetail from './ItemDetail';
 import CollectionFilterPanel from './CollectionFilterPanel';
 import CircularMenu from './CircularMenu';
+import AddCollectionModal from './AddCollectionModal';
+import Toast from './Toast';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { formatEntityType, isCollectionType } from '../utils/formatters';
 import { ItemCardImage } from './ItemCard';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
+import { Heart } from 'lucide-react';
 import './ItemList.css';
 
 function ItemList({ collection, onBack, onSelectCollection, isRootView = false, onRefresh, navigationPath = [], onAddToCollection }) {
@@ -37,6 +40,8 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
   const [userFavorites, setUserFavorites] = useState(new Set());
   const [showCollectionFilters, setShowCollectionFilters] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
 
   // GraphQL queries and mutations
   const [fetchCollectionItems] = useLazyQuery(GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, {
@@ -72,16 +77,12 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
   // Use different queries for root vs nested collections
   const isRoot = collection.id === 'root';
-  const isMyCollection = collection.id === 'my-collection';
 
   // Determine which query to use
   let query;
   let variables = {};
 
-  if (isMyCollection) {
-    query = GET_MY_COLLECTION;
-    variables = {};
-  } else if (isRoot) {
+  if (isRoot) {
     // For root: use favorites for authenticated users, all collections for others
     query = isAuthenticated ? GET_MY_FAVORITE_COLLECTIONS : GET_DATABASE_OF_THINGS_COLLECTIONS;
     variables = { first: 50 };
@@ -182,11 +183,32 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     }
   };
 
+  // Handle successful addition from AddCollectionModal
+  const handleAddCollectionSuccess = (result) => {
+    const { items_added, items_already_owned, created_collection } = result;
+
+    // Build toast message based on result
+    let message;
+    if (created_collection) {
+      // Track mode - new collection created
+      message = `Created "${created_collection.name}" with ${items_added} wishlist items`;
+    } else if (items_already_owned > 0 && items_added === 0) {
+      // All items already owned
+      message = `All ${items_already_owned} items already owned`;
+    } else if (items_already_owned > 0) {
+      // Partial - some already owned
+      message = `Wishlisted ${items_added} items, ${items_already_owned} already owned`;
+    } else {
+      // All items added
+      message = `Wishlisted ${items_added} items`;
+    }
+
+    setToastMessage({ text: message, type: 'success' });
+    setIsAddModalOpen(false);
+  };
+
   // Get items from the appropriate query result
   const items = useMemo(() => {
-    if (isMyCollection) {
-      return data?.myCollection || [];
-    }
     if (isRoot) {
       // For authenticated users, extract collections from myFavoriteCollections
       if (isAuthenticated && data?.myFavoriteCollections) {
@@ -196,7 +218,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
       return data?.databaseOfThingsCollections || [];
     }
     return data?.databaseOfThingsCollectionItems || [];
-  }, [data, isRoot, isMyCollection, isAuthenticated]);
+  }, [data, isRoot, isAuthenticated]);
 
   // Separate favorites from other items for root view
   const { favoriteItems, otherItems } = useMemo(() => {
@@ -404,8 +426,8 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
   return (
     <div className="item-list">
-      {/* Collection Header - hidden for My Collection */}
-      {!isMyCollection && (
+      {/* Collection Header */}
+      {(
         <div
           className="collection-header-detail clickable"
           onClick={() => {
@@ -455,20 +477,17 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
                     )}
                   </button>
 
-                  {/* Favorite Button */}
+                  {/* Wishlist Button */}
                   {isAuthenticated && (
                     <button
-                      className={`favorite-button ${userFavorites.has(collection.id) ? 'active' : ''}`}
+                      className="wishlist-button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleFavorite();
+                        setIsAddModalOpen(true);
                       }}
-                      title={userFavorites.has(collection.id) ? "Remove from favorites" : "Add to favorites"}
+                      title="Add collection to wishlist"
                     >
-                      <svg viewBox="0 0 24 24" fill={userFavorites.has(collection.id) ? "currentColor" : "none"} width="24" height="24">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
+                      <Heart size={20} />
                     </button>
                   )}
                 </div>
@@ -624,6 +643,28 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
           }}
           onFilter={() => setShowCollectionFilters(true)}
           showFilter={true}
+        />
+      )}
+
+      {/* AddCollectionModal for adding collection to wishlist */}
+      {!isRootView && collection && (
+        <AddCollectionModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          dbotCollection={{
+            id: collection.id,
+            name: collection.name
+          }}
+          onSuccess={handleAddCollectionSuccess}
+        />
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <Toast
+          message={toastMessage.text}
+          type={toastMessage.type}
+          onClose={() => setToastMessage(null)}
         />
       )}
     </div>
