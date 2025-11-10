@@ -291,23 +291,21 @@ export const GOOGLE_LOGIN = gql`
 `;
 
 export const FAVORITE_COLLECTION = gql`
-  mutation FavoriteCollection($collectionId: ID!) {
-    favoriteCollection(collection_id: $collectionId) {
+  mutation FavoriteCollection($entityId: ID!) {
+    favoriteCollection(entity_id: $entityId) {
       id
-      favoriteCollections {
-        id
-      }
+      name
+      email
     }
   }
 `;
 
 export const UNFAVORITE_COLLECTION = gql`
-  mutation UnfavoriteCollection($collectionId: ID!) {
-    unfavoriteCollection(collection_id: $collectionId) {
+  mutation UnfavoriteCollection($entityId: ID!) {
+    unfavoriteCollection(entity_id: $entityId) {
       id
-      favoriteCollections {
-        id
-      }
+      name
+      email
     }
   }
 `;
