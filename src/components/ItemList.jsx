@@ -24,6 +24,7 @@ import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { formatEntityType, isCollectionType } from '../utils/formatters';
 import { ItemCard, ItemCardImage } from './ItemCard';
 import { CollectionHeader } from './CollectionHeader';
+import { ItemGrid } from './ItemGrid';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { Heart } from 'lucide-react';
 import './ItemList.css';
@@ -480,41 +481,18 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
       {/* Items Grid/List */}
       {(filteredItems.favorites?.length > 0 || filteredItems.others?.length > 0) ? (
-        <div className={viewMode === 'grid' ? 'items-grid' : 'items-list'}>
-          {[...filteredItems.favorites, ...filteredItems.others].map((item, index) => {
-            const isOwned = userOwnership.has(item.id);
-            const isFavorite = isRoot && userFavorites.has(item.id);
-
-            // Handle collection navigation
-            if (isCollectionType(item.type)) {
-              return (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  onClick={() => onSelectCollection(item)}
-                  isOwned={isOwned}
-                  isFavorite={isFavorite}
-                />
-              );
-            }
-
-            // Handle item detail modal
-            return (
-              <ItemCard
-                key={item.id}
-                item={item}
-                index={index}
-                onClick={() => {
-                  setSelectedItem(item);
-                  setSelectedItemIndex(index);
-                }}
-                isOwned={isOwned}
-                isFavorite={isFavorite}
-              />
-            );
-          })}
-        </div>
+        <ItemGrid
+          items={[...filteredItems.favorites, ...filteredItems.others]}
+          onItemClick={(item, index) => {
+            setSelectedItem(item);
+            setSelectedItemIndex(index);
+          }}
+          onCollectionClick={onSelectCollection}
+          userOwnership={userOwnership}
+          userFavorites={userFavorites}
+          isRoot={isRoot}
+          viewMode={viewMode}
+        />
       ) : (
         <div className="no-items">
           {searchTerm || filter !== 'all' ? (
