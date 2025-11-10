@@ -194,7 +194,6 @@ export function ItemCard({
         <div className="item-meta">
           <span className="item-type">
             {formatEntityType(item.type)}
-            {item.year && ` • ${item.year}`}
           </span>
         </div>
 
