@@ -25,7 +25,7 @@
 
 .recently-viewed-scroll {
   display: flex;
-  gap: 1rem;
+  gap: 1em;
   overflow-x: auto;
   padding-bottom: 1rem;
   scroll-behavior: smooth;
@@ -82,7 +82,7 @@
 .collections-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1rem;
+  gap: 1em;
 }
 
 /* Loading and Error States */
@@ -147,6 +147,6 @@
 
   .collections-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 0.75rem;
+    gap: 1em;
   }
 }
