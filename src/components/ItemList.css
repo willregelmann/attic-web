@@ -91,6 +91,25 @@
 
 /* ItemList-specific styles (CollectionHeader styles moved to CollectionHeader.css) */
 
+/* Override filter button styles for light backgrounds in ItemList */
+.item-list .filter-toggle-button {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  color: var(--text-secondary);
+}
+
+.item-list .filter-toggle-button:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+}
+
+.item-list .filter-toggle-button.active {
+  background: var(--yellow-accent);
+  border-color: var(--yellow-accent);
+  color: #2C4B7B;
+}
+
 .admin-button {
   background: transparent;
   border: none;

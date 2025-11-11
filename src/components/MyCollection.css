@@ -44,21 +44,41 @@
 }
 
 .create-collection-button {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   border-radius: 8px;
   cursor: pointer;
   padding: 0.5rem;
   transition: all 0.2s;
-  color: white;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .create-collection-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+}
+
+/* Override filter button styles for light backgrounds in MyCollection headers */
+.header-actions .filter-toggle-button {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  color: var(--text-secondary);
+}
+
+.header-actions .filter-toggle-button:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+}
+
+.header-actions .filter-toggle-button.active {
+  background: var(--yellow-accent);
+  border-color: var(--yellow-accent);
+  color: #2C4B7B;
 }
 
 .add-item-button {
