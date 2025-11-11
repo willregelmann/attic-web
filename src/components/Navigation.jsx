@@ -1,26 +1,22 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { useFilters } from '../contexts/FilterContext';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { useLazyQuery } from '@apollo/client/react';
 import { SEMANTIC_SEARCH_DATABASE_OF_THINGS } from '../queries';
 import { isCollectionType, formatEntityType } from '../utils/formatters';
-import { filterEntities } from '../utils/filterUtils';
 import Breadcrumbs from './Breadcrumbs';
 import ItemDetail from './ItemDetail';
-import FilterModal from './FilterModal';
 import './Navigation.css';
 
-function Navigation({ onLogin, onSignup, onAddToCollection }) {
-  const { user, logout } = useAuth();
+function Navigation({ onLogin, onSignup }) {
+  const { user, logout, login } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const { filters, hasActiveFilters } = useFilters();
   const { breadcrumbItems, loading: breadcrumbsLoading } = useBreadcrumbs();
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
-  const [showFilterModal, setShowFilterModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -38,12 +34,6 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
       }
     }
   );
-
-  // Apply filters to search results
-  const filteredSearchResults = useMemo(() => {
-    if (!searchData?.databaseOfThingsSemanticSearch) return [];
-    return filterEntities(searchData.databaseOfThingsSemanticSearch, filters);
-  }, [searchData, filters]);
 
   // Debounce search input
   useEffect(() => {
@@ -78,16 +68,22 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
     navigate('/');
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      await login(credentialResponse.credential);
+      setShowMenu(false);
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  };
+
+  const handleGoogleError = () => {
+    console.error('Google login failed');
+  };
+
   const handleLogout = () => {
     logout();
     setShowMenu(false);
-  };
-
-  const handleAddToCollection = () => {
-    setShowMenu(false);
-    if (onAddToCollection) {
-      onAddToCollection();
-    }
   };
 
   const handleSearch = (e) => {
@@ -169,15 +165,15 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
               )}
               {!searchLoading && searchData?.databaseOfThingsSemanticSearch && (
                 <>
-                  {filteredSearchResults.length === 0 ? (
+                  {searchData.databaseOfThingsSemanticSearch.length === 0 ? (
                     <div className="search-empty">No results found</div>
                   ) : (
                     <>
                       <div className="search-results-header">
-                        Found {filteredSearchResults.length} result{filteredSearchResults.length !== 1 ? 's' : ''}
+                        Found {searchData.databaseOfThingsSemanticSearch.length} result{searchData.databaseOfThingsSemanticSearch.length !== 1 ? 's' : ''}
                       </div>
                       <div className="search-results-list" role="group">
-                        {filteredSearchResults.map(item => (
+                        {searchData.databaseOfThingsSemanticSearch.map(item => (
                           <button
                             key={item.id}
                             className="search-result-item"
@@ -223,19 +219,6 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
         </div>
 
         <div className="nav-actions">
-          {/* Filter Toggle */}
-          <button
-            className={`filter-toggle-button ${hasActiveFilters ? 'active' : ''}`}
-            onClick={() => setShowFilterModal(true)}
-            aria-label="Filters"
-            title="Filters"
-          >
-            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-              <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-            {hasActiveFilters && <span className="filter-badge"></span>}
-          </button>
-
           {/* Dark Mode Toggle */}
           <button
             className="theme-toggle-button"
@@ -246,8 +229,8 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
             {isDarkMode ? (
               // Sun icon for light mode
               <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2"/>
-                <path d="M12 1v6m0 6v6M23 12h-6m-6 0H1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/>
+                <path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
             ) : (
               // Moon icon for dark mode
@@ -259,17 +242,35 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
 
           <div className="nav-menu-container" ref={menuRef}>
             <button
-              className="nav-menu-button"
+              className="nav-user-button"
               onClick={() => setShowMenu(!showMenu)}
-              aria-label="Menu"
+              aria-label="User menu"
             >
-              {showMenu ? (
-                <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
+              {user ? (
+                <>
+                  {user.picture ? (
+                    <img
+                      src={user.picture}
+                      alt={user.name}
+                      className="nav-user-avatar"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : null}
+                  <div
+                    className="nav-user-avatar-fallback"
+                    style={{ display: user.picture ? 'none' : 'flex' }}
+                  >
+                    {(user.given_name || user.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                </>
               ) : (
                 <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
-                  <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               )}
             </button>
@@ -277,112 +278,25 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
             {showMenu && (
               <div className="nav-dropdown-menu" role="menu" aria-label="User menu">
                 {user ? (
-                  <>
-                    <div className="dropdown-header" role="presentation">
-                      <div className="dropdown-user-info">
-                        {user.picture ? (
-                          <img
-                            src={user.picture}
-                            alt={user.name}
-                            className="dropdown-avatar"
-                            loading="lazy"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'flex';
-                            }}
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : null}
-                        <div
-                          className="dropdown-avatar-fallback"
-                          style={{ display: user.picture ? 'none' : 'flex' }}
-                        >
-                          {(user.given_name || user.name || 'U').charAt(0).toUpperCase()}
-                        </div>
-                        <div className="dropdown-user-text">
-                          <div className="dropdown-username">{user.given_name || user.name}</div>
-                          <div className="dropdown-email">{user.email}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="dropdown-divider" role="separator"></div>
-                    <button
-                      className="dropdown-item"
-                      onClick={() => {
-                        navigate('/my-collection');
-                        setShowMenu(false);
-                      }}
-                      role="menuitem"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                        <path d="M20 21v-2a4 4 0 00-3-3.87M15 3a4 4 0 010 7.75M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      My Collection
-                    </button>
-                    <button
-                      className="dropdown-item"
-                      onClick={() => {
-                        handleAddToCollection();
-                      }}
-                      role="menuitem"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                        <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                      Add to My Collection
-                    </button>
-                    <button
-                      className="dropdown-item"
-                      onClick={() => {
-                        navigate('/wishlist');
-                        setShowMenu(false);
-                      }}
-                      role="menuitem"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" stroke="currentColor" strokeWidth="2" fill="none"/>
-                      </svg>
-                      My Wishlist
-                    </button>
-                    <button
-                      className="dropdown-item"
-                      onClick={() => {
-                        navigate('/profile');
-                        setShowMenu(false);
-                      }}
-                      role="menuitem"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      Profile & API Tokens
-                    </button>
-                    <div className="dropdown-divider" role="separator"></div>
-                    <button className="dropdown-item" onClick={handleLogout} role="menuitem">
-                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
-                              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      Log Out
-                    </button>
-                  </>
+                  <button className="dropdown-item" onClick={handleLogout} role="menuitem">
+                    <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Log Out
+                  </button>
                 ) : (
-                  <>
-                    <button className="dropdown-item dropdown-item-primary" onClick={onLogin} role="menuitem">
-                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18" aria-hidden="true">
-                        <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"
-                              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      Log In
-                    </button>
-                    <button className="dropdown-item" onClick={onSignup} role="menuitem">
-                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18" aria-hidden="true">
-                        <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M8 11a4 4 0 100-8 4 4 0 000 8zM20 8v6M23 11h-6"
-                              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      Sign Up
-                    </button>
-                  </>
+                  <div className="google-login-dropdown">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={handleGoogleError}
+                      theme="outline"
+                      size="large"
+                      text="signin_with"
+                      shape="rectangular"
+                      width="200"
+                    />
+                  </div>
                 )}
               </div>
             )}
@@ -400,7 +314,6 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
         item={selectedItem}
         isOwned={false}
         onToggleOwnership={() => {}}
-        onAddToCollection={onAddToCollection}
         onNavigateToCollection={(collection) => {
           navigate(`/collection/${collection.id}`);
           setSelectedItem(null);
@@ -409,11 +322,6 @@ function Navigation({ onLogin, onSignup, onAddToCollection }) {
       />
     )}
 
-    {/* Filter Modal */}
-    <FilterModal
-      isOpen={showFilterModal}
-      onClose={() => setShowFilterModal(false)}
-    />
     </>
   );
 }

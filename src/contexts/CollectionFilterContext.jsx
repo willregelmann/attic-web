@@ -160,8 +160,9 @@ export function CollectionFilterProvider({ children }) {
    * @param {Array} items - Items to filter
    * @param {Object} filters - Filters to apply
    * @param {Array} parentCollections - Parent collections data (for parent_collections filter)
+   * @param {Set} userOwnership - Set of owned item IDs (for ownership filter)
    */
-  const applyFilters = useCallback((items, filters, parentCollections = []) => {
+  const applyFilters = useCallback((items, filters, parentCollections = [], userOwnership = null) => {
     if (!filters || Object.keys(filters).length === 0) {
       return items;
     }
@@ -214,6 +215,17 @@ export function CollectionFilterProvider({ children }) {
           const itemParents = itemToParentsMap[item.id] || [];
           // Item matches if it belongs to ANY of the selected parent collections (OR logic)
           return itemParents.some(parentId => allowedValues.includes(parentId));
+        }
+
+        // Special handling for ownership filter
+        if (field === 'ownership' && userOwnership) {
+          const isOwned = userOwnership.has(item.id);
+          // Check if item's ownership status matches any of the selected values
+          return allowedValues.some(value => {
+            if (value === 'owned') return isOwned;
+            if (value === 'missing') return !isOwned;
+            return false;
+          });
         }
 
         // Get item value for this field

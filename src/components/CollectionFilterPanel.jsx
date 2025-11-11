@@ -2,11 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GET_COLLECTION_FILTER_FIELDS, GET_COLLECTION_PARENT_COLLECTIONS } from '../queries';
 import { useCollectionFilter } from '../contexts/CollectionFilterContext';
+import { useAuth } from '../contexts/AuthContext';
 import { countFilterValues, formatFilterValue, countParentCollections } from '../utils/collectionFilterUtils';
 import { FilterFieldsSkeleton } from './SkeletonLoader';
 import './CollectionFilterPanel.css';
 
-function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOpen, onClose }) {
+function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOpen, onClose, userOwnership }) {
+  const { isAuthenticated } = useAuth();
   const {
     getFiltersForCollection,
     updateCollectionFilter,
@@ -42,36 +44,55 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
     }
   );
 
-  // Get filterable fields from server response, plus parent collections
+  // Get filterable fields from server response, plus parent collections and ownership
   const filterableFields = useMemo(() => {
     const metadataFields = filterFieldsData?.databaseOfThingsCollectionFilterFields || [];
     const parentCollections = parentCollectionsData?.databaseOfThingsCollectionParentCollections || [];
+    const specialFields = [];
+
+    // Add ownership filter for authenticated users
+    if (isAuthenticated && userOwnership) {
+      specialFields.push({
+        field: 'ownership',
+        label: 'Ownership',
+        type: 'multiselect',
+        values: ['owned', 'missing'],
+        priority: 110, // Highest priority - appears first
+        isOwnershipFilter: true
+      });
+    }
 
     // If there are parent collections, add them as a special filter field
     if (parentCollections.length > 0) {
-      const parentCollectionField = {
+      specialFields.push({
         field: 'parent_collections',
         label: 'Collection(s)',
         type: 'multiselect',
         values: parentCollections.map(c => c.id), // Use IDs as values
         priority: 100, // High priority - appears at top
         parentCollectionsData: parentCollections // Store full collection data for lookup
-      };
-
-      // Merge and sort by priority (higher priority first)
-      return [parentCollectionField, ...metadataFields].sort((a, b) =>
-        (b.priority || 0) - (a.priority || 0)
-      );
+      });
     }
 
-    return metadataFields;
-  }, [filterFieldsData, parentCollectionsData]);
+    // Merge and sort by priority (higher priority first)
+    return [...specialFields, ...metadataFields].sort((a, b) =>
+      (b.priority || 0) - (a.priority || 0)
+    );
+  }, [filterFieldsData, parentCollectionsData, isAuthenticated, userOwnership]);
 
   // Pre-compute value counts for all fields
   const allValueCounts = useMemo(() => {
     const counts = {};
     filterableFields.forEach(fieldInfo => {
-      if (fieldInfo.field === 'parent_collections') {
+      if (fieldInfo.field === 'ownership') {
+        // Special handling for ownership filter
+        const ownedCount = items.filter(item => userOwnership?.has(item.id)).length;
+        const missingCount = items.length - ownedCount;
+        counts[fieldInfo.field] = {
+          'owned': ownedCount,
+          'missing': missingCount
+        };
+      } else if (fieldInfo.field === 'parent_collections') {
         // Special handling for parent collections
         counts[fieldInfo.field] = countParentCollections(items, fieldInfo.parentCollectionsData);
       } else {
@@ -79,7 +100,7 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
       }
     });
     return counts;
-  }, [items, filterableFields]);
+  }, [items, filterableFields, userOwnership]);
 
   // Auto-expand fields that have active filters
   useEffect(() => {
@@ -242,9 +263,15 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
                           const isSelected = selectedValues.includes(value);
                           const count = valueCounts[value] || 0;
 
-                          // For parent_collections, display collection name instead of ID
+                          // Special display formatting
                           let displayValue = formatFilterValue(value);
-                          if (field === 'parent_collections' && fieldInfo.parentCollectionsData) {
+
+                          // For ownership filter, show friendly labels
+                          if (field === 'ownership') {
+                            displayValue = value === 'owned' ? 'Owned' : 'Missing';
+                          }
+                          // For parent_collections, display collection name instead of ID
+                          else if (field === 'parent_collections' && fieldInfo.parentCollectionsData) {
                             const collection = fieldInfo.parentCollectionsData.find(c => c.id === value);
                             displayValue = collection?.name || value;
                           }

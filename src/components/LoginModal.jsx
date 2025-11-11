@@ -30,37 +30,15 @@ function LoginModal({ isOpen, onClose }) {
         </button>
 
         <div className="modal-header">
-          <h2 id="login-modal-title">Welcome to Attic</h2>
-          <p>Sign in to track your personal collection</p>
+          <h2 id="login-modal-title">Sign in to track your collection</h2>
         </div>
 
         <div className="modal-body">
-          <div className="auth-benefits">
-            <div className="benefit-item">
-              <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2"/>
-              </svg>
-              <span>Track owned items</span>
-            </div>
-            <div className="benefit-item">
-              <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-              <span>Save your progress</span>
-            </div>
-            <div className="benefit-item">
-              <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2"/>
-              </svg>
-              <span>Sync across devices</span>
-            </div>
-          </div>
-
           <div className="google-login-wrapper">
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
-              theme="filled_blue"
+              theme="outline"
               size="large"
               text="continue_with"
               shape="rectangular"

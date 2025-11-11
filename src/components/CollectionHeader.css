@@ -36,11 +36,24 @@
   margin-bottom: 4px;
 }
 
+.collection-title-container {
+  display: flex;
+  flex-direction: column;
+}
+
 .collection-title {
   font-size: 24px;
   font-weight: 700;
   margin: 0;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.collection-title-action {
+  display: flex;
+  align-items: center;
 }
 
 .collection-subtitle {

@@ -2,7 +2,30 @@
 
 .landing-page {
   min-height: 100vh;
-  background: var(--bg-secondary);
+}
+
+/* Empty State */
+.empty-landing-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 2rem;
+}
+
+.empty-landing-state h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-landing-state p {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 /* Starred Collections Section */
@@ -20,7 +43,7 @@
 .recently-viewed {
   padding: 0 2rem;
   max-width: 1400px;
-  margin: 0 auto 1em;
+  margin: 2rem auto 1em;
 }
 
 .recently-viewed-scroll {
@@ -67,10 +90,10 @@
 }
 
 .section-title {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 !important;
+  margin: 0 0 1rem 0 !important;
   padding: 0 !important;
 }
 
@@ -126,7 +149,7 @@
 
   .recently-viewed {
     padding: 0 1rem;
-    margin-bottom: 1em;
+    margin: 1.5rem auto 1em;
   }
 
   .recently-viewed .item-card {
@@ -138,7 +161,7 @@
   }
 
   .section-title {
-    font-size: 2rem;
+    font-size: 16px;
   }
 
   .section-subtitle {

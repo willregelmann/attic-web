@@ -44,26 +44,20 @@
 }
 
 .create-collection-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  transition: all 0.2s;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: #28a745;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  color: white;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s;
+  justify-content: center;
 }
 
 .create-collection-button:hover {
-  background-color: #218838;
-}
-
-.create-collection-button svg {
-  flex-shrink: 0;
+  color: #28a745;
+  transform: scale(1.1);
 }
 
 .add-item-button {

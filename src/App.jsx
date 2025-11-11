@@ -10,7 +10,6 @@ import { BreadcrumbsProvider } from './contexts/BreadcrumbsContext';
 import client from './apolloClient';
 import Navigation from './components/Navigation';
 import LoginModal from './components/LoginModal';
-import AddItemsModal from './components/AddItemsModal';
 import MobileSearch from './components/MobileSearch';
 import LandingPage from './components/LandingPage';
 import CollectionView from './components/CollectionView';
@@ -26,15 +25,13 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 // Inner component that can use auth context
 function AppContent() {
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showAddItemsModal, setShowAddItemsModal] = useState(false);
-  const [preSelectedItem, setPreSelectedItem] = useState(null);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
 
   // Hide global menu on routes that render ItemList (which has its own CircularMenu with filter)
-  const showGlobalMenu = !location.pathname.startsWith('/collection') && location.pathname !== '/my-collection';
+  const showGlobalMenu = !location.pathname.startsWith('/collection') && !location.pathname.startsWith('/my-collection');
 
   const handleLogin = () => {
     setShowLoginModal(true);
@@ -43,11 +40,6 @@ function AppContent() {
   const handleSignup = () => {
     // For now, signup and login use the same Google OAuth flow
     setShowLoginModal(true);
-  };
-
-  const handleAddToCollection = (item = null) => {
-    setPreSelectedItem(item);
-    setShowAddItemsModal(true);
   };
 
   const handleSearchFromMenu = () => {
@@ -68,33 +60,21 @@ function AppContent() {
         <Navigation
           onLogin={handleLogin}
           onSignup={handleSignup}
-          onAddToCollection={handleAddToCollection}
         />
 
         <main className="app-content">
           <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/collection/:id" element={<CollectionView onAddToCollection={handleAddToCollection} />} />
-            <Route path="/my-collection" element={<MyCollection onAddToCollection={handleAddToCollection} />} />
+            <Route
+              path="/"
+              element={isAuthenticated ? <Navigate to="/my-collection" replace /> : <LandingPage />}
+            />
+            <Route path="/collection/:id" element={<CollectionView />} />
+            <Route path="/my-collection/:id?" element={<MyCollection />} />
             <Route path="/wishlist" element={<WishlistView />} />
             <Route path="/profile" element={<UserProfile />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
-
-        <AddItemsModal
-          isOpen={showAddItemsModal}
-          onClose={() => {
-            setShowAddItemsModal(false);
-            setPreSelectedItem(null);
-          }}
-          onItemsAdded={() => {
-            setShowAddItemsModal(false);
-            setPreSelectedItem(null);
-            // Refresh will be handled by the modal itself
-          }}
-          preSelectedItem={preSelectedItem}
-        />
 
         <LoginModal
           isOpen={showLoginModal}
@@ -104,13 +84,11 @@ function AppContent() {
         <MobileSearch
           isOpen={showMobileSearch}
           onClose={() => setShowMobileSearch(false)}
-          onAddToCollection={handleAddToCollection}
         />
 
         {/* Mobile Circular Menu - only on pages without their own menu */}
         {showGlobalMenu && (
           <CircularMenu
-            onAddToCollection={handleAddToCollection}
             onSearch={handleSearchFromMenu}
             onAccount={handleAccountClick}
             onBackdropClick={() => setShowMobileSearch(false)}

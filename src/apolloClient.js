@@ -80,8 +80,9 @@ const cache = new InMemoryCache({
             return incoming;
           },
         },
-        myFavoriteCollections: {
-          keyArgs: false,
+        // User collection tree - cache separately for each parent_id
+        myCollectionTree: {
+          keyArgs: ['parent_id'],  // Cache separately based on parent_id
           merge(existing, incoming) {
             return incoming;
           },
@@ -99,7 +100,7 @@ const client = new ApolloClient({
     watchQuery: {
       // Use cache-first for better performance
       // Override with cache-and-network for user data that might change frequently:
-      // - myCollectionItems, myWishlist, myFavoriteCollections
+      // - myCollectionItems, myWishlist
       // Override with network-only only if absolutely necessary (e.g., real-time data)
       fetchPolicy: 'cache-first',
       errorPolicy: 'all',

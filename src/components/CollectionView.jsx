@@ -8,7 +8,7 @@ import ItemList from './ItemList';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { addToRecentlyViewed } from '../utils/recentlyViewed';
 
-function CollectionView({ onAddToCollection }) {
+function CollectionView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -142,7 +142,6 @@ function CollectionView({ onAddToCollection }) {
       isRootView={isRoot}
       onRefresh={refetch}
       navigationPath={navigationPath}
-      onAddToCollection={onAddToCollection}
     />
   );
 }

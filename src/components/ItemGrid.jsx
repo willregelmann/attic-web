@@ -1,5 +1,4 @@
 import { ItemCard } from './ItemCard';
-import { CollectionCard } from './CollectionCard';
 import { isCollectionType } from '../utils/formatters';
 
 /**
@@ -31,28 +30,19 @@ export function ItemGrid({
       {items.map((item, index) => {
         const isOwned = userOwnership.has(item.id);
         const isFavorite = isRoot && userFavorites.has(item.id);
+        const isCollection = isCollectionType(item.type);
 
-        // Handle collections with CollectionCard
-        if (isCollectionType(item.type)) {
-          return (
-            <CollectionCard
-              key={item.id}
-              collection={item}
-              onClick={() => onCollectionClick?.(item)}
-            />
-          );
-        }
-
-        // Handle regular items with ItemCard
+        // Universal ItemCard for both items and collections
         return (
           <ItemCard
             key={item.id}
             item={item}
             index={index}
-            onClick={() => onItemClick?.(item, index)}
+            onClick={() => isCollection ? onCollectionClick?.(item) : onItemClick?.(item, index)}
             isOwned={isOwned}
             isFavorite={isFavorite}
-            showAsWishlist={showWishlistStyling && !isOwned}
+            showAsWishlist={showWishlistStyling && !isOwned && !isCollection}
+            progress={item.progress || null}
           />
         );
       })}

@@ -6,13 +6,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   GET_DATABASE_OF_THINGS_COLLECTION_ITEMS,
   GET_DATABASE_OF_THINGS_COLLECTIONS,
-  GET_MY_FAVORITE_COLLECTIONS,
   GET_MY_COLLECTION,
   GET_MY_ITEMS,
   ADD_ITEM_TO_MY_COLLECTION,
   REMOVE_ITEM_FROM_MY_COLLECTION,
-  FAVORITE_COLLECTION,
-  UNFAVORITE_COLLECTION,
   GET_COLLECTION_PARENT_COLLECTIONS
 } from '../queries';
 import ItemDetail from './ItemDetail';
@@ -26,10 +23,9 @@ import { ItemCard, ItemCardImage } from './ItemCard';
 import { CollectionHeader } from './CollectionHeader';
 import { ItemGrid } from './ItemGrid';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
-import { Heart, Pin } from 'lucide-react';
 import './ItemList.css';
 
-function ItemList({ collection, onBack, onSelectCollection, isRootView = false, onRefresh, navigationPath = [], onAddToCollection }) {
+function ItemList({ collection, onBack, onSelectCollection, isRootView = false, onRefresh, navigationPath = [] }) {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { setBreadcrumbItems, setLoading: setBreadcrumbsLoading } = useBreadcrumbs();
@@ -40,7 +36,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [sortBy, setSortBy] = useState('default'); // default, name-asc, name-desc, type, owned
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
-  const [userFavorites, setUserFavorites] = useState(new Set());
   const [showCollectionFilters, setShowCollectionFilters] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
@@ -49,8 +44,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [fetchCollectionItems] = useLazyQuery(GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, {
     fetchPolicy: 'cache-first'
   });
-  const [favoriteCollectionMutation] = useMutation(FAVORITE_COLLECTION);
-  const [unfavoriteCollectionMutation] = useMutation(UNFAVORITE_COLLECTION);
   const [addItemMutation] = useMutation(ADD_ITEM_TO_MY_COLLECTION);
   const [removeItemMutation] = useMutation(REMOVE_ITEM_FROM_MY_COLLECTION);
 
@@ -61,22 +54,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     fetchPolicy: 'cache-first'
   });
 
-  // Fetch user's favorite collections from database
-  const { data: favoritesData, refetch: refetchFavorites } = useQuery(GET_MY_FAVORITE_COLLECTIONS, {
-    skip: !isAuthenticated,
-    fetchPolicy: 'cache-and-network'
-  });
-
-  // Update local favorites state when data is fetched
-  useEffect(() => {
-    if (favoritesData?.myFavoriteCollections) {
-      const favoriteIds = new Set(
-        favoritesData.myFavoriteCollections.map(fav => fav.collection.id)
-      );
-      setUserFavorites(favoriteIds);
-    }
-  }, [favoritesData]);
-
   // Use different queries for root vs nested collections
   const isRoot = collection.id === 'root';
 
@@ -85,8 +62,8 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   let variables = {};
 
   if (isRoot) {
-    // For root: use favorites for authenticated users, all collections for others
-    query = isAuthenticated ? GET_MY_FAVORITE_COLLECTIONS : GET_DATABASE_OF_THINGS_COLLECTIONS;
+    // For root: always show all collections
+    query = GET_DATABASE_OF_THINGS_COLLECTIONS;
     variables = { first: 50 };
   } else {
     query = GET_DATABASE_OF_THINGS_COLLECTION_ITEMS;
@@ -148,42 +125,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     }
   };
 
-  // Toggle collection favorite status
-  const toggleFavorite = async () => {
-    if (!isAuthenticated || !collection || collection.id === 'root') {
-      return;
-    }
-
-    const isFavorited = userFavorites.has(collection.id);
-
-    try {
-      if (isFavorited) {
-        await unfavoriteCollectionMutation({
-          variables: { entityId: collection.id }
-        });
-
-        setUserFavorites(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(collection.id);
-          return newSet;
-        });
-      } else {
-        await favoriteCollectionMutation({
-          variables: { entityId: collection.id }
-        });
-
-        setUserFavorites(prev => {
-          const newSet = new Set(prev);
-          newSet.add(collection.id);
-          return newSet;
-        });
-      }
-
-      refetchFavorites();
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-    }
-  };
 
   // Handle successful addition from AddCollectionModal
   const handleAddCollectionSuccess = (result) => {
@@ -212,44 +153,17 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   // Get items from the appropriate query result
   const items = useMemo(() => {
     if (isRoot) {
-      // For authenticated users, extract collections from myFavoriteCollections
-      if (isAuthenticated && data?.myFavoriteCollections) {
-        return data.myFavoriteCollections.map(fav => fav.collection);
-      }
-      // For unauthenticated users, use Database of Things collections
       return data?.databaseOfThingsCollections || [];
     }
     return data?.databaseOfThingsCollectionItems || [];
-  }, [data, isRoot, isAuthenticated]);
+  }, [data, isRoot]);
 
-  // Separate favorites from other items for root view
-  const { favoriteItems, otherItems } = useMemo(() => {
-    if (!isRoot || !items.length) {
-      return { favoriteItems: [], otherItems: items };
-    }
-
-    // For authenticated users at root, all items are already favorites from the query
-    if (isAuthenticated) {
-      return { favoriteItems: items, otherItems: [] };
-    }
-
-    // For unauthenticated users, shuffle and show random collections
-    const shuffled = [...items];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return { favoriteItems: [], otherItems: shuffled.slice(0, 20) }; // Show max 20 random
-  }, [items, isRoot, isAuthenticated]);
 
   // Filter and search items
   const filteredItems = useMemo(() => {
-    // Combine favorites and others for filtering
-    const allItems = isRoot ? [...favoriteItems, ...otherItems] : items;
+    if (!items.length) return [];
 
-    if (!allItems.length) return { favorites: [], others: [] };
-
-    let filtered = allItems;
+    let filtered = items;
 
     // Apply collection-specific filters (metadata filtering)
     // Note: Collections always pass through filters so users can navigate into them
@@ -257,7 +171,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     if (!isRoot && collection?.id) {
       const collectionFilters = getFiltersForCollection(collection.id);
       const parentCollections = parentCollectionsData?.databaseOfThingsCollectionParentCollections || [];
-      filtered = applyFilters(filtered, collectionFilters, parentCollections);
+      filtered = applyFilters(filtered, collectionFilters, parentCollections, userOwnership);
     }
 
     // Apply ownership filter
@@ -328,83 +242,25 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
       }
     }
 
-    // Re-separate into favorites and others if root view
-    if (isRoot) {
-      const filteredFavorites = filtered.filter(item => userFavorites.has(item.id));
-      const filteredOthers = filtered.filter(item => !userFavorites.has(item.id));
-      return { favorites: filteredFavorites, others: filteredOthers };
-    }
-
-    return { favorites: [], others: filtered };
-  }, [items, favoriteItems, otherItems, isRoot, filter, searchTerm, userOwnership, userFavorites, sortBy, collection?.id, getFiltersForCollection, applyFilters, parentCollectionsData]);
+    return filtered;
+  }, [items, isRoot, filter, searchTerm, userOwnership, sortBy, collection?.id, getFiltersForCollection, applyFilters, parentCollectionsData]);
 
   // Calculate stats based on filtered items
   const stats = useMemo(() => {
-    const allFilteredItems = isRoot
-      ? [...filteredItems.favorites, ...filteredItems.others]
-      : filteredItems.others;
+    if (!filteredItems.length) return { total: 0, owned: 0, percentage: 0 };
 
-    if (!allFilteredItems.length) return { total: 0, owned: 0, percentage: 0 };
-
-    const total = allFilteredItems.length;
-    const owned = allFilteredItems.filter(item => userOwnership.has(item.id)).length;
+    const total = filteredItems.length;
+    const owned = filteredItems.filter(item => userOwnership.has(item.id)).length;
     const percentage = total > 0 ? Math.round((owned / total) * 100) : 0;
 
     return { total, owned, percentage };
-  }, [filteredItems, isRoot, userOwnership]);
+  }, [filteredItems, userOwnership]);
 
-  // Update breadcrumbs in context
+  // Hide breadcrumbs in ItemList
   useEffect(() => {
-    if (isRootView) {
-      setBreadcrumbItems([]);
-      return;
-    }
-
-    const homeIcon = (
-      <svg viewBox="0 0 24 24" fill="none" width="16" height="16" className="breadcrumb-icon">
-        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M9 22V12h6v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    );
-
-    const items = [
-      {
-        label: 'Home',
-        icon: homeIcon,
-        onClick: () => navigate('/')
-      }
-    ];
-
-    // Add navigation path items
-    navigationPath.forEach((pathItem, index) => {
-      items.push({
-        label: pathItem.name,
-        onClick: () => {
-          const pathUpToHere = navigationPath.slice(0, index);
-          const pathParam = pathUpToHere.length > 0
-            ? `?path=${pathUpToHere.map(p => `${p.id}:${encodeURIComponent(p.name)}`).join(',')}`
-            : '';
-          navigate(`/collection/${pathItem.id}${pathParam}`);
-        }
-      });
-    });
-
-    // Add current collection (not clickable)
-    if (collection?.name) {
-      items.push({
-        label: collection.name
-      });
-    }
-
-    setBreadcrumbItems(items);
-  }, [collection?.name, navigationPath, navigate, isRootView, setBreadcrumbItems]);
-
-  // Update breadcrumbs loading state
-  useEffect(() => {
-    if (!isRootView) {
-      setBreadcrumbsLoading(loading);
-    }
-  }, [loading, isRootView, setBreadcrumbsLoading]);
+    setBreadcrumbItems([]);
+    setBreadcrumbsLoading(false);
+  }, [setBreadcrumbItems, setBreadcrumbsLoading]);
 
 
   if (loading) {
@@ -426,54 +282,39 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     );
   }
 
-  // Collection header action buttons
+  // Collection header action buttons (filter only)
   const headerActions = !isRootView && (
-    <>
-      {/* Collection Filter Button */}
-      <button
-        className={`admin-button ${hasActiveFilters(collection.id) ? 'active' : ''}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          setShowCollectionFilters(true);
-        }}
-        title="Filter collection items"
-      >
-        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-          <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        </svg>
-        {hasActiveFilters(collection.id) && (
-          <span className="filter-active-indicator"></span>
-        )}
-      </button>
-
-      {/* Pin Collection Button */}
-      {isAuthenticated && (
-        <>
-          <button
-            className={`icon-button ${userFavorites.has(collection.id) ? 'active' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleFavorite();
-            }}
-            title={userFavorites.has(collection.id) ? "Unpin collection" : "Pin collection"}
-          >
-            <Pin size={20} fill={userFavorites.has(collection.id) ? 'currentColor' : 'none'} />
-          </button>
-
-          {/* Wishlist Button */}
-          <button
-            className="wishlist-button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsAddModalOpen(true);
-            }}
-            title="Add collection to wishlist"
-          >
-            <Heart size={20} />
-          </button>
-        </>
+    <button
+      className={`admin-button ${hasActiveFilters(collection.id) ? 'active' : ''}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        setShowCollectionFilters(true);
+      }}
+      title="Filter collection items"
+    >
+      <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+        <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+      {hasActiveFilters(collection.id) && (
+        <span className="filter-active-indicator"></span>
       )}
-    </>
+    </button>
+  );
+
+  // Title action button (add to wishlist)
+  const titleAction = !isRootView && isAuthenticated && (
+    <button
+      className="wishlist-button"
+      onClick={(e) => {
+        e.stopPropagation();
+        setIsAddModalOpen(true);
+      }}
+      title="Add collection to wishlist"
+    >
+      <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+        <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    </button>
   );
 
   return (
@@ -485,25 +326,26 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
         ownedCount={stats.owned}
         totalCount={stats.total}
         actions={headerActions}
+        titleAction={titleAction}
         onClick={() => {
           setSelectedItem(collection);
           setSelectedItemIndex(null);
         }}
         clickable={true}
-        showProgress={!isRootView}
+        showProgress={!isRootView && isAuthenticated}
       />
 
       {/* Items Grid/List */}
-      {(filteredItems.favorites?.length > 0 || filteredItems.others?.length > 0) ? (
+      {filteredItems.length > 0 ? (
         <ItemGrid
-          items={[...filteredItems.favorites, ...filteredItems.others]}
+          items={filteredItems}
           onItemClick={(item, index) => {
             setSelectedItem(item);
             setSelectedItemIndex(index);
           }}
           onCollectionClick={onSelectCollection}
           userOwnership={userOwnership}
-          userFavorites={userFavorites}
+          userFavorites={new Set()}
           isRoot={isRoot}
           viewMode={viewMode}
         />
@@ -548,16 +390,9 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
           index={selectedItemIndex}
           collection={collection}
           isOwned={userOwnership.has(selectedItem.id)}
-          isUserItem={isMyCollection}  // Pass flag for My Collection items
+          isUserItem={false}  // ItemList shows DBoT collections, not user items
           onToggleOwnership={() => {
             toggleItemOwnership(selectedItem.id);
-          }}
-          onAddToCollection={onAddToCollection}
-          onEditItem={(item) => {
-            // Open AddItemsModal in edit mode with this item
-            if (onAddToCollection) {
-              onAddToCollection(item);
-            }
           }}
           onNavigateToCollection={(collection) => {
             // Navigate directly without appending to current path
@@ -579,13 +414,13 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
           fetchCollectionItems={fetchCollectionItems}
           isOpen={showCollectionFilters}
           onClose={() => setShowCollectionFilters(false)}
+          userOwnership={userOwnership}
         />
       )}
 
       {/* Collection-specific Circular Menu with Filter */}
       {!isRoot && collection?.id && (
         <CircularMenu
-          onAddToCollection={onAddToCollection}
           onSearch={() => {
             // Navigate to search - could enhance this later
             navigate('/');

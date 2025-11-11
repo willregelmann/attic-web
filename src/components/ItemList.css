@@ -1,5 +1,4 @@
 .item-list {
-  background: var(--bg-secondary);
   min-height: calc(100vh - 64px);
   max-width: 1400px;
   margin: 0 auto;
@@ -8,7 +7,7 @@
 /* Breadcrumbs */
 .breadcrumbs {
   padding: 8px 32px;
-  background: white;
+  background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 80px;
@@ -75,7 +74,7 @@
   display: inline-block;
   width: 80px;
   height: 16px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, var(--skeleton-from) 25%, var(--skeleton-to) 50%, var(--skeleton-from) 75%);
   background-size: 200% 100%;
   animation: loading 1.5s ease-in-out infinite;
   border-radius: 4px;
@@ -163,7 +162,7 @@
 }
 
 .wishlist-button:hover {
-  color: #ef4444;
+  color: #22c55e;
   transform: scale(1.1);
 }
 
@@ -246,11 +245,14 @@
 
 /* Wishlist item styling */
 .item-card.item-wishlist {
-  opacity: 0.6;
+  opacity: 0.5;
+  filter: grayscale(50%);
+  transition: opacity 0.2s, filter 0.2s;
 }
 
 .item-card.item-wishlist:hover {
-  opacity: 0.85;
+  opacity: 0.75;
+  filter: grayscale(20%);
 }
 
 .item-card.clickable {
@@ -359,6 +361,21 @@
   color: var(--yellow-accent);
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
   animation: pulse 2s ease-in-out infinite;
+}
+
+.owned-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 @keyframes pulse {
@@ -504,6 +521,34 @@
 
 .section-header svg {
   color: var(--yellow-accent);
+}
+
+/* Progress bar for user collections */
+.item-progress {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-progress .progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--border-color);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.item-progress .progress-fill {
+  height: 100%;
+  background: var(--primary-color);
+  transition: width 0.3s ease;
+}
+
+.item-progress .progress-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {

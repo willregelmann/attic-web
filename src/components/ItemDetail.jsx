@@ -1,11 +1,130 @@
 import { useAuth } from '../contexts/AuthContext';
-import { useQuery, useLazyQuery, useMutation } from '@apollo/client/react';
+import { useTheme } from '../contexts/ThemeContext';
+import { useQuery, useLazyQuery, useMutation, useApolloClient } from '@apollo/client/react';
 import { useState, useEffect, memo } from 'react';
-import { GET_DATABASE_OF_THINGS_ITEM_PARENTS, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, UPDATE_MY_ITEM } from '../queries';
+import { GET_DATABASE_OF_THINGS_ITEM_PARENTS, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, UPDATE_MY_ITEM, UPDATE_USER_COLLECTION, CREATE_USER_COLLECTION, ADD_ITEM_TO_MY_COLLECTION, MY_COLLECTION_TREE, MOVE_USER_ITEM, MOVE_USER_COLLECTION } from '../queries';
 import { formatEntityType, isCollectionType } from '../utils/formatters';
 import { CollectionTreeSkeleton } from './SkeletonLoader';
+import { getTypeIcon } from '../utils/iconUtils.jsx';
 import './ItemDetail.css';
 import './ItemList.css'; // Import for child-images-grid styles
+
+// Collection picker node - expandable tree for selecting collection
+const CollectionPickerNode = memo(({ collection, depth = 0, selectedId, onSelect, selectedCollectionParentId, excludeCollectionId = null }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [fetchSubcollections, { data: subData, loading: subLoading }] = useLazyQuery(MY_COLLECTION_TREE, {
+    fetchPolicy: 'network-only',  // Force network fetch to bypass cache issue
+    notifyOnNetworkStatusChange: true
+  });
+
+  // Don't render this node if it's the excluded collection
+  if (excludeCollectionId && collection.id === excludeCollectionId) {
+    return null;
+  }
+
+  const subcollections = subData?.myCollectionTree?.collections || [];
+  const hasSubcollections = subcollections.length > 0;
+  const isSelected = selectedId === collection.id;
+
+  // Auto-expand if this collection is the parent of the selected collection
+  useEffect(() => {
+    if (selectedCollectionParentId === collection.id && !subData) {
+      fetchSubcollections({
+        variables: { parentId: collection.id }
+      });
+      setIsExpanded(true);
+    }
+  }, [selectedCollectionParentId, collection.id, subData, fetchSubcollections]);
+
+  // Check if the selected collection is a descendant of this collection
+  const isDescendantSelected = (collections, targetId) => {
+    if (!collections || !targetId) return false;
+    return collections.some(c => {
+      if (c.id === targetId) return true;
+      // Recursively check if we've fetched this collection's children
+      // Note: we can't check deeper without fetching, so we'll only check direct children
+      return false;
+    });
+  };
+
+  // Collapse when a sibling (non-descendant) is selected
+  useEffect(() => {
+    // Don't collapse if we're the parent of the selected collection (we should be auto-expanded)
+    if (selectedCollectionParentId === collection.id) {
+      return;
+    }
+
+    if (selectedId && selectedId !== collection.id) {
+      // Check if the selected collection is one of our direct children
+      const currentSubcollections = subData?.myCollectionTree?.collections || [];
+      const isChild = isDescendantSelected(currentSubcollections, selectedId);
+      if (!isChild) {
+        // Selected collection is not us and not our child, so collapse
+        setIsExpanded(false);
+      }
+    }
+  }, [selectedId, collection.id, subData, selectedCollectionParentId]); // Don't include isExpanded to avoid infinite loop
+
+  // Handler: if already selected, deselect and collapse; otherwise select and expand
+  const handleClick = () => {
+    if (isSelected) {
+      // Explicitly deselect and collapse
+      onSelect(null);
+      setIsExpanded(false);
+    } else {
+      // Select this collection and expand
+      onSelect(collection.id);
+      if (!isExpanded && !subData) {
+        fetchSubcollections({
+          variables: { parentId: collection.id }
+        });
+      }
+      setIsExpanded(true);
+    }
+  };
+
+  return (
+    <li className="tree-item">
+      <button
+        className={`tree-collection-link ${isSelected ? 'selected' : ''}`}
+        style={{
+          paddingLeft: `${12 + (depth * 20)}px`,
+          fontWeight: isSelected ? '600' : '400',
+          backgroundColor: isSelected ? 'var(--bg-tertiary)' : 'transparent',
+          borderRadius: isSelected ? '6px' : '0'
+        }}
+        onClick={handleClick}
+        title={`Select ${collection.name}`}
+      >
+        {depth > 0 && (
+          <svg className="tree-branch" viewBox="0 0 16 16" width="16" height="16">
+            <path d="M8 0 L8 8 L16 8" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+          </svg>
+        )}
+        <span className="tree-collection-name">
+          {collection.name}
+        </span>
+      </button>
+
+      {/* Subcollections */}
+      {isExpanded && hasSubcollections && (
+        <ul className="tree-nested-list">
+          {subcollections.map((sub) => (
+            <CollectionPickerNode
+              key={sub.id}
+              collection={sub}
+              depth={depth + 1}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              selectedCollectionParentId={selectedCollectionParentId}
+              excludeCollectionId={excludeCollectionId}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+});
 
 // Recursive component to render collection tree - memoized to prevent unnecessary re-renders
 const CollectionTreeNode = memo(({ collection, depth = 0, onNavigateToCollection, onClose }) => {
@@ -58,7 +177,6 @@ function ItemDetail({
   index,
   isOwned,
   onToggleOwnership,
-  onAddToCollection,
   onClose,
   onNavigateToCollection,
   collection,
@@ -66,36 +184,113 @@ function ItemDetail({
   onAcceptSuggestion,
   onRejectSuggestion,
   isUserItem = false,  // New prop: indicates this is from My Collection
-  onEditItem  // New prop: handler for editing user item
+  currentCollection = null  // New prop: current collection context (for defaulting collection picker)
 }) {
   const { isAuthenticated } = useAuth();
+  const { isDarkMode } = useTheme();
+  const client = useApolloClient();
 
   // Edit mode state for user items
   const [isEditMode, setIsEditMode] = useState(false);
   const [editNotes, setEditNotes] = useState('');
-  const [editMetadata, setEditMetadata] = useState({});
-  const [newMetadataKey, setNewMetadataKey] = useState('');
-  const [newMetadataValue, setNewMetadataValue] = useState('');
+  const [originalParentCollectionId, setOriginalParentCollectionId] = useState(null);
+
+  // Edit mode state for collections
+  const [editCollectionName, setEditCollectionName] = useState('');
+  const [editCollectionDescription, setEditCollectionDescription] = useState('');
+
+  // Add mode state for non-owned items
+  const [isAddMode, setIsAddMode] = useState(false);
+  const [selectedCollection, setSelectedCollection] = useState(currentCollection?.id || null);
+  const [selectedCollectionParentId, setSelectedCollectionParentId] = useState(currentCollection?.parent_collection_id || null);
+  const [isRootExpanded, setIsRootExpanded] = useState(true); // Root collection expanded by default
 
   // Initialize edit state when item changes
   useEffect(() => {
     if (isUserItem && item) {
       setEditNotes(item.user_notes || '');
-
-      let metadata = item.user_metadata;
-      if (typeof metadata === 'string') {
-        try {
-          metadata = JSON.parse(metadata);
-        } catch (e) {
-          metadata = {};
-        }
-      }
-      setEditMetadata(metadata || {});
+      // Store the original parent collection ID
+      setOriginalParentCollectionId(item.parent_collection_id || null);
+      setSelectedCollection(item.parent_collection_id || null);
     }
-  }, [isUserItem, item]);
 
-  // Update mutation
-  const [updateMyItem, { loading: isSaving }] = useMutation(UPDATE_MY_ITEM, {
+    // Initialize collection edit state
+    if (item && item.type === 'custom') {
+      setEditCollectionName(item.name || '');
+      setEditCollectionDescription(item.description || '');
+      // Set selected collection to the parent of this collection
+      setSelectedCollection(item.parent_collection_id || null);
+      setOriginalParentCollectionId(item.parent_collection_id || null);
+
+      // Auto-enter edit mode if creating a new collection (no ID)
+      if (!item.id) {
+        setIsEditMode(true);
+      }
+    }
+
+    // Initialize linked collection edit state
+    if (item && item.type === 'linked') {
+      // Set selected collection to the parent of this linked collection
+      setSelectedCollection(item.parent_collection_id || null);
+      setOriginalParentCollectionId(item.parent_collection_id || null);
+    }
+  }, [isUserItem, item.user_notes, item.parent_collection_id, item.type, item.name, item.description, item.id]);
+
+  // Fetch user's collections for the picker and for building collection hierarchy
+  const { data: collectionsData, loading: collectionsLoading } = useQuery(MY_COLLECTION_TREE, {
+    variables: { parentId: null },
+    skip: !isAuthenticated,
+    fetchPolicy: 'cache-and-network'
+  });
+
+  // Build user collection hierarchy for owned items and linked collections
+  const [userCollectionPath, setUserCollectionPath] = useState([]);
+
+  useEffect(() => {
+    const buildCollectionPath = async () => {
+      // Build path for user items or linked collections that have a parent_collection_id
+      if ((isUserItem || item.type === 'linked') && item.parent_collection_id && !collectionsLoading) {
+        // Build path from parent_collection_id upward through user collections
+        const path = [];
+        let currentId = item.parent_collection_id;
+
+        // Recursively fetch parent collections to build the full path
+        while (currentId) {
+          try {
+            const { data } = await client.query({
+              query: MY_COLLECTION_TREE,
+              variables: { parentId: currentId },
+              fetchPolicy: 'cache-first'
+            });
+
+            if (data?.myCollectionTree?.current_collection) {
+              const col = data.myCollectionTree.current_collection;
+              path.unshift({  // Add to beginning to build path from root to item
+                id: col.id,
+                name: col.name,
+                type: col.type
+              });
+              currentId = col.parent_collection_id;  // Move up to parent
+            } else {
+              break;
+            }
+          } catch (error) {
+            console.error('Error fetching collection path:', error);
+            break;
+          }
+        }
+
+        setUserCollectionPath(path);
+      } else {
+        setUserCollectionPath([]);
+      }
+    };
+
+    buildCollectionPath();
+  }, [isUserItem, item.type, item.parent_collection_id, collectionsLoading, client]);
+
+  // Update mutation for owned items
+  const [updateMyItem, { loading: isUpdating }] = useMutation(UPDATE_MY_ITEM, {
     onCompleted: () => {
       setIsEditMode(false);
       // Optionally refetch or update cache
@@ -106,62 +301,223 @@ function ItemDetail({
     }
   });
 
-  // Save changes
+  // Update mutation for collections
+  const [updateUserCollection, { loading: isUpdatingCollection }] = useMutation(UPDATE_USER_COLLECTION, {
+    onCompleted: () => {
+      setIsEditMode(false);
+      // Refetch collection tree to update the display
+    },
+    onError: (error) => {
+      console.error('Failed to update collection:', error);
+      alert('Failed to save changes. Please try again.');
+    },
+    refetchQueries: [
+      { query: MY_COLLECTION_TREE, variables: { parentId: item.parent_collection_id || null } }
+    ]
+  });
+
+  // Create mutation for new collections
+  const [createUserCollection, { loading: isCreatingCollection }] = useMutation(CREATE_USER_COLLECTION, {
+    onCompleted: () => {
+      onClose(); // Close modal after successful creation
+    },
+    onError: (error) => {
+      console.error('Failed to create collection:', error);
+      if (error.message.includes('Unauthenticated') || error.networkError?.statusCode === 401) {
+        alert('You must be logged in to create collections. Please log in and try again.');
+      } else {
+        alert('Failed to create collection: ' + error.message);
+      }
+    },
+    refetchQueries: [
+      { query: MY_COLLECTION_TREE, variables: { parentId: null } },
+      { query: MY_COLLECTION_TREE, variables: { parentId: selectedCollection } }
+    ]
+  });
+
+  // Add mutation for new items
+  const [addItemToMyCollection, { loading: isAdding }] = useMutation(ADD_ITEM_TO_MY_COLLECTION, {
+    onError: (error) => {
+      console.error('Failed to add item:', error);
+      if (error.message.includes('Unauthenticated') || error.networkError?.statusCode === 401) {
+        alert('You must be logged in to add items. Please log in and try again.');
+      } else {
+        alert('Failed to add item: ' + error.message);
+      }
+    }
+  });
+
+  // Move item mutation (for setting parent collection after adding)
+  const [moveUserItem, { loading: isMoving }] = useMutation(MOVE_USER_ITEM, {
+    refetchQueries: [
+      { query: MY_COLLECTION_TREE, variables: { parentId: null } },
+      { query: MY_COLLECTION_TREE, variables: { parentId: originalParentCollectionId } },
+      { query: MY_COLLECTION_TREE, variables: { parentId: selectedCollection } }
+    ],
+    awaitRefetchQueries: true,
+    onError: (error) => {
+      console.error('Failed to move item to collection:', error);
+      alert('Item was added but could not be moved to the selected collection.');
+    }
+  });
+
+  // Move collection mutation (for changing parent collection)
+  const [moveUserCollection, { loading: isMovingCollection }] = useMutation(MOVE_USER_COLLECTION, {
+    refetchQueries: [
+      { query: MY_COLLECTION_TREE, variables: { parentId: null } },
+      { query: MY_COLLECTION_TREE, variables: { parentId: originalParentCollectionId } },
+      { query: MY_COLLECTION_TREE, variables: { parentId: selectedCollection } }
+    ],
+    awaitRefetchQueries: true,
+    onError: (error) => {
+      console.error('Failed to move collection:', error);
+      alert('Failed to move collection. Please try again.');
+    }
+  });
+
+  const isSaving = isUpdating || isUpdatingCollection || isCreatingCollection || isAdding || isMoving || isMovingCollection;
+
+  // Save changes (handles both edit mode and add mode)
   const handleSave = async () => {
     try {
-      await updateMyItem({
-        variables: {
-          userItemId: item.user_item_id,
-          notes: editNotes,
-          metadata: editMetadata
+      // Check if we're creating a new collection
+      if (isEditMode && item.type === 'custom' && !item.id) {
+        // Validate collection name
+        if (!editCollectionName.trim()) {
+          alert('Collection name cannot be empty');
+          return;
         }
-      });
+
+        // Create collection
+        await createUserCollection({
+          variables: {
+            name: editCollectionName.trim(),
+            description: editCollectionDescription.trim() || null,
+            parentId: selectedCollection || null
+          }
+        });
+
+        // Success - modal will close via onCompleted callback
+        return;
+      }
+
+      // Check if we're editing an existing collection
+      if (isEditMode && item.type === 'custom') {
+        // Validate collection name
+        if (!editCollectionName.trim()) {
+          alert('Collection name cannot be empty');
+          return;
+        }
+
+        // Update collection
+        await updateUserCollection({
+          variables: {
+            id: item.id,
+            name: editCollectionName.trim(),
+            description: editCollectionDescription.trim() || null
+          }
+        });
+
+        // Success - exit edit mode
+        setIsEditMode(false);
+        return;
+      }
+
+      // Check if we're editing a linked collection
+      if (isEditMode && item.type === 'linked') {
+        // Only update parent collection for linked collections
+        await moveUserCollection({
+          variables: {
+            id: item.id,
+            newParentId: selectedCollection
+          }
+        });
+
+        // Success - exit edit mode and close modal to refresh parent view
+        setIsEditMode(false);
+        onClose();
+        return;
+      }
+
+      if (isAddMode) {
+        // Add new item to collection
+        const result = await addItemToMyCollection({
+          variables: {
+            itemId: item.id,
+            notes: editNotes.trim() || null
+          }
+        });
+
+        // If a collection is selected, move the item to that collection
+        if (selectedCollection && result.data?.addItemToMyCollection?.id) {
+          await moveUserItem({
+            variables: {
+              itemId: result.data.addItemToMyCollection.id,
+              newParentCollectionId: selectedCollection
+            }
+          });
+        }
+
+        // Success - close modal and reset state
+        setIsAddMode(false);
+        setEditNotes('');
+        onClose();
+      } else {
+        // Update existing item
+        await updateMyItem({
+          variables: {
+            userItemId: item.user_item_id,
+            notes: editNotes
+          }
+        });
+
+        // Check if collection has changed and move if needed
+        if (selectedCollection !== originalParentCollectionId) {
+          await moveUserItem({
+            variables: {
+              itemId: item.user_item_id,
+              newParentCollectionId: selectedCollection
+            }
+          });
+        }
+
+        // Success - exit edit mode
+        setIsEditMode(false);
+      }
     } catch (error) {
       console.error('Save error:', error);
     }
   };
 
-  // Cancel edit mode
-  const handleCancel = () => {
-    setIsEditMode(false);
-    // Reset to original values
-    setEditNotes(item.user_notes || '');
-    let metadata = item.user_metadata;
-    if (typeof metadata === 'string') {
-      try {
-        metadata = JSON.parse(metadata);
-      } catch (e) {
-        metadata = {};
-      }
+  // Handle modal close - reset edit/add mode
+  const handleClose = () => {
+    if (isAddMode) {
+      setIsAddMode(false);
+      setEditNotes('');
+    } else if (isEditMode) {
+      setIsEditMode(false);
+      // Reset to original values
+      setEditNotes(item.user_notes || '');
+      setEditCollectionName(item.name || '');
+      setEditCollectionDescription(item.description || '');
     }
-    setEditMetadata(metadata || {});
+    onClose();
   };
 
-  // Add new metadata field
-  const handleAddMetadata = () => {
-    if (newMetadataKey && newMetadataValue) {
-      setEditMetadata({
-        ...editMetadata,
-        [newMetadataKey]: newMetadataValue
-      });
-      setNewMetadataKey('');
-      setNewMetadataValue('');
+  // Enter add mode
+  const handleEnterAddMode = () => {
+    setIsAddMode(true);
+    setEditNotes('');
+    // Default to current collection if viewing one
+    const defaultCollection = currentCollection?.id || null;
+    const defaultParentId = currentCollection?.parent_collection_id || null;
+    setSelectedCollection(defaultCollection);
+    setSelectedCollectionParentId(defaultParentId);
+
+    // If a collection is selected, expand the root to show it
+    if (defaultCollection) {
+      setIsRootExpanded(true);
     }
-  };
-
-  // Remove metadata field
-  const handleRemoveMetadata = (key) => {
-    const updated = { ...editMetadata };
-    delete updated[key];
-    setEditMetadata(updated);
-  };
-
-  // Update metadata field
-  const handleUpdateMetadata = (key, value) => {
-    setEditMetadata({
-      ...editMetadata,
-      [key]: value
-    });
   };
 
   // Fetch parent collections for this item
@@ -179,6 +535,12 @@ function ItemDetail({
 
   // Child images state for collections without images
   const [childImages, setChildImages] = useState([]);
+
+  // Determine if this is a user collection (custom or linked)
+  const isUserCollection = item.type === 'custom' || item.type === 'linked' ||
+    (item.parent_collection_id !== undefined && item.parent_collection_id !== null);
+
+  // Query for DBoT collections
   const [fetchChildren, { data: childrenData }] = useLazyQuery(
     GET_DATABASE_OF_THINGS_COLLECTION_ITEMS,
     {
@@ -186,18 +548,32 @@ function ItemDetail({
     }
   );
 
+  // Query for user collections
+  const [fetchUserChildren, { data: userChildrenData }] = useLazyQuery(
+    MY_COLLECTION_TREE,
+    {
+      fetchPolicy: 'cache-first'
+    }
+  );
+
   // Use representative images from backend if available, otherwise fetch children client-side
-  const representativeImages = item.representative_image_urls || [];
+  const representativeImages = item.representative_image_urls || item.representative_images || [];
   const hasRepresentativeImages = representativeImages.length > 0;
 
   // Fetch children if item has no image and no representative images and is a collection type
   useEffect(() => {
     if (!item.image_url && !hasRepresentativeImages && isCollectionType(item.type) && item.id) {
-      fetchChildren({ variables: { collectionId: item.id, first: 50 } });
+      if (isUserCollection) {
+        // Fetch user collection items
+        fetchUserChildren({ variables: { parentId: item.id } });
+      } else {
+        // Fetch DBoT collection items
+        fetchChildren({ variables: { collectionId: item.id, first: 50 } });
+      }
     }
-  }, [item.image_url, hasRepresentativeImages, item.type, item.id, fetchChildren]);
+  }, [item.image_url, hasRepresentativeImages, item.type, item.id, isUserCollection, fetchChildren, fetchUserChildren]);
 
-  // Extract child images using breadth-first search
+  // Extract child images from DBoT collections using breadth-first search
   useEffect(() => {
     if (!childrenData?.databaseOfThingsCollectionItems) return;
 
@@ -220,23 +596,41 @@ function ItemDetail({
     setChildImages(images);
   }, [childrenData]);
 
+  // Extract child images from user collections
+  useEffect(() => {
+    if (!userChildrenData?.myCollectionTree) return;
+
+    const items = userChildrenData.myCollectionTree.items || [];
+    const collections = userChildrenData.myCollectionTree.collections || [];
+    const images = [];
+
+    // First, try to get images from items
+    for (let i = 0; i < items.length && images.length < 5; i++) {
+      const item = items[i];
+      if (item.image_url) {
+        images.push(item.image_url);
+      }
+    }
+
+    // If not enough images from items, try subcollection images
+    if (images.length < 5) {
+      for (let i = 0; i < collections.length && images.length < 5; i++) {
+        const collection = collections[i];
+        if (collection.image_url) {
+          images.push(collection.image_url);
+        }
+      }
+    }
+
+    setChildImages(images);
+  }, [userChildrenData]);
+
   const getItemImage = () => {
     // Use image_url for detail view (full quality)
     if (item.image_url) {
       return `url(${item.image_url})`;
     }
-    // Only use gradient if no representative or child images are available
-    if (representativeImages.length === 0 && childImages.length === 0) {
-      const gradients = [
-        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-        'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-      ];
-      return gradients[index % gradients.length];
-    }
-    // No background when showing representative or child images
+    // No background when no images are available (just show icon)
     return 'transparent';
   };
 
@@ -245,10 +639,15 @@ function ItemDetail({
   const hasMoreImages = imagesToDisplay.length > 4;
   const displayImages = hasMoreImages ? imagesToDisplay.slice(0, 4) : imagesToDisplay;
 
+  // Determine icon color and get icon
+  const iconColor = isDarkMode ? '#9ca3af' : '#6b7280';
+  const shouldShowIcon = !item.image_url && imagesToDisplay.length === 0;
+  const typeIcon = shouldShowIcon ? getTypeIcon(item.type, iconColor, 96) : null;
+
   return (
-    <div className="item-detail-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="item-detail-title">
+    <div className="item-detail-overlay" onClick={handleClose} role="dialog" aria-modal="true" aria-labelledby="item-detail-title">
       <div className={`item-detail-modal ${isSuggestionPreview ? 'suggestion-preview' : ''}`} onClick={(e) => e.stopPropagation()}>
-        <button className="detail-close-btn" onClick={onClose} aria-label="Close item details">
+        <button className="detail-close-btn" onClick={handleClose} aria-label="Close item details">
           <svg viewBox="0 0 24 24" fill="none" width="24" height="24" aria-hidden="true">
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
@@ -283,6 +682,19 @@ function ItemDetail({
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat'
             }}>
+              {/* Type icon for items without images */}
+              {typeIcon && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: '100%'
+                }}>
+                  {typeIcon}
+                </div>
+              )}
+
               {/* Representative/child images - special handling for 1 or 2 images */}
               {!item.image_url && imagesToDisplay.length === 1 && (
                 <div
@@ -324,112 +736,180 @@ function ItemDetail({
               )}
             </div>
 
-            {/* Show "View Full Page" button if this is a collection */}
-            {isCollectionType(item.type) && onNavigateToCollection && (
-              <div className="detail-collection-section">
-                <button
-                  className="view-collection-btn"
-                  onClick={() => {
-                    onNavigateToCollection(item);
-                    onClose();
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                    <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                  View Full Page
-                </button>
-              </div>
-            )}
 
-            {/* Show "Edit Item" button for user items, or "Add to Collection" for non-collection items */}
-            {!isSuggestionPreview && isAuthenticated && !isCollectionType(item.type) && (
-              <div className="detail-collection-section">
-                {isUserItem ? (
-                  isEditMode ? (
-                    // Save and Cancel buttons in edit mode
-                    <div className="edit-actions">
-                      <button
-                        className="ownership-toggle-btn save"
-                        onClick={handleSave}
-                        disabled={isSaving}
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                          <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        {isSaving ? 'Saving...' : 'Save Changes'}
-                      </button>
-                      <button
-                        className="ownership-toggle-btn cancel"
-                        onClick={handleCancel}
-                        disabled={isSaving}
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                          <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    // Edit button in view mode
-                    <button
-                      className="ownership-toggle-btn edit"
-                      onClick={() => setIsEditMode(true)}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      Edit
-                    </button>
-                  )
-                ) : (
-                  <button
-                    className={`ownership-toggle-btn ${isOwned ? 'remove' : 'add'}`}
-                    onClick={(e) => {
-                      if (isOwned) {
-                        onToggleOwnership();
-                      } else {
-                        // Call handler to open add items modal with this item pre-selected
-                        if (onAddToCollection) {
-                          onAddToCollection(item);
-                          onClose(); // Close the detail modal
-                        }
-                      }
-                    }}
-                  >
-                    {isOwned ? (
-                      <>
-                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                          <path d="M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        Remove from Collection
-                      </>
-                    ) : (
-                      <>
-                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                          <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        Add to Collection
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
           <div className="detail-info-section">
             <div className="detail-header">
-              <h2 className="detail-title">{item.name}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {/* Editable collection name */}
+                {isEditMode && item.type === 'custom' ? (
+                  <input
+                    type="text"
+                    value={editCollectionName}
+                    onChange={(e) => setEditCollectionName(e.target.value)}
+                    className="detail-title-edit"
+                    placeholder="Collection name"
+                  />
+                ) : (
+                  <h2 className="detail-title" style={{ margin: 0 }}>{item.name}</h2>
+                )}
+                {/* Edit icon for custom collections */}
+                {!isSuggestionPreview && isAuthenticated && item.type === 'custom' && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {isEditMode ? (
+                      <button
+                        className="icon-btn save-icon"
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        title="Save changes"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                          <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        className="icon-btn edit-icon"
+                        onClick={() => setIsEditMode(true)}
+                        title="Edit collection"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                )}
+                {/* Edit icon for linked collections */}
+                {!isSuggestionPreview && isAuthenticated && item.type === 'linked' && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {isEditMode ? (
+                      <button
+                        className="icon-btn save-icon"
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        title="Save changes"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                          <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        className="icon-btn edit-icon"
+                        onClick={() => setIsEditMode(true)}
+                        title="Move collection"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                )}
+                {/* View Full Page icon for non-custom collections */}
+                {isCollectionType(item.type) && item.type !== 'custom' && item.type !== 'linked' && onNavigateToCollection && (
+                  <button
+                    className="icon-btn"
+                    onClick={() => {
+                      onNavigateToCollection(item);
+                      onClose();
+                    }}
+                    title="View full page"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M15 3h6v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M10 14L21 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                )}
+                {/* Edit/Save icons for user items */}
+                {!isSuggestionPreview && isAuthenticated && !isCollectionType(item.type) && isUserItem && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {isEditMode ? (
+                      <>
+                        <button
+                          className="icon-btn save-icon"
+                          onClick={handleSave}
+                          disabled={isSaving}
+                          title="Save changes"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                            <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="icon-btn edit-icon"
+                        onClick={() => setIsEditMode(true)}
+                        title="Edit item"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                )}
+                {/* Save icon for add mode */}
+                {!isSuggestionPreview && isAuthenticated && !isCollectionType(item.type) && isAddMode && (
+                  <button
+                    className="icon-btn save-icon"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    title="Add to collection"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                )}
+                {/* Add to Collection icon for non-owned items */}
+                {!isSuggestionPreview && isAuthenticated && !isCollectionType(item.type) && !isUserItem && !isAddMode && (
+                  <button
+                    className="icon-btn add-icon"
+                    onClick={handleEnterAddMode}
+                    title="Add to collection"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                )}
+              </div>
               <p className="detail-subtitle">
-                {formatEntityType(item.type)}
+                {item.type === 'linked' ? 'LINKED' : formatEntityType(item.type)}
                 {item.year && ` • ${item.year}`}
               </p>
             </div>
 
-            {/* Unified Metadata Section (DBoT attributes, user metadata, and notes) */}
+            {/* Collection Description - Editable for custom collections */}
+            {item.type === 'custom' && (
+              <div>
+                <label className="meta-label" style={{ display: 'block', marginBottom: '6px' }}>Description:</label>
+                {isEditMode ? (
+                  <textarea
+                    className="notes-textarea-inline"
+                    value={editCollectionDescription}
+                    onChange={(e) => setEditCollectionDescription(e.target.value)}
+                    placeholder="Add a description for this collection..."
+                    rows={3}
+                  />
+                ) : (
+                  <p className="meta-value notes-value" style={{ margin: 0, lineHeight: 1.6 }}>
+                    {item.description || 'No description'}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Metadata Section (DBoT attributes - read-only) */}
             {(() => {
               // Parse item attributes
               let attributes = item.attributes;
@@ -441,27 +921,12 @@ function ItemDetail({
                 }
               }
 
-              // Parse user metadata
-              let userMetadata = {};
-              if (isUserItem) {
-                userMetadata = item.user_metadata;
-                if (typeof userMetadata === 'string') {
-                  try {
-                    userMetadata = JSON.parse(userMetadata);
-                  } catch (e) {
-                    userMetadata = {};
-                  }
-                }
-              }
-
               const hasAttributes = attributes && typeof attributes === 'object' && Object.keys(attributes).length > 0;
-              const hasUserMetadata = userMetadata && typeof userMetadata === 'object' && Object.keys(userMetadata).length > 0;
-              const hasNotes = isUserItem && (isEditMode || item.user_notes);
 
-              return (hasAttributes || hasUserMetadata || isEditMode || hasNotes) && (
+              return hasAttributes && (
                 <div className="detail-metadata">
                   {/* Database of Things attributes (read-only) */}
-                  {hasAttributes && Object.entries(attributes)
+                  {Object.entries(attributes)
                     .sort(([a], [b]) => a.localeCompare(b))
                     .map(([key, value]) => (
                       <div key={key} className="detail-meta-item">
@@ -469,126 +934,185 @@ function ItemDetail({
                         <span className="meta-value">{Array.isArray(value) ? value.join(', ') : value}</span>
                       </div>
                     ))}
-
-                  {/* User custom properties (editable for user items) */}
-                  {isUserItem && isEditMode ? (
-                    // Edit mode: editable user metadata fields
-                    <>
-                      {Object.keys(editMetadata).length > 0 && (
-                        <div className="metadata-fields">
-                          {Object.entries(editMetadata)
-                            .sort(([a], [b]) => a.localeCompare(b))
-                            .map(([key, value]) => (
-                              <div key={key} className="detail-meta-item editable">
-                                <span className="meta-label">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
-                                <div className="meta-value-edit">
-                                  <input
-                                    type="text"
-                                    value={Array.isArray(value) ? value.join(', ') : value}
-                                    onChange={(e) => handleUpdateMetadata(key, e.target.value)}
-                                    className="meta-input"
-                                  />
-                                  <button
-                                    className="meta-remove-btn"
-                                    onClick={() => handleRemoveMetadata(key)}
-                                    title="Remove field"
-                                  >
-                                    <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
-                                      <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                                    </svg>
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-
-                      {/* Add new metadata field */}
-                      <div className="add-metadata-section">
-                        <div className="add-metadata-inputs">
-                          <input
-                            type="text"
-                            placeholder="Property name"
-                            value={newMetadataKey}
-                            onChange={(e) => setNewMetadataKey(e.target.value)}
-                            className="meta-key-input"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Value"
-                            value={newMetadataValue}
-                            onChange={(e) => setNewMetadataValue(e.target.value)}
-                            className="meta-value-input"
-                          />
-                          <button
-                            className="meta-add-btn"
-                            onClick={handleAddMetadata}
-                            disabled={!newMetadataKey || !newMetadataValue}
-                            title="Add property"
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                            </svg>
-                            Add Property
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    // View mode: display user metadata if exists
-                    hasUserMetadata && Object.entries(userMetadata)
-                      .sort(([a], [b]) => a.localeCompare(b))
-                      .map(([key, value]) => (
-                        <div key={key} className="detail-meta-item">
-                          <span className="meta-label">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
-                          <span className="meta-value">{Array.isArray(value) ? value.join(', ') : value}</span>
-                        </div>
-                      ))
-                  )}
-
-                  {/* Notes (last in table, editable for user items) */}
-                  {isUserItem && (isEditMode || item.user_notes) && (
-                    <div className="detail-meta-item notes-item">
-                      <span className="meta-label">Notes:</span>
-                      {isEditMode ? (
-                        <textarea
-                          className="notes-textarea-inline"
-                          value={editNotes}
-                          onChange={(e) => setEditNotes(e.target.value)}
-                          placeholder="Add your notes about this item..."
-                          rows={3}
-                        />
-                      ) : (
-                        <span className="meta-value notes-value">{item.user_notes}</span>
-                      )}
-                    </div>
-                  )}
                 </div>
               );
             })()}
 
-            {/* Parent Collections Tree View */}
-            {!isSuggestionPreview && !isEditMode && (parentsLoading || parentCollections.length > 0) && (
+            {/* Notes Section - Always shown for owned items */}
+            {(isUserItem || isAddMode) && (
+              <div>
+                <label className="meta-label" style={{ display: 'block', marginBottom: '6px' }}>Notes:</label>
+                {(isEditMode || isAddMode) ? (
+                  <textarea
+                    className="notes-textarea-inline"
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    placeholder="Add your notes about this item..."
+                    rows={3}
+                  />
+                ) : (
+                  <p className="meta-value notes-value" style={{ margin: 0, lineHeight: 1.6 }}>
+                    {item.user_notes || ''}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Collection Picker - Shows in add/edit mode */}
+            {!isSuggestionPreview && (isEditMode || isAddMode) && (
               <div className="detail-collections-tree">
-                <h5 className="collections-tree-header">Collections</h5>
+                <h5 className="collections-tree-header">Collection</h5>
                 <div className="collections-tree-list">
-                  {parentsLoading ? (
-                    <CollectionTreeSkeleton count={3} />
+                  {collectionsLoading ? (
+                    <CollectionTreeSkeleton count={2} />
                   ) : (
                     <ul className="tree-list">
-                      {parentCollections.map((parent) => (
-                        <CollectionTreeNode
-                          key={parent.id}
-                          collection={parent}
-                          depth={0}
-                          onNavigateToCollection={onNavigateToCollection}
-                          onClose={onClose}
-                        />
-                      ))}
+                      {/* Root collection option - expandable */}
+                      <li className="tree-item">
+                        <button
+                          onClick={() => {
+                            if (selectedCollection === null) {
+                              // Already selected, just toggle collapse
+                              setIsRootExpanded(!isRootExpanded);
+                            } else {
+                              // Not selected, select and expand
+                              setSelectedCollection(null);
+                              setIsRootExpanded(true);
+                            }
+                          }}
+                          className={`tree-collection-link ${selectedCollection === null ? 'selected' : ''}`}
+                          style={{
+                            paddingLeft: '12px',
+                            fontWeight: selectedCollection === null ? '600' : '400',
+                            backgroundColor: selectedCollection === null ? 'var(--bg-tertiary)' : 'transparent',
+                            borderRadius: selectedCollection === null ? '6px' : '0'
+                          }}
+                          title="Select My Collection"
+                        >
+                          <span className="tree-collection-name">My Collection</span>
+                        </button>
+
+                        {/* User collections tree - nested under root */}
+                        {isRootExpanded && (
+                          <ul className="tree-nested-list">
+                            {collectionsData?.myCollectionTree?.collections?.map((collection) => (
+                              <CollectionPickerNode
+                                key={collection.id}
+                                collection={collection}
+                                depth={1}
+                                selectedId={selectedCollection}
+                                onSelect={setSelectedCollection}
+                                selectedCollectionParentId={selectedCollectionParentId}
+                                excludeCollectionId={item.type === 'custom' || item.type === 'linked' ? item.id : null}
+                              />
+                            ))}
+                          </ul>
+                        )}
+                      </li>
                     </ul>
                   )}
                 </div>
               </div>
+            )}
+
+            {/* Collections Tree View */}
+            {!isSuggestionPreview && !isEditMode && !isAddMode && (
+              <>
+                {/* Show user collection hierarchy for owned items and linked collections */}
+                {(isUserItem || item.type === 'linked') && (
+                  <div className="detail-collections-tree">
+                    <h5 className="collections-tree-header">Collections</h5>
+                    <div className="collections-tree-list">
+                      {collectionsLoading ? (
+                        <CollectionTreeSkeleton count={1} />
+                      ) : (
+                        <ul className="tree-list">
+                          {/* Show path in reverse order (most specific first) like DBoT collections */}
+                          {[...userCollectionPath].reverse().map((collection, index) => (
+                            <li key={collection.id} className="tree-item">
+                              <button
+                                className="tree-collection-link"
+                                style={{ paddingLeft: `${12 + (index * 20)}px` }}
+                                onClick={() => {
+                                  // Navigate to this collection
+                                  if (onNavigateToCollection) {
+                                    onNavigateToCollection({ ...collection, type: 'user_collection' });
+                                  }
+                                  onClose();
+                                }}
+                                title={`View ${collection.name}`}
+                              >
+                                {index > 0 && (
+                                  <svg className="tree-branch" viewBox="0 0 16 16" width="16" height="16">
+                                    <path d="M8 0 L8 8 L16 8" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                                  </svg>
+                                )}
+                                <span className="tree-collection-name">
+                                  {collection.name}
+                                </span>
+                                <svg className="tree-arrow" viewBox="0 0 24 24" fill="none" width="16" height="16">
+                                  <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              </button>
+                            </li>
+                          ))}
+                          {/* Always show "My Collection" root at the bottom */}
+                          <li className="tree-item">
+                            <button
+                              className="tree-collection-link"
+                              style={{ paddingLeft: `${12 + (userCollectionPath.length * 20)}px` }}
+                              onClick={() => {
+                                // Navigate to root of My Collection
+                                if (onNavigateToCollection) {
+                                  onNavigateToCollection({ id: null, name: 'My Collection', type: 'user_collection' });
+                                }
+                                onClose();
+                              }}
+                              title="View My Collection"
+                            >
+                              {userCollectionPath.length > 0 && (
+                                <svg className="tree-branch" viewBox="0 0 16 16" width="16" height="16">
+                                  <path d="M8 0 L8 8 L16 8" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                                </svg>
+                              )}
+                              <span className="tree-collection-name">
+                                My Collection
+                              </span>
+                              <svg className="tree-arrow" viewBox="0 0 24 24" fill="none" width="16" height="16">
+                                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </button>
+                          </li>
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Show DBoT parent collections for non-owned items (excluding linked collections) */}
+                {!isUserItem && item.type !== 'linked' && (parentsLoading || parentCollections.length > 0) && (
+                  <div className="detail-collections-tree">
+                    <h5 className="collections-tree-header">Collections</h5>
+                    <div className="collections-tree-list">
+                      {parentsLoading ? (
+                        <CollectionTreeSkeleton count={3} />
+                      ) : (
+                        <ul className="tree-list">
+                          {parentCollections.map((parent) => (
+                            <CollectionTreeNode
+                              key={parent.id}
+                              collection={parent}
+                              depth={0}
+                              onNavigateToCollection={onNavigateToCollection}
+                              onClose={onClose}
+                            />
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Show suggestion actions in preview mode */}

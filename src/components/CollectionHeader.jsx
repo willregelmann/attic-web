@@ -1,3 +1,5 @@
+import { useTheme } from '../contexts/ThemeContext';
+import { getTypeIcon } from '../utils/iconUtils.jsx';
 import './CollectionHeader.css';
 
 /**
@@ -7,10 +9,12 @@ import './CollectionHeader.css';
  * @param {String} subtitle - Subtitle text (e.g., "Collection • 2024")
  * @param {Number} ownedCount - Number of owned items
  * @param {Number} totalCount - Total number of items
- * @param {ReactNode} actions - Action buttons to render in header
+ * @param {ReactNode} actions - Action buttons to render in header (right side)
+ * @param {ReactNode} titleAction - Action button to render next to title (inline with title)
  * @param {Function} onClick - Optional click handler for header
  * @param {Boolean} clickable - Whether header should be clickable
  * @param {Boolean} showProgress - Whether to show progress bar
+ * @param {Boolean} hideImage - Whether to hide the collection image
  */
 export function CollectionHeader({
   collection,
@@ -18,15 +22,31 @@ export function CollectionHeader({
   ownedCount = 0,
   totalCount = 0,
   actions,
+  titleAction,
   onClick,
   clickable = false,
-  showProgress = true
+  showProgress = true,
+  hideImage = false
 }) {
+  const { isDarkMode } = useTheme();
   const progressPercentage = totalCount > 0 ? Math.round((ownedCount / totalCount) * 100) : 0;
 
   const headerClass = clickable
     ? 'collection-header-detail clickable'
     : 'collection-header-detail';
+
+  // Determine image to display - priority order:
+  // 1. thumbnail_url/image_url (for DBoT entities)
+  // 2. representative_images[0] (for custom collections)
+  const imageUrl = collection?.thumbnail_url
+    || collection?.image_url
+    || (collection?.representative_images && collection.representative_images.length > 0
+      ? collection.representative_images[0]
+      : null);
+
+  // Get appropriate icon for collection type
+  const iconColor = isDarkMode ? '#9ca3af' : '#6b7280';
+  const fallbackIcon = getTypeIcon(collection?.type || 'collection', iconColor, 60);
 
   return (
     <div
@@ -36,11 +56,11 @@ export function CollectionHeader({
       style={clickable ? { cursor: 'pointer' } : undefined}
     >
       {/* Collection Image */}
-      {(collection?.thumbnail_url || collection?.image_url) ? (
+      {!hideImage && (imageUrl ? (
         <div
           className="collection-image-large"
           style={{
-            backgroundImage: `url(${collection.thumbnail_url || collection.image_url})`,
+            backgroundImage: `url(${imageUrl})`,
             backgroundSize: 'contain',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
@@ -54,22 +74,27 @@ export function CollectionHeader({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#f8f9fa',
-            border: '2px solid #dee2e6'
+            backgroundColor: 'transparent'
           }}
         >
-          <svg viewBox="0 0 24 24" width="60" height="60" fill="none" stroke="#6c757d" strokeWidth="1.5">
-            <path d="M3 7v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7M3 7l9-4 9 4M3 7h18" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          {fallbackIcon}
         </div>
-      )}
+      ))}
 
       {/* Collection Details */}
       <div className="collection-details">
         <div className="collection-title-row">
-          <div>
-            <h1 className="collection-title">{collection?.name || 'Collection'}</h1>
-            <p className="collection-subtitle">{subtitle}</p>
+          <div className="collection-title-container">
+            <h1 className="collection-title">
+              {collection?.name || 'Collection'}
+              {/* Title Action Button (inline with title) */}
+              {titleAction && (
+                <span className="collection-title-action">
+                  {titleAction}
+                </span>
+              )}
+            </h1>
+            {subtitle && <p className="collection-subtitle">{subtitle}</p>}
           </div>
 
           {/* Action Buttons Slot */}

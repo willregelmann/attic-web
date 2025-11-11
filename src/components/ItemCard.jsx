@@ -2,11 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { useLazyQuery } from '@apollo/client/react';
 import { GET_DATABASE_OF_THINGS_COLLECTION_ITEMS } from '../queries';
 import { isCollectionType, formatEntityType } from '../utils/formatters';
+import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { getTypeIcon } from '../utils/iconUtils.jsx';
 
 /**
  * ItemCardImage - Displays item image with fallback to child images
  */
 export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = false }) {
+  const { isDarkMode } = useTheme();
+  const { isAuthenticated } = useAuth();
   const [childImages, setChildImages] = useState([]);
   const [isVisible, setIsVisible] = useState(false);
   const imageRef = useRef(null);
@@ -18,7 +23,8 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
   );
 
   // Use representative images from backend if available, otherwise fetch children client-side
-  const representativeImages = item.representative_image_urls || [];
+  // Support both field names: representative_image_urls (DBoT entities) and representative_images (UserCollections)
+  const representativeImages = item.representative_image_urls || item.representative_images || [];
   const hasRepresentativeImages = representativeImages.length > 0;
 
   // Intersection Observer to detect when card enters viewport
@@ -85,18 +91,7 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
     if (imageUrl) {
       return `url(${imageUrl})`;
     }
-    // Only use gradient if no representative or child images are available
-    if (representativeImages.length === 0 && childImages.length === 0) {
-      const gradients = [
-        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-        'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-      ];
-      return gradients[index % gradients.length];
-    }
-    // No background when showing representative or child images
+    // No background when no images are available (just show icon)
     return 'transparent';
   };
 
@@ -105,8 +100,26 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
   const hasMoreImages = imagesToDisplay.length > 4;
   const displayImages = hasMoreImages ? imagesToDisplay.slice(0, 4) : imagesToDisplay;
 
+  // Determine icon color and get icon
+  const iconColor = isDarkMode ? '#9ca3af' : '#6b7280';
+  const shouldShowIcon = !item.image_url && imagesToDisplay.length === 0;
+  const typeIcon = shouldShowIcon ? getTypeIcon(item.type, iconColor, 64) : null;
+
   return (
     <div className="item-image" ref={imageRef} style={{ background: getItemImage() }}>
+      {/* Type icon for items without images */}
+      {typeIcon && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+          height: '100%'
+        }}>
+          {typeIcon}
+        </div>
+      )}
+
       {/* Representative/child images - special handling for 1 or 2 images */}
       {!item.image_url && imagesToDisplay.length === 1 && (
         <div
@@ -155,13 +168,23 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
             </svg>
           </div>
         )}
+        {isOwned && isAuthenticated && (
+          <div className="owned-indicator">
+            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+              <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 /**
- * ItemCard - Standard item/collection card component
+ * ItemCard - Universal card component for items and collections
+ *
+ * @param {Object} item - Item or collection data
+ * @param {Object} progress - Optional progress data for user collections { owned_count, total_count, percentage }
  */
 export function ItemCard({
   item,
@@ -171,8 +194,11 @@ export function ItemCard({
   isFavorite = false,
   showCompletion = false,
   completionStats = null,
-  showAsWishlist = false
+  showAsWishlist = false,
+  progress = null
 }) {
+  const { isAuthenticated } = useAuth();
+
   // Calculate completion percentage
   const completionPercentage = completionStats?.completionPercentage ?? (isOwned ? 100 : 0);
 
@@ -194,13 +220,28 @@ export function ItemCard({
         <div className="item-meta">
           <span className="item-type">
             {formatEntityType(item.type)}
+            {item.year && ` • ${item.year}`}
           </span>
         </div>
 
-        {showCompletion && (
+        {showCompletion && isAuthenticated && (
           <div className="item-completion-bar">
             <div className="completion-progress">
               <div className="completion-fill" style={{ width: `${completionPercentage}%` }}></div>
+            </div>
+          </div>
+        )}
+
+        {progress && isAuthenticated && (
+          <div className="item-progress">
+            <div className="progress-bar">
+              <div
+                className="progress-fill"
+                style={{ width: `${progress.percentage}%` }}
+              />
+            </div>
+            <div className="progress-text">
+              {progress.owned_count}/{progress.total_count}
             </div>
           </div>
         )}

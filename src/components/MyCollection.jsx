@@ -1,27 +1,23 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@apollo/client/react';
-import { useNavigate } from 'react-router-dom';
-import { MY_COLLECTION_TREE, CREATE_USER_COLLECTION, GET_DATABASE_OF_THINGS_ENTITY } from '../queries';
-import { CollectionCard } from './CollectionCard';
-import { ItemCard } from './ItemCard';
+import { useQuery, useApolloClient } from '@apollo/client/react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { MY_COLLECTION_TREE, GET_DATABASE_OF_THINGS_ENTITY } from '../queries';
 import { CollectionHeader } from './CollectionHeader';
 import { ItemGrid } from './ItemGrid';
 import ItemDetail from './ItemDetail';
-import CircularMenu from './CircularMenu';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
+import { formatEntityType } from '../utils/formatters';
 import './MyCollection.css';
 
-function MyCollection({ onAddToCollection }) {
+function MyCollection() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const client = useApolloClient();
   const { setBreadcrumbItems, setLoading: setBreadcrumbsLoading } = useBreadcrumbs();
-  const [currentParentId, setCurrentParentId] = useState(null);
+  const [currentParentId, setCurrentParentId] = useState(id || null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
-  const [showCreateCollectionPrompt, setShowCreateCollectionPrompt] = useState(false);
-  const [newCollectionName, setNewCollectionName] = useState('');
-  const [newCollectionDescription, setNewCollectionDescription] = useState('');
-  const [navigationPath, setNavigationPath] = useState([]); // Track navigation breadcrumb trail
 
   const { loading, error, data, refetch } = useQuery(MY_COLLECTION_TREE, {
     variables: { parentId: currentParentId },
@@ -36,52 +32,13 @@ function MyCollection({ onAddToCollection }) {
     fetchPolicy: 'cache-first'
   });
 
-  const [createCollection] = useMutation(CREATE_USER_COLLECTION, {
-    onCompleted: () => {
-      refetch();
-      setShowCreateCollectionPrompt(false);
-      setNewCollectionName('');
-      setNewCollectionDescription('');
-    },
-    onError: (error) => {
-      console.error('Error creating collection:', error);
-      if (error.message.includes('Unauthenticated') || error.networkError?.statusCode === 401) {
-        alert('You must be logged in to create collections. Please log in and try again.');
-      } else if (error.networkError?.statusCode === 500) {
-        alert('Server error. Please try logging out and logging back in, then try again.');
-      } else {
-        alert('Failed to create collection: ' + error.message);
-      }
-    }
-  });
+  // Sync currentParentId with URL parameter
+  useEffect(() => {
+    setCurrentParentId(id || null);
+  }, [id]);
 
   const handleCollectionClick = (collection) => {
-    setCurrentParentId(collection.id);
-    // Add to navigation path
-    setNavigationPath(prev => [...prev, { id: collection.id, name: collection.name }]);
-  };
-
-  const handleCreateCollection = async () => {
-    if (!newCollectionName.trim()) {
-      alert('Please enter a collection name');
-      return;
-    }
-
-    const variables = {
-      name: newCollectionName.trim(),
-    };
-
-    // Only include description if provided
-    if (newCollectionDescription.trim()) {
-      variables.description = newCollectionDescription.trim();
-    }
-
-    // Only include parentId if we're in a subcollection
-    if (currentParentId) {
-      variables.parentId = currentParentId;
-    }
-
-    await createCollection({ variables });
+    navigate(`/my-collection/${collection.id}`);
   };
 
   const handleItemClick = (item, index) => {
@@ -110,33 +67,60 @@ function MyCollection({ onAddToCollection }) {
     setSelectedItem(allItems[newIndex]);
   };
 
-  // Update breadcrumbs in context
+  // Build breadcrumbs dynamically from collection hierarchy
   useEffect(() => {
-    const items = [
-      {
-        label: 'My Collection',
-        onClick: () => {
-          setCurrentParentId(null);
-          setNavigationPath([]);
+    const buildBreadcrumbs = async () => {
+      const items = [
+        {
+          label: 'My Collection',
+          onClick: () => navigate('/my-collection')
         }
+      ];
+
+      // Build path by walking up parent chain
+      if (currentParentId && data?.myCollectionTree?.current_collection) {
+        const path = [];
+        let currentId = currentParentId;
+
+        // Walk up the parent chain
+        while (currentId) {
+          try {
+            const { data: collectionData } = await client.query({
+              query: MY_COLLECTION_TREE,
+              variables: { parentId: currentId },
+              fetchPolicy: 'cache-first'
+            });
+
+            if (collectionData?.myCollectionTree?.current_collection) {
+              const col = collectionData.myCollectionTree.current_collection;
+              path.unshift({
+                id: col.id,
+                name: col.name
+              });
+              currentId = col.parent_collection_id;
+            } else {
+              break;
+            }
+          } catch (error) {
+            console.error('Error building breadcrumb path:', error);
+            break;
+          }
+        }
+
+        // Add path items as breadcrumbs
+        path.forEach(pathItem => {
+          items.push({
+            label: pathItem.name,
+            onClick: () => navigate(`/my-collection/${pathItem.id}`)
+          });
+        });
       }
-    ];
 
-    // Add navigation path items
-    navigationPath.forEach((pathItem, index) => {
-      items.push({
-        label: pathItem.name,
-        onClick: () => {
-          // Navigate to this collection
-          setCurrentParentId(pathItem.id);
-          // Trim navigation path to this point
-          setNavigationPath(navigationPath.slice(0, index + 1));
-        }
-      });
-    });
+      setBreadcrumbItems(items);
+    };
 
-    setBreadcrumbItems(items);
-  }, [navigationPath, setBreadcrumbItems]);
+    buildBreadcrumbs();
+  }, [currentParentId, data?.myCollectionTree?.current_collection, client, navigate, setBreadcrumbItems]);
 
   // Update breadcrumbs loading state
   useEffect(() => {
@@ -166,14 +150,21 @@ function MyCollection({ onAddToCollection }) {
   const { collections = [], items = [], wishlists = [], current_collection } = data?.myCollectionTree || {};
   const allItems = [...items, ...wishlists];
 
-  // For linked collections, use DBoT collection data for display
-  const isLinkedCollection = current_collection?.linked_dbot_collection_id;
+  // For linked collections, merge user collection data with DBoT collection data
+  const isLinkedCollection = current_collection?.type === 'linked';
   const dbotCollection = dbotCollectionData?.databaseOfThingsEntity;
-  const displayCollection = isLinkedCollection && dbotCollection ? dbotCollection : current_collection;
+  const displayCollection = isLinkedCollection && dbotCollection
+    ? {
+        ...dbotCollection, // Use DBoT's image, attributes, year, etc.
+        type: 'linked', // Override type to 'linked'
+        parent_collection_id: current_collection.parent_collection_id, // Preserve user collection hierarchy
+        id: current_collection.id, // Use user collection ID for navigation
+      }
+    : current_collection;
 
-  // Calculate progress
-  const ownedCount = items.length;
-  const totalCount = allItems.length;
+  // Use backend's recursive progress calculation if available, otherwise fallback to local count
+  const ownedCount = current_collection?.progress?.owned_count ?? items.length;
+  const totalCount = current_collection?.progress?.total_count ?? allItems.length;
 
   // Combine collections and items for rendering
   const displayItems = [...collections, ...allItems];
@@ -181,26 +172,30 @@ function MyCollection({ onAddToCollection }) {
   // Create ownership set for ItemGrid
   const userOwnership = new Set(items.map(item => item.id));
 
-  // Collection header action buttons
-  const headerActions = (
-    <>
-      <button className="create-collection-button" onClick={() => setShowCreateCollectionPrompt(true)}>
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M3 7v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7M3 7l9-4 9 4M3 7h18" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M12 11v6m-3-3h6" strokeLinecap="round"/>
-        </svg>
-        Create Collection
-      </button>
-      {onAddToCollection && (
-        <button className="add-item-button" onClick={onAddToCollection}>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 5v14m-7-7h14" strokeLinecap="round"/>
-          </svg>
-          Add Item
-        </button>
-      )}
-    </>
-  );
+  // Collection header action buttons - hide in linked collections
+  const headerActions = !linkedDbotCollectionId ? (
+    <button
+      className="create-collection-button"
+      onClick={(e) => {
+        e.stopPropagation();
+        // Open ItemDetail with a new collection object
+        setSelectedItem({
+          type: 'custom',
+          name: '',
+          description: '',
+          parent_collection_id: currentParentId
+        });
+        setSelectedItemIndex(null);
+      }}
+      title="Create new collection"
+      aria-label="Create new collection"
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 11v6m-3-3h6" strokeLinecap="round"/>
+      </svg>
+    </button>
+  ) : null;
 
   return (
     <div className="my-collection">
@@ -208,16 +203,20 @@ function MyCollection({ onAddToCollection }) {
       <CollectionHeader
         collection={displayCollection || { name: 'My Collection' }}
         subtitle={
-          displayCollection
-            ? isLinkedCollection
-              ? `${displayCollection.type?.replace(/_/g, ' ').toUpperCase()}${displayCollection.year ? ` • ${displayCollection.year}` : ''}`
-              : 'Custom Collection'
-            : 'Your personal collection of items'
+          currentParentId && current_collection
+            ? `${formatEntityType(current_collection.type)}${displayCollection?.year ? ` • ${displayCollection.year}` : ''}`
+            : null
         }
         ownedCount={ownedCount}
         totalCount={totalCount}
         actions={headerActions}
-        showProgress={totalCount > 0}
+        showProgress={currentParentId && (ownedCount > 0 || totalCount > 0)}
+        onClick={currentParentId && displayCollection ? () => {
+          setSelectedItem(displayCollection);
+          setSelectedItemIndex(null);
+        } : undefined}
+        clickable={!!currentParentId && !!displayCollection}
+        hideImage={!currentParentId}
       />
 
       {/* Collections and Items Grid */}
@@ -238,9 +237,6 @@ function MyCollection({ onAddToCollection }) {
         />
       ) : (
         <div className="empty-state">
-          <svg viewBox="0 0 24 24" fill="none" width="64" height="64" stroke="currentColor" strokeWidth="2">
-            <path d="M3 7v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7M3 7l9-4 9 4M3 7h18"/>
-          </svg>
           <h3>No items yet</h3>
           <p>Start building your collection by browsing and adding items</p>
         </div>
@@ -255,71 +251,25 @@ function MyCollection({ onAddToCollection }) {
           onPrevious={() => handleNavigateItem('prev')}
           hasNext={selectedItemIndex < allItems.length - 1}
           hasPrevious={selectedItemIndex > 0}
+          onNavigateToCollection={(collection) => {
+            // Check if it's a user collection or DBoT collection
+            if (collection.type === 'user_collection' || collection.type === 'custom' || collection.type === 'linked') {
+              // Navigate to My Collection view (root if id is null)
+              if (collection.id) {
+                navigate(`/my-collection/${collection.id}`);
+              } else {
+                navigate(`/my-collection`);
+              }
+            } else {
+              // Navigate to DBoT collection view
+              navigate(`/collection/${collection.id}`);
+            }
+          }}
+          currentCollection={current_collection}
+          isUserItem={selectedItem.user_item_id ? true : false}
         />
       )}
 
-      {/* Circular Menu */}
-      {onAddToCollection && (
-        <CircularMenu onAddToCollection={onAddToCollection} />
-      )}
-
-      {/* Create Collection Modal */}
-      {showCreateCollectionPrompt && (
-        <div className="modal-overlay" onClick={() => setShowCreateCollectionPrompt(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Create New Collection</h2>
-            <p className="modal-description">
-              {currentParentId
-                ? `This will create a new collection under "${data?.myCollectionTree?.current_collection?.name}"`
-                : 'This will create a new collection at the root level'}
-            </p>
-
-            <div className="form-group">
-              <label htmlFor="collection-name">Collection Name *</label>
-              <input
-                id="collection-name"
-                type="text"
-                value={newCollectionName}
-                onChange={(e) => setNewCollectionName(e.target.value)}
-                placeholder="e.g., Pokémon Cards, Action Figures"
-                autoFocus
-                onKeyPress={(e) => e.key === 'Enter' && handleCreateCollection()}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="collection-description">Description (optional)</label>
-              <textarea
-                id="collection-description"
-                value={newCollectionDescription}
-                onChange={(e) => setNewCollectionDescription(e.target.value)}
-                placeholder="Add a description for your collection"
-                rows={3}
-              />
-            </div>
-
-            <div className="modal-actions">
-              <button
-                className="cancel-button"
-                onClick={() => {
-                  setShowCreateCollectionPrompt(false);
-                  setNewCollectionName('');
-                  setNewCollectionDescription('');
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="create-button"
-                onClick={handleCreateCollection}
-                disabled={!newCollectionName.trim()}
-              >
-                Create Collection
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

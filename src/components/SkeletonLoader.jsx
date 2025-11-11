@@ -14,26 +14,7 @@ export function Skeleton({ width = '100%', height = '20px', borderRadius = '4px'
   );
 }
 
-// Collection Card Skeleton
-export function CollectionCardSkeleton() {
-  return (
-    <div className="collection-card skeleton-card">
-      <Skeleton height="200px" borderRadius="12px 12px 0 0" className="skeleton-image" />
-      <div className="collection-content">
-        <div className="collection-header">
-          <Skeleton width="70%" height="24px" />
-          <Skeleton width="60px" height="20px" borderRadius="12px" />
-        </div>
-        <div className="skeleton-progress">
-          <Skeleton width="100%" height="8px" borderRadius="4px" />
-          <Skeleton width="40%" height="16px" style={{ marginTop: '8px' }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Item Card Skeleton
+// Item Card Skeleton (used for both items and collections)
 export function ItemCardSkeleton() {
   return (
     <div className="item-card skeleton-card">
@@ -78,12 +59,12 @@ export function ItemListSkeleton({ count = 12 }) {
   );
 }
 
-// Collection Grid Skeleton
+// Collection Grid Skeleton (uses ItemCardSkeleton)
 export function CollectionGridSkeleton({ count = 6 }) {
   return (
-    <div className="collections-grid">
+    <div className="items-grid">
       {Array.from({ length: count }).map((_, index) => (
-        <CollectionCardSkeleton key={index} />
+        <ItemCardSkeleton key={index} />
       ))}
     </div>
   );

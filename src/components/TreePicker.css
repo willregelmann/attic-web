@@ -37,21 +37,12 @@
   justify-content: space-between;
   padding: 0.5rem 0.75rem;
   min-height: 36px;
-  transition: background-color 0.15s ease;
   cursor: default;
-}
-
-.tree-item:hover {
-  background: var(--bg-secondary);
 }
 
 .tree-item.selected {
   background: rgba(74, 144, 226, 0.1);
   border-left: 3px solid var(--bright-blue);
-}
-
-.tree-item.selected:hover {
-  background: rgba(74, 144, 226, 0.15);
 }
 
 /* Tree Item Content (left side) */

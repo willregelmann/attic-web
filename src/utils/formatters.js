@@ -19,7 +19,9 @@ export const isCollectionType = (type) => {
   const normalizedType = type.toLowerCase();
   const collectionTypes = [
     'collection',
-    'custom_collection',
+    'custom',
+    'linked',
+    'custom_collection', // Keep for backwards compatibility
     'trading_card_game',
     'franchise',
     'video_game_series'

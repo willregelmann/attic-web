@@ -290,47 +290,6 @@ export const GOOGLE_LOGIN = gql`
   }
 `;
 
-export const FAVORITE_COLLECTION = gql`
-  mutation FavoriteCollection($entityId: ID!) {
-    favoriteCollection(entity_id: $entityId) {
-      id
-      name
-      email
-    }
-  }
-`;
-
-export const UNFAVORITE_COLLECTION = gql`
-  mutation UnfavoriteCollection($entityId: ID!) {
-    unfavoriteCollection(entity_id: $entityId) {
-      id
-      name
-      email
-    }
-  }
-`;
-
-export const GET_MY_FAVORITE_COLLECTIONS = gql`
-  query GetMyFavoriteCollections {
-    myFavoriteCollections {
-      collection {
-        id
-        name
-        type
-        year
-        image_url
-        thumbnail_url
-        representative_image_urls
-      }
-      stats {
-        totalItems
-        ownedItems
-        completionPercentage
-      }
-    }
-  }
-`;
-
 export const GET_MY_ITEMS = gql`
   query GetMyItems {
     myItems {
@@ -509,6 +468,8 @@ export const MY_COLLECTION_TREE = gql`
         type
         description
         custom_image
+        linked_dbot_collection_id
+        image_url
         progress {
           owned_count
           wishlist_count
@@ -524,10 +485,12 @@ export const MY_COLLECTION_TREE = gql`
         user_metadata
         user_notes
         user_images
+        parent_collection_id
         id
         type
         name
         year
+        attributes
         image_url
         thumbnail_url
       }
@@ -538,6 +501,7 @@ export const MY_COLLECTION_TREE = gql`
         type
         name
         year
+        attributes
         image_url
         thumbnail_url
       }
@@ -546,6 +510,17 @@ export const MY_COLLECTION_TREE = gql`
         name
         parent_collection_id
         linked_dbot_collection_id
+        type
+        description
+        custom_image
+        image_url
+        representative_images
+        progress {
+          owned_count
+          wishlist_count
+          total_count
+          percentage
+        }
       }
     }
   }
@@ -570,6 +545,25 @@ export const CREATE_USER_COLLECTION = gql`
       parent_collection_id
       linked_dbot_collection_id
       created_at
+    }
+  }
+`;
+
+export const UPDATE_USER_COLLECTION = gql`
+  mutation UpdateUserCollection(
+    $id: ID!
+    $name: String
+    $description: String
+  ) {
+    updateUserCollection(
+      id: $id
+      name: $name
+      description: $description
+    ) {
+      id
+      name
+      description
+      updated_at
     }
   }
 `;

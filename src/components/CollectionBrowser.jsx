@@ -2,10 +2,12 @@ import { useQuery } from '@apollo/client/react';
 import { GET_COLLECTIONS } from '../queries';
 import { CollectionGridSkeleton } from './SkeletonLoader';
 import { formatEntityType } from '../utils/formatters';
+import { useTheme } from '../contexts/ThemeContext';
 import './CollectionBrowser.css';
 
 function CollectionBrowser({ onSelectCollection }) {
   const { loading, error, data } = useQuery(GET_COLLECTIONS);
+  const { isDarkMode } = useTheme();
 
   if (loading) {
     return (
@@ -61,15 +63,30 @@ function CollectionBrowser({ onSelectCollection }) {
     };
   };
 
-  const getCollectionImage = (type) => {
-    // Returns a gradient placeholder based on collection type
-    const gradients = {
-      'COLLECTION': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      'SET': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-      'SERIES': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-      'default': 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
-    };
-    return gradients[type] || gradients.default;
+  const getCollectionBackground = () => {
+    // Returns grey background color based on theme
+    return isDarkMode ? '#374151' : '#e5e7eb';
+  };
+
+  const getCollectionIcon = (collection) => {
+    const iconColor = isDarkMode ? '#9ca3af' : '#6b7280';
+
+    // Use folder icon for custom collections
+    if (collection && collection.type === 'custom') {
+      return (
+        <svg viewBox="0 0 24 24" fill="none" width="64" height="64" stroke={iconColor} strokeWidth="1.5">
+          <path d="M3 7v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-9l-2-2H5a2 2 0 0 0-2 2v0" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      );
+    }
+
+    // Default collection icon
+    return (
+      <svg viewBox="0 0 24 24" fill="none" width="64" height="64" stroke={iconColor} strokeWidth="1.5">
+        <path d="M3 7v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7M3 7l9-4 9 4M3 7h18" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M9 11h6M9 15h6" strokeLinecap="round"/>
+      </svg>
+    );
   };
 
   return (
@@ -115,15 +132,16 @@ function CollectionBrowser({ onSelectCollection }) {
             >
               <div
                 className="collection-image"
-                style={{ background: getCollectionImage(collection.type) }}
+                style={{ background: getCollectionBackground() }}
               >
-                <div className="collection-overlay">
-                  <svg viewBox="0 0 24 24" fill="none" className="collection-icon">
-                    <rect x="3" y="6" width="18" height="15" rx="2" stroke="white" strokeWidth="2"/>
-                    <path d="M3 10h18" stroke="white" strokeWidth="2"/>
-                    <circle cx="8" cy="8" r="1" fill="white"/>
-                    <circle cx="12" cy="8" r="1" fill="white"/>
-                  </svg>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: '100%'
+                }}>
+                  {getCollectionIcon(collection)}
                 </div>
               </div>
 
