@@ -5,7 +5,7 @@ import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFilters } from '../contexts/FilterContext';
 import { filterEntities } from '../utils/filterUtils';
-import { ItemCard } from './ItemCard';
+import { ItemGrid } from './ItemGrid';
 import './LandingPage.css';
 
 const LandingPage = () => {
@@ -55,17 +55,12 @@ const LandingPage = () => {
             <h2 className="section-title">Recently Viewed</h2>
           </div>
 
-          <div className="recently-viewed-scroll">
-            {filteredRecentlyViewed.slice(0, 8).map((collection, index) => (
-              <ItemCard
-                key={collection.id}
-                item={collection}
-                index={index}
-                onClick={() => handleCollectionClick(collection.id)}
-                showCompletion={true}
-              />
-            ))}
-          </div>
+          <ItemGrid
+            items={filteredRecentlyViewed}
+            onCollectionClick={(collection) => handleCollectionClick(collection.id)}
+            onItemClick={(item) => handleCollectionClick(item.id)}
+            viewMode="grid"
+          />
         </section>
       ) : (
         <div className="empty-landing-state">

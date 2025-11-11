@@ -83,9 +83,10 @@ function Navigation({ onLogin, onSignup }) {
     console.error('Google login failed');
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setShowMenu(false);
+    navigate('/');
   };
 
   const handleSearch = (e) => {

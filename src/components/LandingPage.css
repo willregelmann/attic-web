@@ -41,40 +41,13 @@
 
 /* Recently Viewed Section */
 .recently-viewed {
-  padding: 0 2rem;
   max-width: 1400px;
   margin: 2rem auto 1em;
 }
 
-.recently-viewed-scroll {
-  display: flex;
-  gap: 1em;
-  overflow-x: auto;
-  padding-bottom: 1rem;
-  scroll-behavior: smooth;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-}
-
-.recently-viewed-scroll::-webkit-scrollbar {
-  height: 8px;
-}
-
-.recently-viewed-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.recently-viewed-scroll::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-}
-
-.recently-viewed-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.recently-viewed .item-card {
-  flex: 0 0 180px;
+/* ItemGrid within recently-viewed gets proper spacing */
+.recently-viewed .items-grid {
+  margin-top: 0;
 }
 
 /* Featured Collections Section */
@@ -94,7 +67,7 @@
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 1rem 0 !important;
-  padding: 0 !important;
+  padding: 0 2rem !important;
 }
 
 .section-subtitle {
@@ -148,12 +121,12 @@
   }
 
   .recently-viewed {
-    padding: 0 1rem;
     margin: 1.5rem auto 1em;
   }
 
-  .recently-viewed .item-card {
-    flex: 0 0 150px;
+  .recently-viewed .section-title {
+    text-align: center;
+    padding: 0 1rem !important;
   }
 
   .featured-collections {

@@ -1,12 +1,28 @@
 import { useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
+import { useAuth } from '../contexts/AuthContext';
 import './MobileMenuPanel.css';
 
 function MobileMenuPanel({ isOpen, onClose, user, onLogin, onLogout, isDarkMode, toggleDarkMode }) {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleNavigation = (path) => {
     navigate(path);
     onClose();
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      await login(credentialResponse.credential);
+      onClose();
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  };
+
+  const handleGoogleError = () => {
+    console.error('Google login failed');
   };
 
   const handleLogin = () => {
@@ -65,7 +81,7 @@ function MobileMenuPanel({ isOpen, onClose, user, onLogin, onLogout, isDarkMode,
 
           {/* Navigation Links */}
           <nav className="mobile-menu-nav">
-            {user && (
+            {user ? (
               <button
                 className="mobile-menu-nav-item"
                 onClick={() => handleNavigation('/my-collection')}
@@ -75,6 +91,17 @@ function MobileMenuPanel({ isOpen, onClose, user, onLogin, onLogout, isDarkMode,
                   <path d="M9 22V12h6v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
                 My Collection
+              </button>
+            ) : (
+              <button
+                className="mobile-menu-nav-item"
+                onClick={() => handleNavigation('/recently-viewed')}
+              >
+                <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Recently Viewed
               </button>
             )}
           </nav>
@@ -110,9 +137,9 @@ function MobileMenuPanel({ isOpen, onClose, user, onLogin, onLogout, isDarkMode,
             </button>
           </div>
 
-          {/* Logout */}
-          {user && (
-            <div className="mobile-menu-section">
+          {/* Logout / Login */}
+          <div className="mobile-menu-section">
+            {user ? (
               <button
                 className="mobile-menu-logout-btn"
                 onClick={handleLogout}
@@ -124,8 +151,19 @@ function MobileMenuPanel({ isOpen, onClose, user, onLogin, onLogout, isDarkMode,
                 </svg>
                 Logout
               </button>
-            </div>
-          )}
+            ) : (
+              <div className="mobile-menu-login">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  theme="outline"
+                  size="large"
+                  text="signin_with"
+                  shape="rectangular"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>
