@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Yellow circle background -->
+  <circle cx="50" cy="50" r="50" fill="#F5C842"/>
+
+  <!-- Briefcase icon in navy blue -->
+  <path fill="#2C4B7B" d="M70 35h-8v-5c0-2.76-2.24-5-5-5H43c-2.76 0-5 2.24-5 5v5h-8c-2.76 0-5 2.24-5 5v30c0 2.76 2.24 5 5 5h40c2.76 0 5-2.24 5-5V40c0-2.76-2.24-5-5-5zM43 30h14v5H43v-5zm27 40H30V40h8v5h24v-5h8v30zm-20-15h10v5H50v-5z"/>
+</svg>

@@ -551,14 +551,303 @@
   white-space: nowrap;
 }
 
+/* ===== Mobile Optimizations ===== */
+
 @media (max-width: 768px) {
+  /* Hide breadcrumbs on mobile */
   .breadcrumbs {
     display: none;
   }
 
+  /* Container adjustments */
+  .item-list {
+    min-height: calc(100vh - 56px); /* Account for smaller mobile nav */
+  }
+
+  /* Grid layout - better mobile sizing */
   .items-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
     padding: 0 1rem;
+    margin-top: 1rem;
+  }
+
+  /* List view mobile adjustments */
+  .items-list {
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+
+  .items-list .item-card {
+    margin-bottom: 0.75rem;
+  }
+
+  /* Item cards - better mobile presentation */
+  .item-card {
+    border-radius: 8px;
+    box-shadow: 0 1px 4px var(--shadow-md);
+  }
+
+  .item-card:hover {
+    transform: none; /* Remove lift effect on mobile */
+    box-shadow: 0 1px 4px var(--shadow-md); /* Keep consistent shadow */
+  }
+
+  .item-card:active {
+    transform: scale(0.98);
+    transition: transform 0.1s;
+  }
+
+  /* Item images - smaller on mobile */
+  .item-image {
+    height: 140px;
+    margin: 8px;
+  }
+
+  .items-list .item-image {
+    width: 60px;
+    height: 60px;
+  }
+
+  .items-list .item-content {
+    padding-left: 1rem;
+  }
+
+  /* Item content - adjusted spacing */
+  .item-content {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .item-name {
+    font-size: 0.8125rem;
+    line-height: 1.3;
+  }
+
+  .item-type {
+    font-size: 0.6875rem;
+  }
+
+  /* Overlay elements - adjusted for smaller cards */
+  .item-overlay {
+    padding: 0.5rem;
+  }
+
+  .item-number {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+
+  .owned-badge {
+    width: 24px;
+    height: 24px;
+  }
+
+  .favorite-indicator {
+    top: 6px;
+    left: 6px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .owned-indicator {
+    top: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Child images grid - adjusted for mobile */
+  .child-images-grid {
+    padding: 8px;
+  }
+
+  .more-indicator {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* Action buttons - larger tap targets */
+  .admin-button,
+  .favorite-button,
+  .wishlist-button {
+    padding: 0.75rem;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  .admin-button:active,
+  .favorite-button:active,
+  .wishlist-button:active {
+    transform: scale(0.95);
+    transition: transform 0.1s;
+  }
+
+  /* Filter active indicator - larger on mobile */
+  .filter-active-indicator {
+    width: 10px;
+    height: 10px;
+    top: 6px;
+    right: 6px;
+  }
+
+  /* Empty states - better mobile spacing */
+  .no-items,
+  .items-loading,
+  .items-error {
+    min-height: 300px;
+    padding: 2rem 1.5rem;
+  }
+
+  .empty-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .no-items h3,
+  .items-error h3 {
+    font-size: 1.125rem;
+  }
+
+  .no-items p,
+  .items-error p,
+  .items-loading p {
+    font-size: 0.875rem;
+    text-align: center;
+  }
+
+  .items-error button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    min-height: 48px;
+    border-radius: 10px;
+  }
+
+  /* Section headers - mobile spacing */
+  .section-header {
+    font-size: 1rem;
+    margin: 0 0.5rem 0.75rem;
+    padding: 0 0.5rem;
+  }
+
+  /* Progress bars - adjusted for mobile */
+  .item-completion-bar {
+    margin-top: 0.5rem;
+  }
+
+  .completion-progress {
+    height: 5px;
+    margin-bottom: 0.375rem;
+  }
+
+  .completion-text {
+    font-size: 0.6875rem;
+  }
+
+  .item-progress .progress-bar {
+    height: 5px;
+  }
+
+  .item-progress .progress-text {
+    font-size: 11px;
+  }
+}
+
+/* Small phones - extra optimizations */
+@media (max-width: 480px) {
+  /* Tighter grid on small screens */
+  .items-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.5rem;
+    padding: 0 0.75rem;
+  }
+
+  /* Even smaller cards */
+  .item-image {
+    height: 120px;
+    margin: 6px;
+  }
+
+  .items-list .item-image {
+    width: 50px;
+    height: 50px;
+  }
+
+  .items-list .item-content {
+    padding-left: 0.75rem;
+  }
+
+  /* Compact content */
+  .item-content {
+    padding: 0.375rem 0.5rem;
+  }
+
+  .item-name {
+    font-size: 0.75rem;
+  }
+
+  .item-type {
+    font-size: 0.625rem;
+  }
+
+  /* Smaller overlays */
+  .item-overlay {
+    padding: 0.375rem;
+  }
+
+  .item-number {
+    padding: 2px 5px;
+    font-size: 10px;
+  }
+
+  .owned-badge {
+    width: 20px;
+    height: 20px;
+  }
+
+  .favorite-indicator,
+  .owned-indicator {
+    width: 18px;
+    height: 18px;
+    top: 4px;
+  }
+
+  .favorite-indicator {
+    left: 4px;
+  }
+
+  .owned-indicator {
+    right: 4px;
+  }
+
+  /* Compact empty states */
+  .no-items,
+  .items-loading,
+  .items-error {
+    min-height: 250px;
+    padding: 1.5rem 1rem;
+  }
+
+  .empty-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .no-items h3,
+  .items-error h3 {
+    font-size: 1rem;
+  }
+
+  .no-items p,
+  .items-error p,
+  .items-loading p {
+    font-size: 0.8125rem;
+  }
+
+  /* Section headers - smaller */
+  .section-header {
+    font-size: 0.9375rem;
+    margin: 0 0.375rem 0.5rem;
   }
 }
 

@@ -3,13 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useLazyQuery } from '@apollo/client/react';
 import { SEMANTIC_SEARCH_DATABASE_OF_THINGS } from '../queries';
 import { isCollectionType, formatEntityType } from '../utils/formatters';
-import ItemDetail from './ItemDetail';
 import './MobileSearch.css';
 
 function MobileSearch({ isOpen, onClose, onAddToCollection }) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState(null);
 
   const [searchItems, { data: searchData, loading: searchLoading, error: searchError }] = useLazyQuery(
     SEMANTIC_SEARCH_DATABASE_OF_THINGS,
@@ -37,13 +35,13 @@ function MobileSearch({ isOpen, onClose, onAddToCollection }) {
 
   const handleResultClick = (item) => {
     setSearchQuery('');
+    onClose();
 
     if (isCollectionType(item.type)) {
-      onClose();
       navigate(`/collection/${item.id}`);
     } else {
-      // For individual items, show detail modal
-      setSelectedItem(item);
+      // For individual items, navigate to full-page view
+      navigate(`/item/${item.id}`);
     }
   };
 
@@ -147,22 +145,6 @@ function MobileSearch({ isOpen, onClose, onAddToCollection }) {
         )}
       </div>
     </div>
-
-    {/* Item Detail Modal */}
-    {selectedItem && (
-      <ItemDetail
-        item={selectedItem}
-        isOwned={false}
-        onToggleOwnership={() => {}}
-        onAddToCollection={onAddToCollection}
-        onNavigateToCollection={(collection) => {
-          navigate(`/collection/${collection.id}`);
-          setSelectedItem(null);
-          onClose();
-        }}
-        onClose={() => setSelectedItem(null)}
-      />
-    )}
     </>
   );
 }

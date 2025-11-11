@@ -16,6 +16,8 @@ import CollectionView from './components/CollectionView';
 import UserProfile from './components/UserProfile';
 import WishlistView from './components/WishlistView';
 import MyCollection from './components/MyCollection';
+import ItemDetailPage from './components/ItemDetailPage';
+import MyItemDetailPage from './components/MyItemDetailPage';
 import CircularMenu from './components/CircularMenu';
 import './App.css';
 
@@ -29,9 +31,6 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
-
-  // Hide global menu on routes that render ItemList (which has its own CircularMenu with filter)
-  const showGlobalMenu = !location.pathname.startsWith('/collection') && !location.pathname.startsWith('/my-collection');
 
   const handleLogin = () => {
     setShowLoginModal(true);
@@ -54,6 +53,31 @@ function AppContent() {
     }
   };
 
+  // Build context-aware actions for CircularMenu
+  const getCircularMenuActions = () => {
+    const actions = [];
+
+    // Context-specific actions based on route
+    const isMyCollection = location.pathname.startsWith('/my-collection');
+    const isCollectionView = location.pathname.startsWith('/collection/');
+    const isItemDetail = location.pathname.startsWith('/item/');
+    const isMyItemDetail = location.pathname.startsWith('/my-item/');
+
+    // MyCollection, CollectionView, and ItemDetail pages have their own CircularMenus
+    // Only show CircularMenu on other pages
+    if (!isMyCollection && !isCollectionView && !isItemDetail && !isMyItemDetail) {
+      // Search is available on other pages
+      actions.push({
+        id: 'search',
+        icon: 'fas fa-search',
+        label: 'Search',
+        onClick: handleSearchFromMenu
+      });
+    }
+
+    return actions;
+  };
+
   return (
     <BreadcrumbsProvider>
       <div className="app">
@@ -70,6 +94,8 @@ function AppContent() {
             />
             <Route path="/collection/:id" element={<CollectionView />} />
             <Route path="/my-collection/:id?" element={<MyCollection />} />
+            <Route path="/item/:entity_id" element={<ItemDetailPage />} />
+            <Route path="/my-item/:user_item_id" element={<MyItemDetailPage />} />
             <Route path="/wishlist" element={<WishlistView />} />
             <Route path="/profile" element={<UserProfile />} />
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -86,11 +112,11 @@ function AppContent() {
           onClose={() => setShowMobileSearch(false)}
         />
 
-        {/* Mobile Circular Menu - only on pages without their own menu */}
-        {showGlobalMenu && (
+        {/* Mobile Circular Menu - context-aware actions */}
+        {/* Only render on pages without their own CircularMenu (MyCollection and CollectionView have their own) */}
+        {getCircularMenuActions().length > 0 && (
           <CircularMenu
-            onSearch={handleSearchFromMenu}
-            onAccount={handleAccountClick}
+            actions={getCircularMenuActions()}
             onBackdropClick={() => setShowMobileSearch(false)}
           />
         )}

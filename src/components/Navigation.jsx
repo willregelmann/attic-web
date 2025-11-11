@@ -9,6 +9,7 @@ import { SEMANTIC_SEARCH_DATABASE_OF_THINGS } from '../queries';
 import { isCollectionType, formatEntityType } from '../utils/formatters';
 import Breadcrumbs from './Breadcrumbs';
 import ItemDetail from './ItemDetail';
+import MobileMenuPanel from './MobileMenuPanel';
 import './Navigation.css';
 
 function Navigation({ onLogin, onSignup }) {
@@ -17,6 +18,7 @@ function Navigation({ onLogin, onSignup }) {
   const { breadcrumbItems, loading: breadcrumbsLoading } = useBreadcrumbs();
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -111,8 +113,16 @@ function Navigation({ onLogin, onSignup }) {
     if (isCollectionType(item.type)) {
       navigate(`/collection/${item.id}`);
     } else {
-      // For individual items, show detail modal
-      setSelectedItem(item);
+      // For individual items, check viewport
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile) {
+        // Navigate to full-page view on mobile
+        navigate(`/item/${item.id}`);
+      } else {
+        // Show detail modal on desktop
+        setSelectedItem(item);
+      }
     }
   };
 
@@ -127,7 +137,7 @@ function Navigation({ onLogin, onSignup }) {
           <span className="nav-title">Will's Attic</span>
         </button>
 
-        <div className="nav-search" ref={searchRef}>
+        <div className="nav-search nav-search-desktop" ref={searchRef}>
           <form onSubmit={handleSearch} className="search-form">
             <div className="search-input-wrapper">
               <svg className="search-icon" viewBox="0 0 24 24" fill="none" width="20" height="20">
@@ -219,28 +229,41 @@ function Navigation({ onLogin, onSignup }) {
         </div>
 
         <div className="nav-actions">
-          {/* Dark Mode Toggle */}
+          {/* Mobile Hamburger Menu */}
           <button
-            className="theme-toggle-button"
-            onClick={toggleDarkMode}
-            aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="mobile-menu-button"
+            onClick={() => setShowMobileMenu(true)}
+            aria-label="Open menu"
           >
-            {isDarkMode ? (
-              // Sun icon for light mode
-              <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/>
-                <path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            ) : (
-              // Moon icon for dark mode
-              <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            )}
+            <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+              <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
           </button>
 
-          <div className="nav-menu-container" ref={menuRef}>
+          {/* Desktop Actions */}
+          <div className="nav-actions-desktop">
+            {/* Dark Mode Toggle */}
+            <button
+              className="theme-toggle-button"
+              onClick={toggleDarkMode}
+              aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDarkMode ? (
+                // Sun icon for light mode
+                <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                  <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              ) : (
+                // Moon icon for dark mode
+                <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
+
+            <div className="nav-menu-container" ref={menuRef}>
             <button
               className="nav-user-button"
               onClick={() => setShowMenu(!showMenu)}
@@ -303,7 +326,19 @@ function Navigation({ onLogin, onSignup }) {
           </div>
         </div>
       </div>
+      </div>
     </nav>
+
+      {/* Mobile Menu Panel*/}
+      <MobileMenuPanel
+        isOpen={showMobileMenu}
+        onClose={() => setShowMobileMenu(false)}
+        user={user}
+        onLogin={onLogin}
+        onLogout={handleLogout}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+      />
     {breadcrumbItems.length > 0 && (
       <Breadcrumbs items={breadcrumbItems} loading={breadcrumbsLoading} />
     )}

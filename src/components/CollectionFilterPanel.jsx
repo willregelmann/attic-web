@@ -23,13 +23,16 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
   const hasFilters = hasActiveFilters(collectionId);
   const textSearch = activeFilters._text_search || '';
 
+  // For root level, we'll build filters from items instead of querying the server
+  const isRootLevel = collectionId === 'root';
+
   // Fetch filterable fields from server (with caching)
   // Note: Only discovers fields from direct children, not nested subcollections
   const { data: filterFieldsData, loading: isLoadingFilterFields } = useQuery(
     GET_COLLECTION_FILTER_FIELDS,
     {
       variables: { collectionId },
-      skip: !isOpen || !collectionId,
+      skip: !isOpen || !collectionId || isRootLevel,
       fetchPolicy: 'cache-and-network', // Check server but show cached data while loading
     }
   );
@@ -39,14 +42,49 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
     GET_COLLECTION_PARENT_COLLECTIONS,
     {
       variables: { collectionId },
-      skip: !isOpen || !collectionId,
+      skip: !isOpen || !collectionId || isRootLevel,
       fetchPolicy: 'cache-and-network',
     }
   );
 
   // Get filterable fields from server response, plus parent collections and ownership
   const filterableFields = useMemo(() => {
-    const metadataFields = filterFieldsData?.databaseOfThingsCollectionFilterFields || [];
+    let metadataFields = [];
+
+    if (isRootLevel) {
+      // For root level, build filter fields from items themselves
+      const attributeMap = new Map();
+
+      items.forEach(item => {
+        if (item.attributes) {
+          Object.entries(item.attributes).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== '') {
+              if (!attributeMap.has(key)) {
+                attributeMap.set(key, new Set());
+              }
+              // Handle array values
+              if (Array.isArray(value)) {
+                value.forEach(v => attributeMap.get(key).add(String(v)));
+              } else {
+                attributeMap.get(key).add(String(value));
+              }
+            }
+          });
+        }
+      });
+
+      // Convert to filter field format
+      metadataFields = Array.from(attributeMap.entries()).map(([key, valuesSet]) => ({
+        field: key,
+        label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
+        type: 'multiselect',
+        values: Array.from(valuesSet).sort(),
+        priority: 0
+      }));
+    } else {
+      metadataFields = filterFieldsData?.databaseOfThingsCollectionFilterFields || [];
+    }
+
     const parentCollections = parentCollectionsData?.databaseOfThingsCollectionParentCollections || [];
     const specialFields = [];
 
@@ -62,8 +100,8 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
       });
     }
 
-    // If there are parent collections, add them as a special filter field
-    if (parentCollections.length > 0) {
+    // If there are parent collections, add them as a special filter field (not for root level)
+    if (!isRootLevel && parentCollections.length > 0) {
       specialFields.push({
         field: 'parent_collections',
         label: 'Collection(s)',
@@ -78,7 +116,7 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
     return [...specialFields, ...metadataFields].sort((a, b) =>
       (b.priority || 0) - (a.priority || 0)
     );
-  }, [filterFieldsData, parentCollectionsData, isAuthenticated, userOwnership]);
+  }, [isRootLevel, items, filterFieldsData, parentCollectionsData, isAuthenticated, userOwnership]);
 
   // Pre-compute value counts for all fields
   const allValueCounts = useMemo(() => {
@@ -197,7 +235,7 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
             </div>
           </div>
 
-          {(isLoadingFilterFields || isLoadingParentCollections) ? (
+          {(!isRootLevel && (isLoadingFilterFields || isLoadingParentCollections)) ? (
             <FilterFieldsSkeleton count={5} />
           ) : filterableFields.length === 0 ? (
             <div className="filter-empty-state">

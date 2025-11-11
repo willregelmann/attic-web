@@ -16,6 +16,7 @@ import ItemDetail from './ItemDetail';
 import CollectionFilterPanel from './CollectionFilterPanel';
 import CircularMenu from './CircularMenu';
 import AddCollectionModal from './AddCollectionModal';
+import MobileSearch from './MobileSearch';
 import Toast from './Toast';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { formatEntityType, isCollectionType } from '../utils/formatters';
@@ -38,6 +39,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
   const [showCollectionFilters, setShowCollectionFilters] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
   // GraphQL queries and mutations
@@ -285,37 +287,23 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   // Collection header action buttons (filter only)
   const headerActions = !isRootView && (
     <button
-      className={`admin-button ${hasActiveFilters(collection.id) ? 'active' : ''}`}
+      className={`filter-toggle-button ${hasActiveFilters(collection.id) ? 'active' : ''}`}
       onClick={(e) => {
         e.stopPropagation();
         setShowCollectionFilters(true);
       }}
       title="Filter collection items"
     >
-      <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-        <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
       {hasActiveFilters(collection.id) && (
-        <span className="filter-active-indicator"></span>
+        <span className="filter-badge"></span>
       )}
     </button>
   );
 
-  // Title action button (add to wishlist)
-  const titleAction = !isRootView && isAuthenticated && (
-    <button
-      className="wishlist-button"
-      onClick={(e) => {
-        e.stopPropagation();
-        setIsAddModalOpen(true);
-      }}
-      title="Add collection to wishlist"
-    >
-      <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-        <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    </button>
-  );
+  // Title action removed - now in CircularMenu
 
   return (
     <div className="item-list">
@@ -326,7 +314,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
         ownedCount={stats.owned}
         totalCount={stats.total}
         actions={headerActions}
-        titleAction={titleAction}
         onClick={() => {
           setSelectedItem(collection);
           setSelectedItemIndex(null);
@@ -340,8 +327,17 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
         <ItemGrid
           items={filteredItems}
           onItemClick={(item, index) => {
-            setSelectedItem(item);
-            setSelectedItemIndex(index);
+            // Check viewport: on mobile (<=768px), navigate to full-page view
+            const isMobile = window.innerWidth <= 768;
+
+            if (isMobile) {
+              // Navigate to full-page view on mobile
+              navigate(`/item/${item.id}`);
+            } else {
+              // Open modal on desktop
+              setSelectedItem(item);
+              setSelectedItemIndex(index);
+            }
           }}
           onCollectionClick={onSelectCollection}
           userOwnership={userOwnership}
@@ -419,23 +415,59 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
       )}
 
       {/* Collection-specific Circular Menu with Filter */}
-      {!isRoot && collection?.id && (
-        <CircularMenu
-          onSearch={() => {
-            // Navigate to search - could enhance this later
-            navigate('/');
-          }}
-          onAccount={() => {
-            if (isAuthenticated) {
-              navigate('/profile');
-            } else {
-              navigate('/');
-            }
-          }}
-          onFilter={() => setShowCollectionFilters(true)}
-          showFilter={true}
-        />
-      )}
+      {!isRoot && collection?.id && (() => {
+        const actions = [
+          {
+            id: 'search',
+            icon: 'fas fa-search',
+            label: 'Search',
+            onClick: () => setShowMobileSearch(true)
+          },
+          {
+            id: 'filter',
+            icon: 'fas fa-filter',
+            label: 'Filter collection',
+            onClick: () => setShowCollectionFilters(true)
+          }
+        ];
+
+        // Add wishlist button when no item is selected and user is authenticated
+        if (isAuthenticated && !selectedItem && !isRootView) {
+          actions.push({
+            id: 'add-to-wishlist',
+            icon: 'fas fa-heart',
+            label: 'Add collection to wishlist',
+            onClick: () => setIsAddModalOpen(true)
+          });
+        }
+
+        // Add item action buttons when viewing an item (not a collection) in ItemDetail
+        if (isAuthenticated && selectedItem && !isCollectionType(selectedItem.type) && selectedItemIndex !== null) {
+          if (userOwnership.has(selectedItem.id)) {
+            // For owned items: show remove button
+            actions.push({
+              id: 'remove-from-collection',
+              icon: 'fas fa-minus-circle',
+              label: 'Remove from collection',
+              onClick: () => {
+                if (window.confirm(`Remove "${selectedItem.name}" from your collection?`)) {
+                  toggleItemOwnership(selectedItem.id);
+                }
+              }
+            });
+          } else {
+            // For non-owned items: show add button
+            actions.push({
+              id: 'add-to-collection',
+              icon: 'fas fa-plus-circle',
+              label: 'Add to collection',
+              onClick: () => toggleItemOwnership(selectedItem.id)
+            });
+          }
+        }
+
+        return <CircularMenu actions={actions} />;
+      })()}
 
       {/* AddCollectionModal for adding collection to wishlist */}
       {!isRootView && collection && (
@@ -449,6 +481,12 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
           onSuccess={handleAddCollectionSuccess}
         />
       )}
+
+      {/* Mobile Search Modal */}
+      <MobileSearch
+        isOpen={showMobileSearch}
+        onClose={() => setShowMobileSearch(false)}
+      />
 
       {/* Toast Notification */}
       {toastMessage && (

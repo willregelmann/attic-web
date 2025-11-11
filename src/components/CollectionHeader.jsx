@@ -11,6 +11,7 @@ import './CollectionHeader.css';
  * @param {Number} totalCount - Total number of items
  * @param {ReactNode} actions - Action buttons to render in header (right side)
  * @param {ReactNode} titleAction - Action button to render next to title (inline with title)
+ * @param {ReactNode} subtitleAction - Action button to render next to subtitle (inline with subtitle)
  * @param {Function} onClick - Optional click handler for header
  * @param {Boolean} clickable - Whether header should be clickable
  * @param {Boolean} showProgress - Whether to show progress bar
@@ -23,6 +24,7 @@ export function CollectionHeader({
   totalCount = 0,
   actions,
   titleAction,
+  subtitleAction,
   onClick,
   clickable = false,
   showProgress = true,
@@ -94,7 +96,17 @@ export function CollectionHeader({
                 </span>
               )}
             </h1>
-            {subtitle && <p className="collection-subtitle">{subtitle}</p>}
+            {subtitle && (
+              <p className="collection-subtitle">
+                {subtitle}
+                {/* Subtitle Action Button (inline with subtitle) */}
+                {subtitleAction && (
+                  <span className="collection-subtitle-action">
+                    {subtitleAction}
+                  </span>
+                )}
+              </p>
+            )}
           </div>
 
           {/* Action Buttons Slot */}

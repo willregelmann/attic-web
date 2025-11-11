@@ -302,6 +302,28 @@ export const GET_MY_ITEMS = gql`
   }
 `;
 
+// TODO: Backend needs to implement this query
+// For now, we'll use GET_MY_ITEMS and filter client-side
+export const GET_MY_ITEM = gql`
+  query GetMyItem($userItemId: ID!) {
+    myItem(user_item_id: $userItemId) {
+      user_item_id
+      user_id
+      user_metadata
+      user_notes
+      user_images
+      parent_collection_id
+      id
+      type
+      name
+      year
+      attributes
+      image_url
+      thumbnail_url
+    }
+  }
+`;
+
 export const GET_MY_COLLECTION = gql`
   query GetMyCollection {
     myCollection {

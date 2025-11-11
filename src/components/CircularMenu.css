@@ -4,7 +4,7 @@
   position: fixed;
   bottom: 1.5rem;
   right: 1.5rem;
-  z-index: 1000;
+  z-index: 2100; /* Above ItemDetail modal (z-index: 2000) */
 }
 
 /* Hide on desktop by default */
@@ -15,6 +15,7 @@
 }
 
 /* Floating Action Button - Matches nav logo style */
+/* Fixed colors - no dark mode adjustments to match navigation bar */
 .floating-btn {
   display: flex;
   align-items: center;
@@ -22,14 +23,15 @@
   width: 7rem;
   height: 7rem;
   border-radius: 50%;
-  background: var(--navy-blue, #2C4B7B);
-  color: var(--yellow-accent, #F5C842);
+  background: #2C4B7B; /* Navy blue - fixed color */
+  color: #F5C842; /* Yellow accent - fixed color */
   border: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55),
               box-shadow 0.3s ease,
-              background 0.3s ease;
+              background 0.3s ease,
+              color 0.3s ease;
   z-index: 1002;
   position: relative;
 }
@@ -46,13 +48,46 @@
 
 .circular-menu.active .floating-btn {
   transform: rotate(135deg);
-  background: var(--yellow-accent, #F5C842);
+  background: #F5C842; /* Yellow accent - fixed color */
+}
+
+/* Save variant - green color scheme */
+.floating-btn-save {
+  background: #10b981; /* Green-500 */
+  color: white;
+}
+
+.floating-btn-save:hover {
+  background: #059669; /* Green-600 */
+}
+
+/* Action mode - prevent rotation animation */
+.circular-menu.action-mode .floating-btn {
+  transform: none;
+}
+
+.circular-menu.action-mode .floating-btn:hover {
+  transform: scale(1.1);
+}
+
+.circular-menu.action-mode .floating-btn:active {
+  transform: scale(0.95);
+}
+
+/* Danger variant - red color scheme (for future use) */
+.floating-btn-danger {
+  background: #ef4444; /* Red-500 */
+  color: white;
+}
+
+.floating-btn-danger:hover {
+  background: #dc2626; /* Red-600 */
 }
 
 /* Briefcase Icon Styling - Yellow briefcase */
 .floating-btn .briefcase-icon {
   font-size: 36px !important;
-  color: var(--yellow-accent, #F5C842);
+  color: #F5C842; /* Yellow accent - fixed color */
   transition: transform 0.3s ease;
 }
 
@@ -60,10 +95,20 @@
   transform: scale(1.1);
 }
 
+/* Action mode icons - match briefcase size */
+.circular-menu.action-mode .floating-btn i {
+  font-size: 36px !important;
+  transition: transform 0.3s ease;
+}
+
+.circular-menu.action-mode .floating-btn:hover i {
+  transform: scale(1.1);
+}
+
 /* Close Icon (X) Styling - Navy X */
 .floating-btn i.fa-times {
   font-size: 2.5rem;
-  color: var(--navy-blue, #2C4B7B);
+  color: #2C4B7B; /* Navy blue - fixed color */
   transition: transform 0.3s ease;
 }
 
@@ -91,9 +136,9 @@
   width: 4.5rem;
   height: 4.5rem;
   border-radius: 50%;
-  background: var(--navy-blue, #2C4B7B);
+  background: #2C4B7B; /* Navy blue - fixed color */
   color: white;
-  border: 2px solid var(--yellow-accent, #F5C842);
+  border: 2px solid #F5C842; /* Yellow accent - fixed color */
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -112,9 +157,9 @@
 
 .menu-item:hover {
   transform: scale(1.15);
-  background: var(--yellow-accent, #F5C842);
-  color: var(--navy-blue, #2C4B7B);
-  border-color: var(--yellow-accent, #F5C842);
+  background: #F5C842; /* Yellow accent - fixed color */
+  color: #2C4B7B; /* Navy blue - fixed color */
+  border-color: #F5C842; /* Yellow accent - fixed color */
   box-shadow: 0 4px 14px rgba(245, 200, 66, 0.4);
 }
 
@@ -123,9 +168,10 @@
 }
 
 /* Menu Item Positions - Circular arrangement */
-/* When active, items fan out in an arc */
+/* When active, items fan out in an arc - 11rem radius */
+/* Custom positions: 1 item = 90°, 2 items = 90°+135°, 3 items = 90°+120°+150°, 4 items = 90°+120°+150°+180° */
 
-/* Item 1 - Add to Collection (90°, straight up) - 11rem radius */
+/* Item 1 - Always at 90° (straight up) */
 .circular-menu.active .menu-item:nth-child(1) {
   opacity: 1;
   transform: translate(0rem, -11.0rem) scale(1);
@@ -133,36 +179,36 @@
   transition-delay: 0.05s;
 }
 
-/* Item 2 - Search (120°, upper-left diagonal) - 11rem radius */
-.circular-menu.active .menu-item:nth-child(2) {
+/* Item 2 - 120° when there are 3+ items */
+.circular-menu.active .menu-item:nth-child(2):not(:last-child) {
   opacity: 1;
-  transform: translate(-5.5rem, -9.5rem) scale(1);
+  transform: translate(-5.5rem, -9.53rem) scale(1);
   pointer-events: auto;
   transition-delay: 0.1s;
 }
 
-/* Item 3 - Filter (150°, left-upper diagonal) - 11rem radius */
+/* Item 2 - 135° when it's the last item (only 2 items total) */
+.circular-menu.active .menu-item:nth-child(2):last-child {
+  opacity: 1;
+  transform: translate(-7.78rem, -7.78rem) scale(1);
+  pointer-events: auto;
+  transition-delay: 0.1s;
+}
+
+/* Item 3 - 150° */
 .circular-menu.active .menu-item:nth-child(3) {
   opacity: 1;
-  transform: translate(-9.5rem, -5.5rem) scale(1);
+  transform: translate(-9.53rem, -5.5rem) scale(1);
   pointer-events: auto;
   transition-delay: 0.15s;
 }
 
-/* Item 4 - My Account (180°, straight left) - 11rem radius */
+/* Item 4 - 180° (straight left) */
 .circular-menu.active .menu-item:nth-child(4) {
   opacity: 1;
   transform: translate(-11.0rem, 0rem) scale(1);
   pointer-events: auto;
   transition-delay: 0.2s;
-}
-
-/* Item 5 - Future action (far left) */
-.circular-menu.active .menu-item:nth-child(5) {
-  opacity: 1;
-  transform: translate(-7.5rem, -3rem) scale(1);
-  pointer-events: auto;
-  transition-delay: 0.25s;
 }
 
 /* Backdrop - dims the background when menu is open */
@@ -173,7 +219,7 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 999;
+  z-index: 999; /* Below ItemDetail modal - when modal is open, use modal's backdrop instead */
   animation: fadeIn 0.3s ease;
   backdrop-filter: blur(8px);
 }
@@ -190,7 +236,7 @@
 /* Accessibility improvements */
 .menu-item:focus-visible,
 .floating-btn:focus-visible {
-  outline: 3px solid var(--yellow-accent, #F5C842);
+  outline: 3px solid #F5C842; /* Yellow accent - fixed color */
   outline-offset: 3px;
 }
 
@@ -205,22 +251,6 @@
 
   .circular-menu.active .menu-item {
     transition-delay: 0s;
-  }
-}
-
-/* Dark mode support - CSS variables automatically adjust */
-@media (prefers-color-scheme: dark) {
-  /* Variables are handled in index.css:
-     --yellow-accent: #FFD966
-     --navy-blue: #5A8DD4
-  */
-
-  .floating-btn:hover {
-    background: #6ba3e7; /* Slightly brighter navy in dark mode */
-  }
-
-  .circular-menu-backdrop {
-    background: rgba(0, 0, 0, 0.7);
   }
 }
 
@@ -254,23 +284,28 @@
   }
 
   /* Adjust positions for smaller screens - same angles, 9rem radius */
+  /* Item 1 - 90° */
   .circular-menu.active .menu-item:nth-child(1) {
     transform: translate(0rem, -9.0rem) scale(1);
   }
 
-  .circular-menu.active .menu-item:nth-child(2) {
-    transform: translate(-4.5rem, -7.8rem) scale(1);
+  /* Item 2 - 120° when there are 3+ items */
+  .circular-menu.active .menu-item:nth-child(2):not(:last-child) {
+    transform: translate(-4.5rem, -7.79rem) scale(1);
   }
 
+  /* Item 2 - 135° when it's the last item (only 2 items total) */
+  .circular-menu.active .menu-item:nth-child(2):last-child {
+    transform: translate(-6.36rem, -6.36rem) scale(1);
+  }
+
+  /* Item 3 - 150° */
   .circular-menu.active .menu-item:nth-child(3) {
-    transform: translate(-7.8rem, -4.5rem) scale(1);
+    transform: translate(-7.79rem, -4.5rem) scale(1);
   }
 
+  /* Item 4 - 180° */
   .circular-menu.active .menu-item:nth-child(4) {
     transform: translate(-9.0rem, 0rem) scale(1);
-  }
-
-  .circular-menu.active .menu-item:nth-child(5) {
-    transform: translate(-6.5rem, -2.5rem) scale(1);
   }
 }
