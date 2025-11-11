@@ -135,7 +135,9 @@ function Navigation({ onLogin, onSignup }) {
           <div className="nav-logo">
             <i className="fas fa-briefcase"></i>
           </div>
-          <span className="nav-title">Will's Attic</span>
+          <span className="nav-title">
+            {user ? `${user.given_name || user.name?.split(' ')[0] || 'My'}'s Attic` : "Will's Attic"}
+          </span>
         </button>
 
         <div className="nav-search nav-search-desktop" ref={searchRef}>
