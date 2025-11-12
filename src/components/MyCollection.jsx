@@ -67,11 +67,14 @@ function MyCollection() {
     setCurrentParentId(id || null);
   }, [id]);
 
-  // Reset edit/add/create mode when selected item changes
+  // Reset edit/add/create mode when selected item is cleared (set to null)
+  // Don't reset when opening a new item, as we might be setting edit/create mode at the same time
   useEffect(() => {
-    setItemEditMode(false);
-    setItemAddMode(false);
-    setCollectionCreateMode(false);
+    if (!selectedItem) {
+      setItemEditMode(false);
+      setItemAddMode(false);
+      setCollectionCreateMode(false);
+    }
   }, [selectedItem]);
 
   const handleCollectionClick = (collection) => {
@@ -421,14 +424,7 @@ function MyCollection() {
       )}
 
       {/* Item Detail Modal */}
-      {selectedItem && (() => {
-        console.log('[RENDERING ITEMDETAIL]', {
-          selectedItem,
-          itemEditMode,
-          collectionCreateMode,
-          externalEditMode: itemEditMode || collectionCreateMode
-        });
-        return (
+      {selectedItem && (
         <ItemDetail
           item={selectedItem}
           onClose={handleCloseDetail}
@@ -460,8 +456,7 @@ function MyCollection() {
           onSaveRequest={saveItemRef}
           onCollectionCreated={handleCollectionCreated}
         />
-        );
-      })()}
+      )}
 
       {/* MyCollection-specific Circular Menu */}
       {(itemEditMode || itemAddMode || collectionCreateMode) ? (
@@ -507,11 +502,6 @@ function MyCollection() {
               icon: 'fas fa-folder-plus',
               label: 'Create Collection',
               onClick: () => {
-                console.log('[CREATE COLLECTION CLICKED]', {
-                  currentParentId,
-                  linkedDbotCollectionId,
-                  selectedItem
-                });
                 // Open ItemDetail with a new collection object
                 setSelectedItem({
                   type: 'custom',
@@ -521,7 +511,6 @@ function MyCollection() {
                 });
                 setSelectedItemIndex(null);
                 setCollectionCreateMode(true);
-                console.log('[CREATE COLLECTION] Set collectionCreateMode to true');
               }
             }] : []),
             // Show edit button for custom and linked collections
