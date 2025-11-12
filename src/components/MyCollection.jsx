@@ -341,6 +341,7 @@ function MyCollection() {
               parent_collection_id: currentParentId
             });
             setSelectedItemIndex(null);
+            setCollectionCreateMode(true);
           }}
           title="Create new collection"
           aria-label="Create new collection"
