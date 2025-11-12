@@ -17,7 +17,7 @@ import './AddCollectionModal.css';
  * @param {Object} props.dbotCollection - DBoT collection to add { id, name, ... }
  * @param {Function} props.onSuccess - Callback after successful addition
  */
-function AddCollectionModal({ isOpen, onClose, dbotCollection, onSuccess }) {
+function AddCollectionModal({ isOpen, onClose, dbotCollection, onSuccess, onSaveRequest = null }) {
   // Form state
   const [mode, setMode] = useState('track'); // 'track' or 'add_to_existing'
   const [collectionName, setCollectionName] = useState('');
@@ -113,6 +113,13 @@ function AddCollectionModal({ isOpen, onClose, dbotCollection, onSuccess }) {
       setLoading(false);
     }
   };
+
+  // Expose save function to parent via ref (for mobile circular menu button)
+  useEffect(() => {
+    if (onSaveRequest) {
+      onSaveRequest.current = handleSubmit;
+    }
+  });
 
   // Build collections array from tree data
   const collections = collectionsData?.myCollectionTree?.collections || [];

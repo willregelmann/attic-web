@@ -426,8 +426,7 @@
   }
 
   .add-collection-modal .modal-footer {
-    padding: 16px 24px 20px;
-    flex-direction: column;
+    display: none; /* Hide footer on mobile - use circular menu instead */
   }
 
   .btn-cancel,

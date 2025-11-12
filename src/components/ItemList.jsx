@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useLazyQuery } from '@apollo/client/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCollectionFilter } from '../contexts/CollectionFilterContext';
@@ -41,6 +41,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+  const saveCollectionRef = useRef(null); // Ref to trigger save from CircularMenu
 
   // GraphQL queries and mutations
   const [fetchCollectionItems] = useLazyQuery(GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, {
@@ -416,6 +417,26 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
       {/* Collection-specific Circular Menu with Filter */}
       {!isRoot && collection?.id && (() => {
+        // If AddCollectionModal is open, show save button
+        if (isAddModalOpen) {
+          return (
+            <CircularMenu
+              actions={[
+                {
+                  id: 'save-collection',
+                  icon: 'fas fa-check',
+                  label: 'Save',
+                  onClick: () => {
+                    if (saveCollectionRef.current) {
+                      saveCollectionRef.current();
+                    }
+                  }
+                }
+              ]}
+            />
+          );
+        }
+
         const actions = [
           {
             id: 'search',
@@ -479,6 +500,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
             name: collection.name
           }}
           onSuccess={handleAddCollectionSuccess}
+          onSaveRequest={saveCollectionRef}
         />
       )}
 
