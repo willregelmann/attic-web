@@ -15,7 +15,6 @@ import {
 import ItemDetail from './ItemDetail';
 import CollectionFilterPanel from './CollectionFilterPanel';
 import CircularMenu from './CircularMenu';
-import AddCollectionModal from './AddCollectionModal';
 import MobileSearch from './MobileSearch';
 import Toast from './Toast';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
@@ -38,7 +37,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
   const [showCollectionFilters, setShowCollectionFilters] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isWishlistMode, setIsWishlistMode] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const saveCollectionRef = useRef(null); // Ref to trigger save from CircularMenu
@@ -129,29 +128,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   };
 
 
-  // Handle successful addition from AddCollectionModal
-  const handleAddCollectionSuccess = (result) => {
-    const { items_added, items_already_owned, created_collection } = result;
-
-    // Build toast message based on result
-    let message;
-    if (created_collection) {
-      // Track mode - new collection created
-      message = `Created "${created_collection.name}" with ${items_added} wishlist items`;
-    } else if (items_already_owned > 0 && items_added === 0) {
-      // All items already owned
-      message = `All ${items_already_owned} items already owned`;
-    } else if (items_already_owned > 0) {
-      // Partial - some already owned
-      message = `Wishlisted ${items_added} items, ${items_already_owned} already owned`;
-    } else {
-      // All items added
-      message = `Wishlisted ${items_added} items`;
-    }
-
-    setToastMessage({ text: message, type: 'success' });
-    setIsAddModalOpen(false);
-  };
 
   // Get items from the appropriate query result
   const items = useMemo(() => {
@@ -285,23 +261,43 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     );
   }
 
-  // Collection header action buttons (filter only)
+  // Collection header action buttons (filter + wishlist)
   const headerActions = !isRootView && (
-    <button
-      className={`filter-toggle-button ${hasActiveFilters(collection.id) ? 'active' : ''}`}
-      onClick={(e) => {
-        e.stopPropagation();
-        setShowCollectionFilters(true);
-      }}
-      title="Filter collection items"
-    >
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-      {hasActiveFilters(collection.id) && (
-        <span className="filter-badge"></span>
+    <>
+      <button
+        className={`filter-toggle-button ${hasActiveFilters(collection.id) ? 'active' : ''}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          setShowCollectionFilters(true);
+        }}
+        title="Filter collection items"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        {hasActiveFilters(collection.id) && (
+          <span className="filter-badge"></span>
+        )}
+      </button>
+
+      {/* Wishlist button - desktop only */}
+      {isAuthenticated && (
+        <button
+          className="wishlist-button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedItem(collection);
+            setSelectedItemIndex(null);
+            setIsWishlistMode(true);
+          }}
+          title="Add collection to wishlist"
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
       )}
-    </button>
+    </>
   );
 
   // Title action removed - now in CircularMenu
@@ -396,9 +392,29 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
             // This is used from tree navigation in the detail modal
             navigate(`/collection/${collection.id}`);
           }}
+          externalWishlistMode={isWishlistMode}
+          onWishlistModeChange={setIsWishlistMode}
+          onCollectionWishlisted={(result) => {
+            // Handle successful wishlist addition
+            const { items_added, items_already_owned, created_collection } = result;
+            let message;
+            if (created_collection) {
+              message = `Created "${created_collection.name}" with ${items_added} wishlist items`;
+            } else if (items_already_owned > 0 && items_added === 0) {
+              message = `All ${items_already_owned} items already owned`;
+            } else if (items_already_owned > 0) {
+              message = `Wishlisted ${items_added} items, ${items_already_owned} already owned`;
+            } else {
+              message = `Wishlisted ${items_added} items`;
+            }
+            setToastMessage({ text: message, type: 'success' });
+            setIsWishlistMode(false);
+          }}
+          onSaveRequest={saveCollectionRef}
           onClose={() => {
             setSelectedItem(null);
             setSelectedItemIndex(null);
+            setIsWishlistMode(false);
           }}
         />
       )}
@@ -417,22 +433,19 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
       {/* Collection-specific Circular Menu with Filter */}
       {!isRoot && collection?.id && (() => {
-        // If AddCollectionModal is open, show save button
-        if (isAddModalOpen) {
+        // If in wishlist mode, show save button
+        if (isWishlistMode) {
           return (
             <CircularMenu
-              actions={[
-                {
-                  id: 'save-collection',
-                  icon: 'fas fa-check',
-                  label: 'Save',
-                  onClick: () => {
-                    if (saveCollectionRef.current) {
-                      saveCollectionRef.current();
-                    }
-                  }
+              mainButtonMode="action"
+              mainButtonIcon="fas fa-save"
+              mainButtonLabel="Save wishlist"
+              mainButtonOnClick={() => {
+                if (saveCollectionRef.current) {
+                  saveCollectionRef.current();
                 }
-              ]}
+              }}
+              mainButtonVariant="save"
             />
           );
         }
@@ -458,7 +471,11 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
             id: 'add-to-wishlist',
             icon: 'fas fa-heart',
             label: 'Add collection to wishlist',
-            onClick: () => setIsAddModalOpen(true)
+            onClick: () => {
+              setSelectedItem(collection);
+              setSelectedItemIndex(null);
+              setIsWishlistMode(true);
+            }
           });
         }
 
@@ -489,20 +506,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
         return <CircularMenu actions={actions} />;
       })()}
-
-      {/* AddCollectionModal for adding collection to wishlist */}
-      {!isRootView && collection && (
-        <AddCollectionModal
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          dbotCollection={{
-            id: collection.id,
-            name: collection.name
-          }}
-          onSuccess={handleAddCollectionSuccess}
-          onSaveRequest={saveCollectionRef}
-        />
-      )}
 
       {/* Mobile Search Modal */}
       <MobileSearch

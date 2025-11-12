@@ -19,6 +19,9 @@ function ItemDetail({
   onEditModeChange = null,
   externalAddMode = false,
   onAddModeChange = null,
+  externalWishlistMode = false,
+  onWishlistModeChange = null,
+  onCollectionWishlisted = null,
   onSaveRequest = null,
   onCollectionCreated = null
 }) {
@@ -56,6 +59,9 @@ function ItemDetail({
           onEditModeChange={onEditModeChange}
           externalAddMode={externalAddMode}
           onAddModeChange={onAddModeChange}
+          externalWishlistMode={externalWishlistMode}
+          onWishlistModeChange={onWishlistModeChange}
+          onCollectionWishlisted={onCollectionWishlisted}
           onSaveRequest={onSaveRequest}
           onCollectionCreated={onCollectionCreated}
         />

@@ -79,14 +79,23 @@
 
 /* Override button styles for light backgrounds */
 .collection-actions .filter-toggle-button,
-.collection-actions .create-collection-button {
+.collection-actions .create-collection-button,
+.collection-actions .wishlist-button {
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(0, 0, 0, 0.15);
   color: var(--text-secondary);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
 .collection-actions .filter-toggle-button:hover,
-.collection-actions .create-collection-button:hover {
+.collection-actions .create-collection-button:hover,
+.collection-actions .wishlist-button:hover {
   background: rgba(0, 0, 0, 0.08);
   border-color: rgba(0, 0, 0, 0.2);
   color: var(--text-primary);
@@ -96,6 +105,11 @@
   background: var(--yellow-accent);
   border-color: var(--yellow-accent);
   color: #2C4B7B;
+}
+
+.collection-actions .wishlist-button:hover svg {
+  fill: currentColor;
+  stroke: currentColor;
 }
 
 .progress-section {

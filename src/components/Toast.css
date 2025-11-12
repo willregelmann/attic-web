@@ -5,15 +5,28 @@
   min-width: 300px;
   max-width: 500px;
   padding: 1rem 1.5rem;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
   animation: slideInUp 0.3s ease;
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .toast {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Explicit dark mode class support */
+.dark-mode .toast {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .toast-success {
