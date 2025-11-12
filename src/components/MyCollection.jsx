@@ -108,6 +108,18 @@ function MyCollection() {
     setSelectedItemIndex(null);
     setItemEditMode(false);
     setItemAddMode(false);
+    setCollectionCreateMode(false);
+  };
+
+  const handleCollectionCreated = (newCollection) => {
+    // Transition from create mode to edit mode with the newly created collection
+    setCollectionCreateMode(false);
+    setItemEditMode(true);
+    setSelectedItem({
+      ...newCollection,
+      type: newCollection.type || 'custom'
+    });
+    // Refetch will happen automatically via the mutation's refetchQueries
   };
 
   const handleNavigateItem = (direction) => {
@@ -438,6 +450,7 @@ function MyCollection() {
           externalAddMode={itemAddMode}
           onAddModeChange={setItemAddMode}
           onSaveRequest={saveItemRef}
+          onCollectionCreated={handleCollectionCreated}
         />
       )}
 

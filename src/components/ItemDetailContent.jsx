@@ -190,7 +190,8 @@ function ItemDetailContent({
   onEditModeChange = null,  // New prop: callback when edit mode changes
   externalAddMode = false,  // New prop: externally controlled add mode
   onAddModeChange = null,  // New prop: callback when add mode changes
-  onSaveRequest = null  // New prop: called when parent wants to trigger save
+  onSaveRequest = null,  // New prop: called when parent wants to trigger save
+  onCollectionCreated = null  // New prop: called when a collection is successfully created
 }) {
   const { isAuthenticated } = useAuth();
   const { isDarkMode } = useTheme();
@@ -351,8 +352,14 @@ function ItemDetailContent({
 
   // Create mutation for new collections
   const [createUserCollection, { loading: isCreatingCollection }] = useMutation(CREATE_USER_COLLECTION, {
-    onCompleted: () => {
-      onClose(); // Close modal after successful creation
+    onCompleted: (data) => {
+      // If we have a callback for collection creation, use it to transition to edit mode
+      // Otherwise, just close the modal (default behavior)
+      if (onCollectionCreated && data?.createUserCollection) {
+        onCollectionCreated(data.createUserCollection);
+      } else {
+        onClose();
+      }
     },
     onError: (error) => {
       console.error('Failed to create collection:', error);

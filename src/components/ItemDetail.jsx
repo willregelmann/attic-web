@@ -19,7 +19,8 @@ function ItemDetail({
   onEditModeChange = null,
   externalAddMode = false,
   onAddModeChange = null,
-  onSaveRequest = null
+  onSaveRequest = null,
+  onCollectionCreated = null
 }) {
   // Handle modal close - reset edit/add mode
   const handleClose = () => {
@@ -56,6 +57,7 @@ function ItemDetail({
           externalAddMode={externalAddMode}
           onAddModeChange={onAddModeChange}
           onSaveRequest={onSaveRequest}
+          onCollectionCreated={onCollectionCreated}
         />
       </div>
     </div>
