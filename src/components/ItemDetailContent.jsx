@@ -422,13 +422,17 @@ function ItemDetailContent({
         }
 
         // Create collection
-        await createUserCollection({
-          variables: {
-            name: editCollectionName.trim(),
-            description: editCollectionDescription.trim() || null,
-            parentId: selectedCollection || null
-          }
-        });
+        const variables = {
+          name: editCollectionName.trim(),
+          description: editCollectionDescription.trim() || null
+        };
+
+        // Only include parentId if a parent collection is selected
+        if (selectedCollection) {
+          variables.parentId = selectedCollection;
+        }
+
+        await createUserCollection({ variables });
 
         // Success - modal will close via onCompleted callback
         return;

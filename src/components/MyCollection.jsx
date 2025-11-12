@@ -433,7 +433,7 @@ function MyCollection() {
           currentCollection={current_collection}
           isUserItem={selectedItem.user_item_id ? true : false}
           showAsWishlist={!selectedItem.user_item_id && selectedItem.type !== 'custom' && selectedItem.type !== 'linked'}
-          externalEditMode={itemEditMode}
+          externalEditMode={itemEditMode || collectionCreateMode}
           onEditModeChange={setItemEditMode}
           externalAddMode={itemAddMode}
           onAddModeChange={setItemAddMode}
