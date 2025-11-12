@@ -67,6 +67,12 @@ function MyCollection() {
     setCurrentParentId(id || null);
   }, [id]);
 
+  // Close modal when navigating to a different collection
+  useEffect(() => {
+    setSelectedItem(null);
+    setSelectedItemIndex(null);
+  }, [id]);
+
   // Reset edit/add/create mode when selected item is cleared (set to null)
   // Don't reset when opening a new item, as we might be setting edit/create mode at the same time
   useEffect(() => {
