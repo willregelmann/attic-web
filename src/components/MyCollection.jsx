@@ -27,6 +27,7 @@ function MyCollection() {
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
   const [itemEditMode, setItemEditMode] = useState(false);
   const [itemAddMode, setItemAddMode] = useState(false);
+  const [collectionCreateMode, setCollectionCreateMode] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showCollectionFilters, setShowCollectionFilters] = useState(false);
   const saveItemRef = useRef(null); // Ref to trigger save from ItemDetail
@@ -66,10 +67,11 @@ function MyCollection() {
     setCurrentParentId(id || null);
   }, [id]);
 
-  // Reset edit/add mode when selected item changes
+  // Reset edit/add/create mode when selected item changes
   useEffect(() => {
     setItemEditMode(false);
     setItemAddMode(false);
+    setCollectionCreateMode(false);
   }, [selectedItem]);
 
   const handleCollectionClick = (collection) => {
@@ -440,8 +442,8 @@ function MyCollection() {
       )}
 
       {/* MyCollection-specific Circular Menu */}
-      {(itemEditMode || itemAddMode) ? (
-        // Action mode - Direct save button when in edit or add mode
+      {(itemEditMode || itemAddMode || collectionCreateMode) ? (
+        // Action mode - Direct save button when in edit, add, or create mode
         <CircularMenu
           mainButtonMode="action"
           mainButtonIcon="fas fa-save"
@@ -491,6 +493,7 @@ function MyCollection() {
                   parent_collection_id: currentParentId
                 });
                 setSelectedItemIndex(null);
+                setCollectionCreateMode(true);
               }
             }] : []),
             // Show edit button for custom and linked collections
