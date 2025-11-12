@@ -3,7 +3,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useQuery, useLazyQuery, useMutation, useApolloClient } from '@apollo/client/react';
 import { useState, useEffect, memo } from 'react';
 import { GET_DATABASE_OF_THINGS_ITEM_PARENTS, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, UPDATE_MY_ITEM, UPDATE_USER_COLLECTION, CREATE_USER_COLLECTION, ADD_ITEM_TO_MY_COLLECTION, MY_COLLECTION_TREE, MOVE_USER_ITEM, MOVE_USER_COLLECTION } from '../queries';
-import { formatEntityType, isCollectionType } from '../utils/formatters';
+import { formatEntityType, isCollectionType, isCustomCollection, isLinkedCollection } from '../utils/formatters';
 import { CollectionTreeSkeleton } from './SkeletonLoader';
 import { getTypeIcon } from '../utils/iconUtils.jsx';
 import './ItemDetail.css';
@@ -248,7 +248,7 @@ function ItemDetailContent({
     }
 
     // Initialize collection edit state
-    if (item && item.type === 'custom') {
+    if (item && isCustomCollection(item.type)) {
       setEditCollectionName(item.name || '');
       setEditCollectionDescription(item.description || '');
       // Set selected collection to the parent of this collection
@@ -262,7 +262,7 @@ function ItemDetailContent({
     }
 
     // Initialize linked collection edit state
-    if (item && item.type === 'linked') {
+    if (item && isLinkedCollection(item.type)) {
       // Set selected collection to the parent of this linked collection
       setSelectedCollection(item.parent_collection_id || null);
       setOriginalParentCollectionId(item.parent_collection_id || null);
@@ -282,7 +282,7 @@ function ItemDetailContent({
   useEffect(() => {
     const buildCollectionPath = async () => {
       // Build path for user items, linked collections, or custom collections that have a parent_collection_id
-      if ((isUserItem || item.type === 'linked' || item.type === 'custom') && item.parent_collection_id && !collectionsLoading) {
+      if ((isUserItem || isLinkedCollection(item.type) || isCustomCollection(item.type)) && item.parent_collection_id && !collectionsLoading) {
         // Build path from parent_collection_id upward through user collections
         const path = [];
         let currentId = item.parent_collection_id;
@@ -414,7 +414,7 @@ function ItemDetailContent({
   const handleSave = async () => {
     try {
       // Check if we're creating a new collection
-      if (isEditMode && item.type === 'custom' && !item.id) {
+      if (isEditMode && isCustomCollection(item.type) && !item.id) {
         // Validate collection name
         if (!editCollectionName.trim()) {
           alert('Collection name cannot be empty');
@@ -439,7 +439,7 @@ function ItemDetailContent({
       }
 
       // Check if we're editing an existing collection
-      if (isEditMode && item.type === 'custom') {
+      if (isEditMode && isCustomCollection(item.type)) {
         // Validate collection name
         if (!editCollectionName.trim()) {
           alert('Collection name cannot be empty');
@@ -461,7 +461,7 @@ function ItemDetailContent({
       }
 
       // Check if we're editing a linked collection
-      if (isEditMode && item.type === 'linked') {
+      if (isEditMode && isLinkedCollection(item.type)) {
         // Only update parent collection for linked collections
         await moveUserCollection({
           variables: {
@@ -566,7 +566,7 @@ function ItemDetailContent({
   const [childImages, setChildImages] = useState([]);
 
   // Determine if this is a user collection (custom or linked)
-  const isUserCollection = item.type === 'custom' || item.type === 'linked' ||
+  const isUserCollection = isCustomCollection(item.type) || isLinkedCollection(item.type) ||
     (item.parent_collection_id !== undefined && item.parent_collection_id !== null);
 
   // Query for DBoT collections
@@ -765,7 +765,7 @@ function ItemDetailContent({
           <div className="detail-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {/* Editable collection name */}
-              {isEditMode && item.type === 'custom' ? (
+              {isEditMode && isCustomCollection(item.type) ? (
                 <input
                   type="text"
                   value={editCollectionName}
@@ -777,7 +777,7 @@ function ItemDetailContent({
                 <h2 className="detail-title" style={{ margin: 0 }}>{item.name}</h2>
               )}
               {/* Edit icon for custom collections - Hidden on mobile (use CircularMenu) */}
-              {!isSuggestionPreview && isAuthenticated && item.type === 'custom' && (
+              {!isSuggestionPreview && isAuthenticated && isCustomCollection(item.type) && (
                 <div className="desktop-only-actions" style={{ display: 'flex', gap: '8px' }}>
                   {isEditMode ? (
                     <button
@@ -803,7 +803,7 @@ function ItemDetailContent({
                 </div>
               )}
               {/* Edit icon for linked collections - Hidden on mobile (use CircularMenu) */}
-              {!isSuggestionPreview && isAuthenticated && item.type === 'linked' && (
+              {!isSuggestionPreview && isAuthenticated && isLinkedCollection(item.type) && (
                 <div className="desktop-only-actions" style={{ display: 'flex', gap: '8px' }}>
                   {isEditMode ? (
                     <button
@@ -829,7 +829,7 @@ function ItemDetailContent({
                 </div>
               )}
               {/* View Full Page icon for non-custom collections - Hidden on mobile */}
-              {isCollectionType(item.type) && item.type !== 'custom' && item.type !== 'linked' && onNavigateToCollection && (
+              {isCollectionType(item.type) && !isCustomCollection(item.type) && !isLinkedCollection(item.type) && onNavigateToCollection && (
                 <button
                   className="icon-btn desktop-only-actions"
                   onClick={() => {
@@ -898,13 +898,13 @@ function ItemDetailContent({
               )}
             </div>
             <p className="detail-subtitle">
-              {item.type === 'linked' ? 'LINKED' : formatEntityType(item.type)}
+              {isLinkedCollection(item.type) ? 'LINKED' : formatEntityType(item.type)}
               {item.year && ` • ${item.year}`}
             </p>
           </div>
 
           {/* Collection Description - Editable for custom collections */}
-          {item.type === 'custom' && (
+          {isCustomCollection(item.type) && (
             <div>
               <label className="meta-label" style={{ display: 'block', marginBottom: '6px' }}>Description:</label>
               {isEditMode ? (
@@ -1019,7 +1019,7 @@ function ItemDetailContent({
                               selectedId={selectedCollection}
                               onSelect={setSelectedCollection}
                               selectedCollectionParentId={selectedCollectionParentId}
-                              excludeCollectionId={item.type === 'custom' || item.type === 'linked' ? item.id : null}
+                              excludeCollectionId={isCustomCollection(item.type) || isLinkedCollection(item.type) ? item.id : null}
                             />
                           ))}
                         </ul>
@@ -1035,7 +1035,7 @@ function ItemDetailContent({
           {!isSuggestionPreview && !isEditMode && !isAddMode && (
             <>
               {/* Show user collection hierarchy for owned items, linked collections, and custom collections */}
-              {(isUserItem || item.type === 'linked' || item.type === 'custom') && (
+              {(isUserItem || isLinkedCollection(item.type) || isCustomCollection(item.type)) && (
                 <div className="detail-collections-tree">
                   <h5 className="collections-tree-header">Collections</h5>
                   <div className="collections-tree-list">
@@ -1106,7 +1106,7 @@ function ItemDetailContent({
               )}
 
               {/* Show DBoT parent collections for non-owned items (excluding linked and custom collections) */}
-              {!isUserItem && item.type !== 'linked' && item.type !== 'custom' && (parentsLoading || parentCollections.length > 0) && (
+              {!isUserItem && !isLinkedCollection(item.type) && !isCustomCollection(item.type) && (parentsLoading || parentCollections.length > 0) && (
                 <div className="detail-collections-tree">
                   <h5 className="collections-tree-header">Collections</h5>
                   <div className="collections-tree-list">

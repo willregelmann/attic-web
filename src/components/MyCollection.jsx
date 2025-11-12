@@ -7,7 +7,7 @@ import { ItemGrid } from './ItemGrid';
 import ItemDetail from './ItemDetail';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
-import { formatEntityType } from '../utils/formatters';
+import { formatEntityType, isCustomCollection, isLinkedCollection } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
 import { useCollectionFilter } from '../contexts/CollectionFilterContext';
 import CircularMenu from './CircularMenu';
@@ -120,12 +120,12 @@ function MyCollection() {
     // Apply filters if collection supports filtering
     let navigableItems = rawAllItems;
     const currentSupportsFiltering = currentParentId && (
-      data.myCollectionTree.current_collection?.type === 'linked' ||
-      data.myCollectionTree.current_collection?.type === 'custom'
+      isLinkedCollection(data.myCollectionTree.current_collection?.type) ||
+      isCustomCollection(data.myCollectionTree.current_collection?.type)
     );
 
     if (currentSupportsFiltering && rawAllItems.length > 0) {
-      const currentFilterCollectionId = data.myCollectionTree.current_collection?.type === 'linked'
+      const currentFilterCollectionId = isLinkedCollection(data.myCollectionTree.current_collection?.type)
         ? data.myCollectionTree.current_collection?.linked_dbot_collection_id
         : currentParentId;
       const collectionFilters = getFiltersForCollection(currentFilterCollectionId);
@@ -207,7 +207,7 @@ function MyCollection() {
 
   // For linked collections, maintain DBoT ordering instead of frontloading owned items
   // Use the DBoT collection items as the canonical order
-  const isLinkedCollectionForSorting = current_collection?.type === 'linked';
+  const isLinkedCollectionForSorting = isLinkedCollection(current_collection?.type);
   const dbotItems = dbotCollectionItemsData?.databaseOfThingsCollectionItems || [];
   const allItems = isLinkedCollectionForSorting && dbotItems.length > 0
     ? (() => {
@@ -235,9 +235,9 @@ function MyCollection() {
     : [...items, ...wishlists];
 
   // For linked collections, merge user collection data with DBoT collection data
-  const isLinkedCollection = current_collection?.type === 'linked';
+  const isLinkedCollectionForHeader = isLinkedCollection(current_collection?.type);
   const dbotCollection = dbotCollectionData?.databaseOfThingsEntity;
-  const displayCollection = isLinkedCollection && dbotCollection
+  const displayCollection = isLinkedCollectionForHeader && dbotCollection
     ? {
         ...dbotCollection, // Use DBoT's image, attributes, year, etc.
         type: 'linked', // Override type to 'linked'
@@ -252,8 +252,8 @@ function MyCollection() {
   // Determine if current collection supports filtering
   // Root level (currentParentId === null) always supports filtering
   // Nested levels support filtering for linked and custom collections
-  const supportsFiltering = !currentParentId || isLinkedCollection || current_collection?.type === 'custom';
-  const filterCollectionId = isLinkedCollection ? linkedDbotCollectionId : (currentParentId || 'root');
+  const supportsFiltering = !currentParentId || isLinkedCollectionForHeader || isCustomCollection(current_collection?.type);
+  const filterCollectionId = isLinkedCollectionForHeader ? linkedDbotCollectionId : (currentParentId || 'root');
 
   // Apply collection-specific filters for linked and custom collections (must be before early returns)
   const filteredItems = useMemo(() => {
@@ -418,7 +418,7 @@ function MyCollection() {
           hasPrevious={selectedItemIndex > 0}
           onNavigateToCollection={(collection) => {
             // Check if it's a user collection or DBoT collection
-            if (collection.type === 'user_collection' || collection.type === 'custom' || collection.type === 'linked') {
+            if (collection.type === 'user_collection' || isCustomCollection(collection.type) || isLinkedCollection(collection.type)) {
               // Navigate to My Collection view (root if id is null)
               if (collection.id) {
                 navigate(`/my-collection/${collection.id}`);
@@ -432,7 +432,7 @@ function MyCollection() {
           }}
           currentCollection={current_collection}
           isUserItem={selectedItem.user_item_id ? true : false}
-          showAsWishlist={!selectedItem.user_item_id && selectedItem.type !== 'custom' && selectedItem.type !== 'linked'}
+          showAsWishlist={!selectedItem.user_item_id && !isCustomCollection(selectedItem.type) && !isLinkedCollection(selectedItem.type)}
           externalEditMode={itemEditMode || collectionCreateMode}
           onEditModeChange={setItemEditMode}
           externalAddMode={itemAddMode}
@@ -497,14 +497,14 @@ function MyCollection() {
               }
             }] : []),
             // Show edit button for custom and linked collections
-            ...(selectedItem && (selectedItem.type === 'custom' || selectedItem.type === 'linked') ? [{
+            ...(selectedItem && (isCustomCollection(selectedItem.type) || isLinkedCollection(selectedItem.type)) ? [{
               id: 'edit-collection',
               icon: 'fas fa-edit',
-              label: selectedItem.type === 'linked' ? 'Move collection' : 'Edit collection',
+              label: isLinkedCollection(selectedItem.type) ? 'Move collection' : 'Edit collection',
               onClick: () => setItemEditMode(true)
             }] : []),
             // Show item action buttons when viewing a regular item in ItemDetail
-            ...(selectedItem && selectedItem.type !== 'custom' && selectedItem.type !== 'linked' ?
+            ...(selectedItem && !isCustomCollection(selectedItem.type) && !isLinkedCollection(selectedItem.type) ?
               selectedItem.user_item_id ? [
                 // For owned items: show edit button
                 {

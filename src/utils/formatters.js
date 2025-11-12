@@ -28,3 +28,27 @@ export const isCollectionType = (type) => {
   ];
   return collectionTypes.includes(normalizedType);
 };
+
+/**
+ * Check if an entity type is a custom collection
+ * Handles both "custom" and "CUSTOM COLLECTION" formats
+ * @param {string} type - The entity type to check
+ * @returns {boolean} True if the type is a custom collection
+ */
+export const isCustomCollection = (type) => {
+  if (!type) return false;
+  const normalizedType = type.toLowerCase().replace(/\s+/g, '_');
+  return normalizedType === 'custom' || normalizedType === 'custom_collection';
+};
+
+/**
+ * Check if an entity type is a linked collection
+ * Handles both "linked" and "LINKED COLLECTION" formats
+ * @param {string} type - The entity type to check
+ * @returns {boolean} True if the type is a linked collection
+ */
+export const isLinkedCollection = (type) => {
+  if (!type) return false;
+  const normalizedType = type.toLowerCase().replace(/\s+/g, '_');
+  return normalizedType === 'linked' || normalizedType === 'linked_collection';
+};
