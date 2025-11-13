@@ -276,6 +276,39 @@ export const REMOVE_ITEM_FROM_MY_COLLECTION = gql`
   }
 `;
 
+export const BATCH_ADD_ITEMS_TO_MY_COLLECTION = gql`
+  mutation BatchAddItemsToMyCollection($entityIds: [ID!]!) {
+    batchAddItemsToMyCollection(entity_ids: $entityIds) {
+      success
+      items_processed
+      items_skipped
+      message
+    }
+  }
+`;
+
+export const BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION = gql`
+  mutation BatchRemoveItemsFromMyCollection($entityIds: [ID!]!) {
+    batchRemoveItemsFromMyCollection(entity_ids: $entityIds) {
+      success
+      items_processed
+      items_skipped
+      message
+    }
+  }
+`;
+
+export const BATCH_ADD_ITEMS_TO_WISHLIST = gql`
+  mutation BatchAddItemsToWishlist($entityIds: [ID!]!, $parentCollectionId: ID) {
+    batchAddItemsToWishlist(entity_ids: $entityIds, parent_collection_id: $parentCollectionId) {
+      success
+      items_processed
+      items_skipped
+      message
+    }
+  }
+`;
+
 export const GOOGLE_LOGIN = gql`
   mutation GoogleLogin($googleToken: String!) {
     googleLogin(google_token: $googleToken) {
