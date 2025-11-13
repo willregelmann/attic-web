@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useQuery, useApolloClient } from '@apollo/client/react';
+import { useQuery, useApolloClient, useMutation } from '@apollo/client/react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MY_COLLECTION_TREE, GET_DATABASE_OF_THINGS_ENTITY, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, GET_COLLECTION_PARENT_COLLECTIONS } from '../queries';
+import { MY_COLLECTION_TREE, GET_DATABASE_OF_THINGS_ENTITY, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, GET_COLLECTION_PARENT_COLLECTIONS, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, BATCH_ADD_ITEMS_TO_WISHLIST } from '../queries';
 import { CollectionHeader } from './CollectionHeader';
 import { ItemGrid } from './ItemGrid';
 import ItemDetail from './ItemDetail';
@@ -14,7 +14,11 @@ import { useCollectionFilter } from '../contexts/CollectionFilterContext';
 import CircularMenu from './CircularMenu';
 import MobileSearch from './MobileSearch';
 import CollectionFilterPanel from './CollectionFilterPanel';
+import { useMultiSelect } from '../hooks/useMultiSelect';
+import { BatchActionModal } from './BatchActionModal';
+import Toast from './Toast';
 import './MyCollection.css';
+import './MultiSelectToolbar.css';
 
 function MyCollection() {
   const navigate = useNavigate();
@@ -33,6 +37,57 @@ function MyCollection() {
   const [showCollectionFilters, setShowCollectionFilters] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const saveItemRef = useRef(null); // Ref to trigger save from ItemDetail
+
+  // Multi-select state
+  const {
+    isMultiSelectMode,
+    selectedType,
+    selectedCount,
+    selectedIds,
+    toggleItemSelection,
+    isItemSelected,
+    isItemDisabled,
+    exitMultiSelectMode
+  } = useMultiSelect();
+
+  const [showBatchConfirm, setShowBatchConfirm] = useState(false);
+  const [batchAction, setBatchAction] = useState(null); // 'delete' | 'wishlist'
+  const [toastMessage, setToastMessage] = useState(null);
+
+  // Batch mutations
+  const [batchRemoveMutation, { loading: isBatchRemoving }] = useMutation(
+    BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION,
+    {
+      refetchQueries: [{ query: MY_COLLECTION_TREE, variables: { parentId: currentParentId } }],
+      awaitRefetchQueries: true,
+      onCompleted: (data) => {
+        setToastMessage({ text: data.batchRemoveItemsFromMyCollection.message, type: 'success' });
+        exitMultiSelectMode();
+        setShowBatchConfirm(false);
+      },
+      onError: (error) => {
+        setToastMessage({ text: `Error: ${error.message}`, type: 'error' });
+        setShowBatchConfirm(false);
+      }
+    }
+  );
+
+  const [batchWishlistMutation, { loading: isBatchWishlisting }] = useMutation(
+    BATCH_ADD_ITEMS_TO_WISHLIST,
+    {
+      refetchQueries: [{ query: MY_COLLECTION_TREE, variables: { parentId: currentParentId } }],
+      awaitRefetchQueries: true,
+      onCompleted: (data) => {
+        setToastMessage({ text: data.batchAddItemsToWishlist.message, type: 'success' });
+        exitMultiSelectMode();
+        setShowBatchConfirm(false);
+      },
+      onError: (error) => {
+        setToastMessage({ text: `Error: ${error.message}`, type: 'error' });
+        setShowBatchConfirm(false);
+      }
+    }
+  );
 
   const { loading, error, data, refetch } = useQuery(MY_COLLECTION_TREE, {
     variables: { parentId: currentParentId },
@@ -290,6 +345,51 @@ function MyCollection() {
     return applyFilters(allItems, collectionFilters, parentCollections, userOwnership);
   }, [allItems, supportsFiltering, filterCollectionId, getFiltersForCollection, applyFilters, parentCollectionsData, userOwnership]);
 
+  // Batch action handlers
+  const handleBatchDelete = () => {
+    setBatchAction('delete');
+    setShowBatchConfirm(true);
+  };
+
+  const handleBatchWishlist = () => {
+    setBatchAction('wishlist');
+    setShowBatchConfirm(true);
+  };
+
+  const executeBatchAction = async () => {
+    if (batchAction === 'delete') {
+      await batchRemoveMutation({ variables: { entityIds: selectedIds } });
+    } else if (batchAction === 'wishlist') {
+      await batchWishlistMutation({
+        variables: {
+          entityIds: selectedIds,
+          parentCollectionId: currentParentId
+        }
+      });
+    }
+  };
+
+  const getBatchConfirmationProps = () => {
+    if (batchAction === 'delete') {
+      return {
+        title: 'Delete Items',
+        message: `Delete ${selectedCount} items from your collection?`,
+        confirmText: 'Delete',
+        confirmVariant: 'danger',
+        loading: isBatchRemoving
+      };
+    } else if (batchAction === 'wishlist') {
+      return {
+        title: 'Add to Wishlist',
+        message: `Add ${selectedCount} items to your wishlist?`,
+        confirmText: 'Add to Wishlist',
+        confirmVariant: 'default',
+        loading: isBatchWishlisting
+      };
+    }
+    return {};
+  };
+
   if (loading) {
     return (
       <div className="my-collection">
@@ -408,11 +508,55 @@ function MyCollection() {
         hideImage={!currentParentId}
       />
 
+      {/* Multi-select toolbar (desktop) */}
+      {isMultiSelectMode && (
+        <div className="multi-select-toolbar">
+          <span className="selection-count">{selectedCount} items selected</span>
+          <div className="toolbar-actions">
+            <button onClick={exitMultiSelectMode} className="cancel-btn">
+              Cancel
+            </button>
+            {selectedType === 'owned' && (
+              <>
+                <button
+                  onClick={handleBatchWishlist}
+                  className="action-btn"
+                  disabled={selectedCount === 0}
+                >
+                  Add to Wishlist
+                </button>
+                <button
+                  onClick={handleBatchDelete}
+                  className="action-btn danger"
+                  disabled={selectedCount === 0}
+                >
+                  Delete
+                </button>
+              </>
+            )}
+            {selectedType === 'wishlisted' && (
+              <button
+                onClick={handleBatchDelete}
+                className="action-btn danger"
+                disabled={selectedCount === 0}
+              >
+                Remove from Wishlist
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Collections and Items Grid */}
       {displayItems.length > 0 ? (
         <ItemGrid
           items={displayItems}
           onItemClick={(item, index) => {
+            // In multi-select mode, handled by ItemCard
+            if (isMultiSelectMode) {
+              return;
+            }
+
             // Calculate actual index in allItems array (skip collections)
             const itemIndex = index - collections.length;
             handleItemClick(item, itemIndex >= 0 ? itemIndex : 0);
@@ -423,6 +567,9 @@ function MyCollection() {
           isRoot={false}
           viewMode="grid"
           showWishlistStyling={true}
+          isMultiSelectMode={isMultiSelectMode}
+          selectedItems={new Set(selectedIds)}
+          onItemSelectionToggle={toggleItemSelection}
         />
       ) : (
         <div className="empty-state">
@@ -480,6 +627,19 @@ function MyCollection() {
             }
           }}
           mainButtonVariant="save"
+        />
+      ) : isMultiSelectMode ? (
+        // Multi-select mode
+        <CircularMenu
+          mainButtonMode="action"
+          mainButtonIcon={selectedType === 'owned' ? 'fas fa-trash' : 'fas fa-heart-broken'}
+          mainButtonLabel={
+            selectedType === 'owned'
+              ? `Delete ${selectedCount} items`
+              : `Remove ${selectedCount} items`
+          }
+          mainButtonOnClick={handleBatchDelete}
+          mainButtonVariant={selectedType === 'owned' ? 'danger' : 'danger'}
         />
       ) : (
         // Menu mode - Normal circular menu
@@ -594,6 +754,26 @@ function MyCollection() {
               navigate('/my-collection');
             }
           }}
+        />
+      )}
+
+      {/* Batch Action Confirmation */}
+      <BatchActionModal
+        isOpen={showBatchConfirm}
+        onClose={() => {
+          setShowBatchConfirm(false);
+          setBatchAction(null);
+        }}
+        onConfirm={executeBatchAction}
+        {...getBatchConfirmationProps()}
+      />
+
+      {/* Toast Notifications */}
+      {toastMessage && (
+        <Toast
+          message={toastMessage.text}
+          type={toastMessage.type}
+          onClose={() => setToastMessage(null)}
         />
       )}
 
