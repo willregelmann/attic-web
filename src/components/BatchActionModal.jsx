@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import './BatchActionModal.css';
 
 /**
@@ -22,17 +23,29 @@ export function BatchActionModal({
   confirmVariant = "default",
   loading = false
 }) {
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
-  const handleConfirm = () => {
-    onConfirm();
-  };
-
   return (
-    <div className="batch-modal-overlay" onClick={onClose}>
-      <div className="batch-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="batch-modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
+      <div
+        className="batch-modal"
+        onClick={(e) => e.stopPropagation()}
+        aria-labelledby="batch-modal-title"
+        data-testid="batch-action-modal"
+      >
         <div className="batch-modal-header">
-          <h3>{title}</h3>
+          <h3 id="batch-modal-title">{title}</h3>
         </div>
 
         <div className="batch-modal-body">
@@ -44,13 +57,15 @@ export function BatchActionModal({
             className="cancel-button"
             onClick={onClose}
             disabled={loading}
+            data-testid="batch-modal-cancel"
           >
             Cancel
           </button>
           <button
             className={`confirm-button ${confirmVariant === 'danger' ? 'danger' : ''}`}
-            onClick={handleConfirm}
+            onClick={onConfirm}
             disabled={loading}
+            data-testid="batch-modal-confirm"
           >
             {loading ? 'Processing...' : confirmText}
           </button>
