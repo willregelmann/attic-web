@@ -5,6 +5,7 @@ import { isCollectionType, formatEntityType } from '../utils/formatters';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getTypeIcon } from '../utils/iconUtils.jsx';
+import './ItemCard.css';
 
 /**
  * ItemCardImage - Displays item image with fallback to child images
@@ -209,6 +210,15 @@ export function ItemCard({
   const longPressTimer = useRef(null);
   const [isPressing, setIsPressing] = useState(false);
 
+  // Cleanup effect for long-press timer
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+    };
+  }, []);
+
   // Calculate completion percentage
   const completionPercentage = completionStats?.completionPercentage ?? (isOwned ? 100 : 0);
 
@@ -272,7 +282,7 @@ export function ItemCard({
             type="checkbox"
             checked={isSelected}
             disabled={isDisabled}
-            onChange={() => {}}
+            readOnly
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -318,50 +328,4 @@ export function ItemCard({
       </div>
     </div>
   );
-}
-
-// Multi-select styles
-const multiSelectStyles = document.createElement('style');
-multiSelectStyles.textContent = `
-.item-card.multi-select-mode {
-  cursor: pointer;
-  position: relative;
-}
-
-.item-card.multi-select-mode.selected {
-  border: 2px solid var(--primary-color, #3b82f6);
-  background: rgba(59, 130, 246, 0.05);
-}
-
-.item-card.multi-select-mode.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.item-checkbox {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 10;
-  background: white;
-  border-radius: 4px;
-  padding: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.item-checkbox input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-}
-
-.item-checkbox input[type="checkbox"]:disabled {
-  cursor: not-allowed;
-}
-`;
-
-// Inject styles only once
-if (!document.getElementById('item-card-multi-select-styles')) {
-  multiSelectStyles.id = 'item-card-multi-select-styles';
-  document.head.appendChild(multiSelectStyles);
 }
