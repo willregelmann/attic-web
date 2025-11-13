@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -12,11 +12,15 @@ import ItemDetail from './ItemDetail';
 import MobileMenuPanel from './MobileMenuPanel';
 import './Navigation.css';
 
+// Get Google Client ID from environment variable
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
 function Navigation({ onLogin, onSignup }) {
   const { user, logout, login } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const { breadcrumbItems, loading: breadcrumbsLoading } = useBreadcrumbs();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showMenu, setShowMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,7 +45,7 @@ function Navigation({ onLogin, onSignup }) {
   useEffect(() => {
     if (searchQuery.length > 2) {
       const timeoutId = setTimeout(() => {
-        searchItems({ variables: { query: searchQuery, first: 20 } });
+        searchItems({ variables: { query: searchQuery, first: 10 } });
       }, 500); // Wait 500ms after user stops typing
 
       return () => clearTimeout(timeoutId);
@@ -92,7 +96,11 @@ function Navigation({ onLogin, onSignup }) {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      searchItems({ variables: { query: searchQuery, first: 20 } });
+      // Navigate directly to full search page when pressing Enter
+      const query = encodeURIComponent(searchQuery);
+      setShowSearchResults(false);
+      setSearchQuery('');
+      navigate(`/search?q=${query}`);
     }
   };
 
@@ -125,6 +133,12 @@ function Navigation({ onLogin, onSignup }) {
         setSelectedItem(item);
       }
     }
+  };
+
+  const handleViewAllResults = () => {
+    const query = encodeURIComponent(searchQuery);
+    setShowSearchResults(false);
+    navigate(`/search?q=${query}`);
   };
 
   return (
@@ -182,9 +196,6 @@ function Navigation({ onLogin, onSignup }) {
                     <div className="search-empty">No results found</div>
                   ) : (
                     <>
-                      <div className="search-results-header">
-                        Found {searchData.databaseOfThingsSemanticSearch.length} result{searchData.databaseOfThingsSemanticSearch.length !== 1 ? 's' : ''}
-                      </div>
                       <div className="search-results-list" role="group">
                         {searchData.databaseOfThingsSemanticSearch.map(item => (
                           <button
@@ -223,6 +234,15 @@ function Navigation({ onLogin, onSignup }) {
                           </button>
                         ))}
                       </div>
+                      {searchData.databaseOfThingsSemanticSearch.length === 10 && (
+                        <button
+                          className="search-view-all-button"
+                          onClick={handleViewAllResults}
+                          data-testid="view-all-results"
+                        >
+                          View all results →
+                        </button>
+                      )}
                     </>
                   )}
                 </>
@@ -312,7 +332,7 @@ function Navigation({ onLogin, onSignup }) {
                     </svg>
                     Log Out
                   </button>
-                ) : (
+                ) : GOOGLE_CLIENT_ID ? (
                   <div className="google-login-dropdown">
                     <GoogleLogin
                       onSuccess={handleGoogleSuccess}
@@ -323,6 +343,10 @@ function Navigation({ onLogin, onSignup }) {
                       shape="rectangular"
                       width="200"
                     />
+                  </div>
+                ) : (
+                  <div className="dropdown-item">
+                    <p>Google Sign-In not configured</p>
                   </div>
                 )}
               </div>
@@ -343,7 +367,7 @@ function Navigation({ onLogin, onSignup }) {
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
       />
-    {breadcrumbItems.length > 0 && (
+    {breadcrumbItems.length > 0 && !location.pathname.startsWith('/search') && (
       <Breadcrumbs items={breadcrumbItems} loading={breadcrumbsLoading} />
     )}
 

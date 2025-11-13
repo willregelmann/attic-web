@@ -3,6 +3,9 @@ import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 import './MobileMenuPanel.css';
 
+// Get Google Client ID from environment variable
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
 function MobileMenuPanel({ isOpen, onClose, user, onLogin, onLogout, isDarkMode, toggleDarkMode }) {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -152,7 +155,7 @@ function MobileMenuPanel({ isOpen, onClose, user, onLogin, onLogout, isDarkMode,
                 </svg>
                 Logout
               </button>
-            ) : (
+            ) : GOOGLE_CLIENT_ID ? (
               <div className="mobile-menu-login">
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
@@ -162,6 +165,10 @@ function MobileMenuPanel({ isOpen, onClose, user, onLogin, onLogout, isDarkMode,
                   text="signin_with"
                   shape="rectangular"
                 />
+              </div>
+            ) : (
+              <div className="mobile-menu-login-unavailable">
+                <p>Google Sign-In not configured</p>
               </div>
             )}
           </div>

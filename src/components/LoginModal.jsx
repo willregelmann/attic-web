@@ -2,6 +2,9 @@ import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 import './LoginModal.css';
 
+// Get Google Client ID from environment variable
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
 function LoginModal({ isOpen, onClose }) {
   const { login } = useAuth();
 
@@ -34,17 +37,24 @@ function LoginModal({ isOpen, onClose }) {
         </div>
 
         <div className="modal-body">
-          <div className="google-login-wrapper">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              theme="outline"
-              size="large"
-              text="continue_with"
-              shape="rectangular"
-              width="280"
-            />
-          </div>
+          {GOOGLE_CLIENT_ID ? (
+            <div className="google-login-wrapper">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                theme="outline"
+                size="large"
+                text="continue_with"
+                shape="rectangular"
+                width="280"
+              />
+            </div>
+          ) : (
+            <div className="google-login-unavailable">
+              <p>Google Sign-In is not configured.</p>
+              <p className="config-note">Set VITE_GOOGLE_CLIENT_ID to enable authentication.</p>
+            </div>
+          )}
 
           <div className="privacy-note">
             <p>We only store your email and name to identify your collection. Your data is never shared.</p>
