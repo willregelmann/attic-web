@@ -12,6 +12,9 @@ import { isCollectionType } from '../utils/formatters';
  * @param {Boolean} isRoot - Whether this is root view (for favorites styling)
  * @param {String} viewMode - 'grid' or 'list'
  * @param {Boolean} showWishlistStyling - Whether to dim non-owned items (MyCollection context)
+ * @param {Boolean} isMultiSelectMode - Whether multi-select mode is active
+ * @param {Set} selectedItems - Set of selected item IDs
+ * @param {Function} onItemSelectionToggle - Callback for selection toggle (itemId, itemType)
  */
 export function ItemGrid({
   items = [],
@@ -21,7 +24,10 @@ export function ItemGrid({
   userFavorites = new Set(),
   isRoot = false,
   viewMode = 'grid',
-  showWishlistStyling = false
+  showWishlistStyling = false,
+  isMultiSelectMode = false,
+  selectedItems = new Set(),
+  onItemSelectionToggle = null
 }) {
   const gridClass = viewMode === 'grid' ? 'items-grid' : 'items-list';
 
@@ -31,6 +37,13 @@ export function ItemGrid({
         const isOwned = userOwnership.has(item.id);
         const isFavorite = isRoot && userFavorites.has(item.id);
         const isCollection = isCollectionType(item.type);
+
+        // Determine item type for multi-select
+        const getItemType = () => {
+          if (showWishlistStyling && item.wishlist_id) return 'wishlisted';
+          if (isOwned) return 'owned';
+          return 'dbot-item';
+        };
 
         // Universal ItemCard for both items and collections
         return (
@@ -43,6 +56,10 @@ export function ItemGrid({
             isFavorite={isFavorite}
             showAsWishlist={showWishlistStyling && !isOwned && !isCollection}
             progress={item.progress || null}
+            isMultiSelectMode={isMultiSelectMode && !isCollection}
+            isSelected={selectedItems.has(item.id)}
+            isDisabled={isMultiSelectMode && isCollection}
+            onSelectionToggle={onItemSelectionToggle}
           />
         );
       })}

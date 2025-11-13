@@ -10,7 +10,8 @@ import {
   GET_MY_ITEMS,
   ADD_ITEM_TO_MY_COLLECTION,
   REMOVE_ITEM_FROM_MY_COLLECTION,
-  GET_COLLECTION_PARENT_COLLECTIONS
+  GET_COLLECTION_PARENT_COLLECTIONS,
+  BATCH_ADD_ITEMS_TO_MY_COLLECTION
 } from '../queries';
 import { isFormBusy } from '../utils/formUtils';
 import ItemDetail from './ItemDetail';
@@ -24,7 +25,10 @@ import { ItemCard, ItemCardImage } from './ItemCard';
 import { CollectionHeader } from './CollectionHeader';
 import { ItemGrid } from './ItemGrid';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
+import { useMultiSelect } from '../hooks/useMultiSelect';
+import { BatchActionModal } from './BatchActionModal';
 import './ItemList.css';
+import './MultiSelectToolbar.css';
 
 function ItemList({ collection, onBack, onSelectCollection, isRootView = false, onRefresh, navigationPath = [] }) {
   const { user, isAuthenticated } = useAuth();
@@ -42,6 +46,32 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const saveCollectionRef = useRef(null); // Ref to trigger save from CircularMenu
+
+  // Multi-select state
+  const {
+    isMultiSelectMode,
+    selectedCount,
+    selectedIds,
+    toggleItemSelection,
+    isItemSelected,
+    isItemDisabled,
+    exitMultiSelectMode
+  } = useMultiSelect();
+
+  const [showBatchConfirm, setShowBatchConfirm] = useState(false);
+  const [batchAddMutation, { loading: isBatchAdding }] = useMutation(BATCH_ADD_ITEMS_TO_MY_COLLECTION, {
+    refetchQueries: [{ query: GET_MY_ITEMS }],
+    awaitRefetchQueries: true,
+    onCompleted: (data) => {
+      setToastMessage({ text: data.batchAddItemsToMyCollection.message, type: 'success' });
+      exitMultiSelectMode();
+      setShowBatchConfirm(false);
+    },
+    onError: (error) => {
+      setToastMessage({ text: `Error: ${error.message}`, type: 'error' });
+      setShowBatchConfirm(false);
+    }
+  });
 
   // GraphQL queries and mutations
   const [fetchCollectionItems] = useLazyQuery(GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, {
@@ -246,6 +276,12 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     setBreadcrumbsLoading(false);
   }, [setBreadcrumbItems, setBreadcrumbsLoading]);
 
+  // Batch action handler
+  const handleBatchAdd = async () => {
+    await batchAddMutation({
+      variables: { entityIds: selectedIds }
+    });
+  };
 
   if (loading) {
     return (
@@ -321,11 +357,35 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
         showProgress={!isRootView && isAuthenticated}
       />
 
+      {/* Multi-select toolbar (desktop) */}
+      {isMultiSelectMode && (
+        <div className="multi-select-toolbar">
+          <span className="selection-count">{selectedCount} items selected</span>
+          <div className="toolbar-actions">
+            <button onClick={exitMultiSelectMode} className="cancel-btn">
+              Cancel
+            </button>
+            <button
+              onClick={() => setShowBatchConfirm(true)}
+              className="action-btn"
+              disabled={selectedCount === 0}
+            >
+              Add to My Collection
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Items Grid/List */}
       {filteredItems.length > 0 ? (
         <ItemGrid
           items={filteredItems}
           onItemClick={(item, index) => {
+            // In multi-select mode, handle via ItemCard
+            if (isMultiSelectMode) {
+              return;
+            }
+
             // Check viewport: on mobile (<=768px), navigate to full-page view
             const isMobile = window.innerWidth <= 768;
 
@@ -343,6 +403,9 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
           userFavorites={new Set()}
           isRoot={isRoot}
           viewMode={viewMode}
+          isMultiSelectMode={isMultiSelectMode}
+          selectedItems={new Set(selectedIds)}
+          onItemSelectionToggle={toggleItemSelection}
         />
       ) : (
         <div className="no-items">
@@ -435,6 +498,19 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
       {/* Collection-specific Circular Menu with Filter */}
       {!isRoot && collection?.id && (() => {
+        // If in multi-select mode, show action button
+        if (isMultiSelectMode) {
+          return (
+            <CircularMenu
+              mainButtonMode="action"
+              mainButtonIcon="fas fa-plus"
+              mainButtonLabel={`Add ${selectedCount} items`}
+              mainButtonOnClick={() => setShowBatchConfirm(true)}
+              mainButtonVariant="save"
+            />
+          );
+        }
+
         // If in wishlist mode, show save button
         if (isWishlistMode) {
           return (
@@ -515,6 +591,17 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
       <MobileSearch
         isOpen={showMobileSearch}
         onClose={() => setShowMobileSearch(false)}
+      />
+
+      {/* Batch Action Confirmation */}
+      <BatchActionModal
+        isOpen={showBatchConfirm}
+        onClose={() => setShowBatchConfirm(false)}
+        onConfirm={handleBatchAdd}
+        title="Add Items to Collection"
+        message={`Add ${selectedCount} items to your collection?`}
+        confirmText="Add Items"
+        loading={isBatchAdding}
       />
 
       {/* Toast Notification */}
