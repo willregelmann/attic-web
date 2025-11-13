@@ -18,6 +18,7 @@ import WishlistView from './components/WishlistView';
 import MyCollection from './components/MyCollection';
 import ItemDetailPage from './components/ItemDetailPage';
 import MyItemDetailPage from './components/MyItemDetailPage';
+import SearchResultsPage from './components/SearchResultsPage';
 import CircularMenu from './components/CircularMenu';
 import './App.css';
 
@@ -62,10 +63,11 @@ function AppContent() {
     const isCollectionView = location.pathname.startsWith('/collection/');
     const isItemDetail = location.pathname.startsWith('/item/');
     const isMyItemDetail = location.pathname.startsWith('/my-item/');
+    const isSearchResults = location.pathname.startsWith('/search');
 
-    // MyCollection, CollectionView, and ItemDetail pages have their own CircularMenus
+    // MyCollection, CollectionView, ItemDetail, and SearchResults pages have their own CircularMenus
     // Only show CircularMenu on other pages
-    if (!isMyCollection && !isCollectionView && !isItemDetail && !isMyItemDetail) {
+    if (!isMyCollection && !isCollectionView && !isItemDetail && !isMyItemDetail && !isSearchResults) {
       // Search is available on other pages
       actions.push({
         id: 'search',
@@ -92,6 +94,7 @@ function AppContent() {
               path="/"
               element={isAuthenticated ? <Navigate to="/my-collection" replace /> : <LandingPage />}
             />
+            <Route path="/search" element={<SearchResultsPage />} />
             <Route path="/collection/:id" element={<CollectionView />} />
             <Route path="/my-collection/:id?" element={<MyCollection />} />
             <Route path="/item/:entity_id" element={<ItemDetailPage />} />

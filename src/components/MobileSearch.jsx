@@ -26,7 +26,7 @@ function MobileSearch({ isOpen, onClose, onAddToCollection }) {
   useEffect(() => {
     if (searchQuery.length > 2) {
       const timeoutId = setTimeout(() => {
-        searchItems({ variables: { query: searchQuery, first: 20 } });
+        searchItems({ variables: { query: searchQuery, first: 10 } });
       }, 500);
 
       return () => clearTimeout(timeoutId);
@@ -50,6 +50,19 @@ function MobileSearch({ isOpen, onClose, onAddToCollection }) {
     onClose();
   };
 
+  const handleViewAllResults = () => {
+    const query = encodeURIComponent(searchQuery);
+    setSearchQuery('');
+    onClose();
+    navigate(`/search?q=${query}`);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      handleViewAllResults();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -71,6 +84,7 @@ function MobileSearch({ isOpen, onClose, onAddToCollection }) {
               placeholder="Search collections and items..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
               autoFocus
             />
             {searchQuery && (
@@ -98,9 +112,6 @@ function MobileSearch({ isOpen, onClose, onAddToCollection }) {
                   <div className="mobile-search-empty">No results found</div>
                 ) : (
                   <>
-                    <div className="mobile-search-results-header">
-                      {searchData.databaseOfThingsSemanticSearch.length} result{searchData.databaseOfThingsSemanticSearch.length !== 1 ? 's' : ''}
-                    </div>
                     <div className="mobile-search-results-list">
                       {searchData.databaseOfThingsSemanticSearch.map(item => (
                         <button
@@ -137,6 +148,15 @@ function MobileSearch({ isOpen, onClose, onAddToCollection }) {
                         </button>
                       ))}
                     </div>
+                    {searchData.databaseOfThingsSemanticSearch.length === 10 && (
+                      <button
+                        className="mobile-search-view-all-button"
+                        onClick={handleViewAllResults}
+                        data-testid="mobile-view-all-results"
+                      >
+                        View all results →
+                      </button>
+                    )}
                   </>
                 )}
               </>
