@@ -52,6 +52,7 @@ function MobileMenuPanel({ isOpen, onClose, user, onLogin, onLogout, isDarkMode,
         role="dialog"
         aria-modal="true"
         aria-label="Mobile navigation menu"
+        data-testid="mobile-nav"
       >
         <div className="mobile-menu-header">
           <button

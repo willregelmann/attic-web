@@ -47,8 +47,14 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [fetchCollectionItems] = useLazyQuery(GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, {
     fetchPolicy: 'cache-first'
   });
-  const [addItemMutation, { loading: isAddingItem }] = useMutation(ADD_ITEM_TO_MY_COLLECTION);
-  const [removeItemMutation, { loading: isRemovingItem }] = useMutation(REMOVE_ITEM_FROM_MY_COLLECTION);
+  const [addItemMutation, { loading: isAddingItem }] = useMutation(ADD_ITEM_TO_MY_COLLECTION, {
+    refetchQueries: [{ query: GET_MY_ITEMS }],
+    awaitRefetchQueries: true
+  });
+  const [removeItemMutation, { loading: isRemovingItem }] = useMutation(REMOVE_ITEM_FROM_MY_COLLECTION, {
+    refetchQueries: [{ query: GET_MY_ITEMS }],
+    awaitRefetchQueries: true
+  });
 
   // Fetch parent collections for filtering
   const { data: parentCollectionsData } = useQuery(GET_COLLECTION_PARENT_COLLECTIONS, {
@@ -83,7 +89,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [userOwnership, setUserOwnership] = useState(new Set());
 
   // Fetch user's owned items from backend
-  const { data: myItemsData, refetch: refetchMyItems } = useQuery(GET_MY_ITEMS, {
+  const { data: myItemsData } = useQuery(GET_MY_ITEMS, {
     skip: !isAuthenticated,
     fetchPolicy: 'cache-and-network'
   });
@@ -120,9 +126,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
           variables: { itemId, metadata: null, notes: null }
         });
       }
-
-      // Refetch owned items to update UI
-      await refetchMyItems();
+      // No manual refetch needed - refetchQueries handles it automatically
     } catch (error) {
       console.error('Error toggling ownership:', error);
     }

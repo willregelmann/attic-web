@@ -113,7 +113,7 @@ function WishlistView() {
 
       <div className="wishlist-grid">
         {data.myWishlist.map((wishlistEntry) => (
-          <div key={wishlistEntry.id} className="wishlist-card">
+          <div key={wishlistEntry.id} className="wishlist-card" data-testid="wishlist-item">
             <div className="wishlist-card-image" onClick={() => handleViewItem(wishlistEntry.item.id)}>
               {wishlistEntry.item.primaryImage ? (
                 <img

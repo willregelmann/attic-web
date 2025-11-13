@@ -207,6 +207,7 @@ export function ItemCard({
       className={`item-card ${isFavorite ? 'item-favorite' : ''} ${showAsWishlist ? 'item-wishlist' : ''} clickable`}
       onClick={onClick}
       title="Click to view details"
+      data-testid={isOwned ? "collection-item" : "entity-card"}
     >
       <ItemCardImage
         item={item}

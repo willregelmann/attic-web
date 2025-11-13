@@ -56,6 +56,31 @@
   align-items: center;
 }
 
+/* Wishlist button in title action - next to collection name */
+.collection-title-action .wishlist-button {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.collection-title-action .wishlist-button:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+}
+
+.collection-title-action .wishlist-button:hover svg {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
 .collection-subtitle {
   font-size: 14px;
   color: var(--text-secondary);

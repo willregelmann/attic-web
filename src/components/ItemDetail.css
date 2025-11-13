@@ -997,8 +997,8 @@
 
 /* Icon Buttons in Header */
 .icon-btn {
-  background: rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
   padding: 0.5rem;
@@ -1010,8 +1010,8 @@
 }
 
 .icon-btn:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.08);
-  border-color: rgba(0, 0, 0, 0.2);
+  background: var(--bg-secondary);
+  border-color: var(--text-secondary);
   color: var(--text-primary);
 }
 
