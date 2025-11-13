@@ -186,6 +186,27 @@ npm run start  # Uses 'serve' package
 - `MobileSearch.jsx` - Mobile-optimized search interface
 - Search integrated in `Navigation.jsx`
 
+**Multi-Select Batch Actions:**
+- `useMultiSelect.js` - Custom hook for multi-select state management
+  - Manages selection state (active/inactive, selected items, item type)
+  - Type locking prevents mixing owned/wishlisted/DBoT items
+  - Provides selection toggle, clear, and completion callbacks
+- `BatchActionModal.jsx` - Confirmation modal for batch operations
+  - Displays count of items being affected
+  - Supports different variants (default, danger) for action types
+  - Loading states during mutation execution
+- **Desktop interaction**: Ctrl+click (or Cmd+click on Mac) to enter multi-select mode
+  - Inline toolbar appears with selection count and action buttons
+  - Toolbar shows "Cancel", "Add to Collection", "Delete", or "Add to Wishlist" depending on context
+  - Click items to toggle selection, deselect all exits mode
+- **Mobile interaction**: Long-press (500ms) on item to enter multi-select mode
+  - Circular action button replaces normal menu
+  - Shows item count and primary action (e.g., "Add 5 items", "Delete 3 items")
+  - Tap items to toggle selection
+- **Type locking feature**: Once multi-select is active with a specific item type (owned/wishlisted/dbot-item), only items of that type can be selected
+  - Incompatible items appear disabled/grayed out
+  - Prevents invalid batch operations (e.g., can't batch delete wishlist and owned items together)
+
 **Legacy/Deprecated:**
 - `HierarchicalSuggestions.jsx` - Curator suggestions (deprecated)
 - `SuggestionReview.jsx` - Review suggestions (deprecated)
