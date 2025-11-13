@@ -23,7 +23,8 @@ function ItemDetail({
   onWishlistModeChange = null,
   onCollectionWishlisted = null,
   onSaveRequest = null,
-  onCollectionCreated = null
+  onCollectionCreated = null,
+  onDeleteCollection = null
 }) {
   // Handle modal close - reset edit/add mode
   const handleClose = () => {
@@ -64,6 +65,7 @@ function ItemDetail({
           onCollectionWishlisted={onCollectionWishlisted}
           onSaveRequest={onSaveRequest}
           onCollectionCreated={onCollectionCreated}
+          onDeleteCollection={onDeleteCollection}
         />
       </div>
     </div>

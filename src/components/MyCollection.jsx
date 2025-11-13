@@ -6,6 +6,7 @@ import { CollectionHeader } from './CollectionHeader';
 import { ItemGrid } from './ItemGrid';
 import ItemDetail from './ItemDetail';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
+import { DeleteCollectionModal } from './DeleteCollectionModal';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { formatEntityType, isCustomCollection, isLinkedCollection } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,6 +31,7 @@ function MyCollection() {
   const [collectionCreateMode, setCollectionCreateMode] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showCollectionFilters, setShowCollectionFilters] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const saveItemRef = useRef(null); // Ref to trigger save from ItemDetail
 
   const { loading, error, data, refetch } = useQuery(MY_COLLECTION_TREE, {
@@ -461,6 +463,7 @@ function MyCollection() {
           onAddModeChange={setItemAddMode}
           onSaveRequest={saveItemRef}
           onCollectionCreated={handleCollectionCreated}
+          onDeleteCollection={() => setShowDeleteModal(true)}
         />
       )}
 
@@ -526,6 +529,14 @@ function MyCollection() {
               label: isLinkedCollection(selectedItem.type) ? 'Move collection' : 'Edit collection',
               onClick: () => setItemEditMode(true)
             }] : []),
+            // Show delete button for custom and linked collections
+            ...(selectedItem && (isCustomCollection(selectedItem.type) || isLinkedCollection(selectedItem.type)) ? [{
+              id: 'delete-collection',
+              icon: 'fas fa-trash',
+              label: 'Delete collection',
+              onClick: () => setShowDeleteModal(true),
+              variant: 'danger'
+            }] : []),
             // Show item action buttons when viewing a regular item in ItemDetail
             ...(selectedItem && !isCustomCollection(selectedItem.type) && !isLinkedCollection(selectedItem.type) ?
               selectedItem.user_item_id ? [
@@ -564,6 +575,25 @@ function MyCollection() {
           isOpen={showCollectionFilters}
           onClose={() => setShowCollectionFilters(false)}
           userOwnership={userOwnership}
+        />
+      )}
+
+      {/* Delete Collection Modal */}
+      {showDeleteModal && selectedItem && (isCustomCollection(selectedItem.type) || isLinkedCollection(selectedItem.type)) && (
+        <DeleteCollectionModal
+          collection={selectedItem}
+          onClose={() => setShowDeleteModal(false)}
+          onDelete={() => {
+            setShowDeleteModal(false);
+            handleCloseDetail(); // Close the detail modal
+            // Navigate to parent collection or root
+            const parentId = selectedItem.parent_collection_id;
+            if (parentId) {
+              navigate(`/my-collection/${parentId}`);
+            } else {
+              navigate('/my-collection');
+            }
+          }}
         />
       )}
 

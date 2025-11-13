@@ -197,7 +197,8 @@ function ItemDetailContent({
   onWishlistModeChange = null,  // New prop: callback when wishlist mode changes
   onCollectionWishlisted = null,  // New prop: called when a collection is wishlisted
   onSaveRequest = null,  // New prop: called when parent wants to trigger save
-  onCollectionCreated = null  // New prop: called when a collection is successfully created
+  onCollectionCreated = null,  // New prop: called when a collection is successfully created
+  onDeleteCollection = null  // New prop: called when delete button is clicked
 }) {
   const { isAuthenticated } = useAuth();
   const { isDarkMode } = useTheme();
@@ -880,16 +881,31 @@ function ItemDetailContent({
                       <i className="fas fa-save"></i>
                     </button>
                   ) : (
-                    <button
-                      className="icon-btn edit-icon"
-                      onClick={() => handleSetEditMode(true)}
-                      title="Edit collection"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </button>
+                    <>
+                      <button
+                        className="icon-btn edit-icon"
+                        onClick={() => handleSetEditMode(true)}
+                        title="Edit collection"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                      {onDeleteCollection && (
+                        <button
+                          className="icon-btn delete-icon"
+                          onClick={onDeleteCollection}
+                          title="Delete collection"
+                          style={{ color: '#ef4444' }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -906,16 +922,31 @@ function ItemDetailContent({
                       <i className="fas fa-save"></i>
                     </button>
                   ) : (
-                    <button
-                      className="icon-btn edit-icon"
-                      onClick={() => handleSetEditMode(true)}
-                      title="Move collection"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </button>
+                    <>
+                      <button
+                        className="icon-btn edit-icon"
+                        onClick={() => handleSetEditMode(true)}
+                        title="Move collection"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                      {onDeleteCollection && (
+                        <button
+                          className="icon-btn delete-icon"
+                          onClick={onDeleteCollection}
+                          title="Delete collection"
+                          style={{ color: '#ef4444' }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               )}

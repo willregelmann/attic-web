@@ -167,6 +167,19 @@
   transform: scale(0.9);
 }
 
+/* Danger variant for menu items - red color scheme */
+.menu-item-danger {
+  background: #ef4444 !important; /* Red-500 */
+  border-color: #ef4444 !important;
+}
+
+.menu-item-danger:hover {
+  background: #dc2626 !important; /* Red-600 */
+  border-color: #dc2626 !important;
+  color: white !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4) !important;
+}
+
 /* Menu Item Positions - Circular arrangement */
 /* When active, items fan out in an arc - 11rem radius */
 /* Custom positions: 1 item = 90°, 2 items = 90°+135°, 3 items = 90°+120°+150°, 4 items = 90°+120°+150°+180° */

@@ -62,6 +62,25 @@
   color: var(--text-primary);
 }
 
+.delete-collection-button {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: all 0.2s;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-collection-button:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #dc2626;
+}
+
 /* Override filter button styles for light backgrounds in MyCollection headers */
 .header-actions .filter-toggle-button {
   background: rgba(0, 0, 0, 0.05);

@@ -600,11 +600,24 @@ export const MOVE_USER_COLLECTION = gql`
   }
 `;
 
+export const USER_COLLECTION_DELETION_PREVIEW = gql`
+  query UserCollectionDeletionPreview($id: ID!) {
+    userCollectionDeletionPreview(id: $id) {
+      collection_id
+      collection_name
+      total_items
+      total_subcollections
+    }
+  }
+`;
+
 export const DELETE_USER_COLLECTION = gql`
-  mutation DeleteUserCollection($id: ID!, $deleteContents: Boolean!) {
-    deleteUserCollection(id: $id, delete_contents: $deleteContents) {
+  mutation DeleteUserCollection($id: ID!) {
+    deleteUserCollection(id: $id) {
       success
-      message
+      deleted_collection_id
+      items_deleted
+      subcollections_deleted
     }
   }
 `;
