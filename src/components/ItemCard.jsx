@@ -185,6 +185,10 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
  *
  * @param {Object} item - Item or collection data
  * @param {Object} progress - Optional progress data for user collections { owned_count, total_count, percentage }
+ * @param {Boolean} isMultiSelectMode - Whether multi-select mode is active
+ * @param {Boolean} isSelected - Whether this item is selected
+ * @param {Boolean} isDisabled - Whether this item is disabled (wrong type in multi-select)
+ * @param {Function} onSelectionToggle - Callback for selection toggle (itemId, itemType)
  */
 export function ItemCard({
   item,
@@ -195,20 +199,85 @@ export function ItemCard({
   showCompletion = false,
   completionStats = null,
   showAsWishlist = false,
-  progress = null
+  progress = null,
+  isMultiSelectMode = false,
+  isSelected = false,
+  isDisabled = false,
+  onSelectionToggle = null
 }) {
   const { isAuthenticated } = useAuth();
+  const longPressTimer = useRef(null);
+  const [isPressing, setIsPressing] = useState(false);
 
   // Calculate completion percentage
   const completionPercentage = completionStats?.completionPercentage ?? (isOwned ? 100 : 0);
 
+  // Determine item type for multi-select
+  const getItemType = () => {
+    if (showAsWishlist) return 'wishlisted';
+    if (isOwned) return 'owned';
+    return 'dbot-item';
+  };
+
+  // Handle click - either select or navigate
+  const handleClick = (e) => {
+    // Desktop: ctrl+click or cmd+click enters multi-select
+    if ((e.ctrlKey || e.metaKey) && !isMultiSelectMode && onSelectionToggle) {
+      e.stopPropagation();
+      onSelectionToggle(item.id, getItemType());
+      return;
+    }
+
+    // Already in multi-select mode
+    if (isMultiSelectMode && onSelectionToggle) {
+      e.stopPropagation();
+      if (!isDisabled) {
+        onSelectionToggle(item.id, getItemType());
+      }
+    } else if (onClick) {
+      onClick(e);
+    }
+  };
+
+  // Mobile long-press handler
+  const handleTouchStart = (e) => {
+    setIsPressing(true);
+    longPressTimer.current = setTimeout(() => {
+      if (onSelectionToggle && !isMultiSelectMode && !isDisabled) {
+        onSelectionToggle(item.id, getItemType());
+      }
+    }, 500); // 500ms long press
+  };
+
+  const handleTouchEnd = () => {
+    setIsPressing(false);
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+  };
+
   return (
     <div
-      className={`item-card ${isFavorite ? 'item-favorite' : ''} ${showAsWishlist ? 'item-wishlist' : ''} clickable`}
-      onClick={onClick}
-      title="Click to view details"
+      className={`item-card ${isFavorite ? 'item-favorite' : ''} ${showAsWishlist ? 'item-wishlist' : ''} ${isMultiSelectMode ? 'multi-select-mode' : 'clickable'} ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+      onClick={handleClick}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      title={isMultiSelectMode ? (isDisabled ? 'Cannot select this type' : 'Click to select') : 'Click to view details'}
       data-testid={isOwned ? "collection-item" : "entity-card"}
     >
+      {/* Multi-select checkbox */}
+      {isMultiSelectMode && (
+        <div className="item-checkbox">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            disabled={isDisabled}
+            onChange={() => {}}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       <ItemCardImage
         item={item}
         index={index}
@@ -249,4 +318,50 @@ export function ItemCard({
       </div>
     </div>
   );
+}
+
+// Multi-select styles
+const multiSelectStyles = document.createElement('style');
+multiSelectStyles.textContent = `
+.item-card.multi-select-mode {
+  cursor: pointer;
+  position: relative;
+}
+
+.item-card.multi-select-mode.selected {
+  border: 2px solid var(--primary-color, #3b82f6);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.item-card.multi-select-mode.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.item-checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  background: white;
+  border-radius: 4px;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.item-checkbox input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.item-checkbox input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+}
+`;
+
+// Inject styles only once
+if (!document.getElementById('item-card-multi-select-styles')) {
+  multiSelectStyles.id = 'item-card-multi-select-styles';
+  document.head.appendChild(multiSelectStyles);
 }
