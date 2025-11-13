@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useQuery, useMutation } from '@apollo/client/react';
 import { useNavigate } from 'react-router-dom';
 import { GET_MY_API_TOKENS, CREATE_API_TOKEN, REVOKE_API_TOKEN } from '../queries';
+import { isFormBusy } from '../utils/formUtils';
 import './UserProfile.css';
 
 function UserProfile() {
@@ -17,7 +18,7 @@ function UserProfile() {
     fetchPolicy: 'network-only',
   });
 
-  const [createToken] = useMutation(CREATE_API_TOKEN, {
+  const [createToken, { loading: isCreatingToken }] = useMutation(CREATE_API_TOKEN, {
     onCompleted: (data) => {
       setGeneratedToken(data.createApiToken.plainTextToken);
       refetch();
@@ -219,7 +220,7 @@ function UserProfile() {
                   <button
                     className="btn-primary"
                     onClick={handleCreateToken}
-                    disabled={!newTokenName.trim()}
+                    disabled={!newTokenName.trim() || isFormBusy(isCreatingToken)}
                   >
                     Create Token
                   </button>

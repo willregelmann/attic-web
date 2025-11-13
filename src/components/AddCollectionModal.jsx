@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { ADD_COLLECTION_TO_WISHLIST, MY_COLLECTION_TREE } from '../queries';
+import { isFormBusy } from '../utils/formUtils';
 import TreePicker from './TreePicker';
 import './AddCollectionModal.css';
 
 /**
- * AddCollectionModal - Modal for adding DBoT collections to user's wishlist
+ * AddCollectionModal - Modal for adding DBoT collections as linked collections in user's wishlist
  *
- * Two modes:
- * 1. TRACK - Create new linked collection tracking DBoT collection completion
- * 2. ADD_TO_EXISTING - Add all items from DBoT collection to existing custom collection
+ * Creates a new linked collection that tracks completion of a DBoT collection.
+ * Shows dual progress bars for owned items and wishlist items.
  *
  * @param {Object} props
  * @param {Boolean} props.isOpen - Whether modal is visible
@@ -18,8 +18,7 @@ import './AddCollectionModal.css';
  * @param {Function} props.onSuccess - Callback after successful addition
  */
 function AddCollectionModal({ isOpen, onClose, dbotCollection, onSuccess, onSaveRequest = null }) {
-  // Form state
-  const [mode, setMode] = useState('track'); // 'track' or 'add_to_existing'
+  // Form state - always using 'track' mode (linked collection)
   const [collectionName, setCollectionName] = useState('');
   const [selectedCollectionId, setSelectedCollectionId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -41,7 +40,6 @@ function AddCollectionModal({ isOpen, onClose, dbotCollection, onSuccess, onSave
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen) {
-      setMode('track');
       setCollectionName(dbotCollection?.name || '');
       setSelectedCollectionId(null);
       setError(null);
@@ -61,16 +59,12 @@ function AddCollectionModal({ isOpen, onClose, dbotCollection, onSuccess, onSave
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  // Form validation
+  // Form validation - only need collection name for linked collections
   const isFormValid = () => {
-    if (mode === 'track') {
-      return collectionName.trim().length > 0;
-    } else {
-      return selectedCollectionId !== null;
-    }
+    return collectionName.trim().length > 0;
   };
 
-  // Submit handler
+  // Submit handler - always creates linked collection (TRACK mode)
   const handleSubmit = async () => {
     if (!isFormValid()) return;
 
@@ -80,16 +74,12 @@ function AddCollectionModal({ isOpen, onClose, dbotCollection, onSuccess, onSave
     try {
       const variables = {
         dbot_collection_id: dbotCollection.id,
-        mode: mode === 'track' ? 'TRACK' : 'ADD_TO_EXISTING'
+        mode: 'TRACK',
+        new_collection_name: collectionName.trim()
       };
 
-      // Add mode-specific variables
-      if (mode === 'track') {
-        variables.new_collection_name = collectionName.trim();
-        if (selectedCollectionId !== null) {
-          variables.target_collection_id = selectedCollectionId;
-        }
-      } else {
+      // Include parent collection if selected
+      if (selectedCollectionId !== null) {
         variables.target_collection_id = selectedCollectionId;
       }
 
@@ -171,114 +161,42 @@ function AddCollectionModal({ isOpen, onClose, dbotCollection, onSuccess, onSave
             </div>
           )}
 
-          {/* Mode Selection */}
+          {/* Collection Name Field */}
           <div className="modal-section">
-            <h3>How would you like to add this collection?</h3>
-
-            <div className="mode-options">
-              {/* Track Mode */}
-              <label className={`mode-option ${mode === 'track' ? 'selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="mode"
-                  value="track"
-                  checked={mode === 'track'}
-                  onChange={(e) => setMode(e.target.value)}
-                />
-                <div className="mode-content">
-                  <div className="mode-header">
-                    <span className="radio-indicator"></span>
-                    <span className="mode-title">Track this collection (linked)</span>
-                  </div>
-                  <p className="mode-description">
-                    Track official completion with dual progress bars showing both your owned items and wishlist
-                  </p>
-                </div>
-              </label>
-
-              {/* Add to Existing Mode */}
-              <label className={`mode-option ${mode === 'add_to_existing' ? 'selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="mode"
-                  value="add_to_existing"
-                  checked={mode === 'add_to_existing'}
-                  onChange={(e) => setMode(e.target.value)}
-                />
-                <div className="mode-content">
-                  <div className="mode-header">
-                    <span className="radio-indicator"></span>
-                    <span className="mode-title">Add items to existing collection</span>
-                  </div>
-                  <p className="mode-description">
-                    Add all items from this collection to one of your custom collections
-                  </p>
-                </div>
-              </label>
-            </div>
+            <label htmlFor="collection-name" className="field-label required">
+              Collection Name
+            </label>
+            <input
+              id="collection-name"
+              type="text"
+              className="text-input"
+              placeholder="Enter a name for your collection"
+              value={collectionName}
+              onChange={(e) => setCollectionName(e.target.value)}
+              autoFocus
+            />
           </div>
 
-          {/* Conditional Fields */}
-          {mode === 'track' ? (
-            // Track Mode Fields
-            <>
-              <div className="modal-section">
-                <label htmlFor="collection-name" className="field-label required">
-                  Collection Name
-                </label>
-                <input
-                  id="collection-name"
-                  type="text"
-                  className="text-input"
-                  placeholder="Enter a name for your collection"
-                  value={collectionName}
-                  onChange={(e) => setCollectionName(e.target.value)}
-                  autoFocus
-                />
-              </div>
-
-              <div className="modal-section">
-                <label className="field-label">
-                  Parent Collection (optional)
-                </label>
-                <p className="field-description">
-                  Choose where to place this collection, or leave unselected for root level
-                </p>
-                <div className="tree-picker-container">
-                  <TreePicker
-                    collections={collections}
-                    loading={collectionsLoading}
-                    error={collectionsError}
-                    onRetry={refetchCollections}
-                    onSelect={setSelectedCollectionId}
-                    allowRoot={true}
-                    selectedId={selectedCollectionId}
-                  />
-                </div>
-              </div>
-            </>
-          ) : (
-            // Add to Existing Mode Fields
-            <div className="modal-section">
-              <label className="field-label required">
-                Target Collection
-              </label>
-              <p className="field-description">
-                Select the collection to add all items to
-              </p>
-              <div className="tree-picker-container">
-                <TreePicker
-                  collections={collections}
-                  loading={collectionsLoading}
-                  error={collectionsError}
-                  onRetry={refetchCollections}
-                  onSelect={setSelectedCollectionId}
-                  allowRoot={true}
-                  selectedId={selectedCollectionId}
-                />
-              </div>
+          {/* Parent Collection Picker */}
+          <div className="modal-section">
+            <label className="field-label">
+              Parent Collection (optional)
+            </label>
+            <p className="field-description">
+              Choose where to place this collection, or leave unselected for root level
+            </p>
+            <div className="tree-picker-container">
+              <TreePicker
+                collections={collections}
+                loading={collectionsLoading}
+                error={collectionsError}
+                onRetry={refetchCollections}
+                onSelect={setSelectedCollectionId}
+                allowRoot={true}
+                selectedId={selectedCollectionId}
+              />
             </div>
-          )}
+          </div>
 
           {/* Error Message */}
           {error && (
@@ -297,14 +215,14 @@ function AddCollectionModal({ isOpen, onClose, dbotCollection, onSuccess, onSave
           <button
             className="btn-cancel"
             onClick={onClose}
-            disabled={loading}
+            disabled={isFormBusy(loading, collectionsLoading)}
           >
             Cancel
           </button>
           <button
             className="btn-confirm"
             onClick={handleSubmit}
-            disabled={!isFormValid() || loading}
+            disabled={!isFormValid() || isFormBusy(loading, collectionsLoading)}
           >
             {loading ? (
               <>
@@ -312,7 +230,7 @@ function AddCollectionModal({ isOpen, onClose, dbotCollection, onSuccess, onSave
                 Adding...
               </>
             ) : (
-              mode === 'track' ? 'Track Collection' : 'Add Items'
+              'Track Collection'
             )}
           </button>
         </div>

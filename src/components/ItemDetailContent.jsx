@@ -4,6 +4,7 @@ import { useQuery, useLazyQuery, useMutation, useApolloClient } from '@apollo/cl
 import { useState, useEffect, memo } from 'react';
 import { GET_DATABASE_OF_THINGS_ITEM_PARENTS, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, UPDATE_MY_ITEM, UPDATE_USER_COLLECTION, CREATE_USER_COLLECTION, ADD_ITEM_TO_MY_COLLECTION, MY_COLLECTION_TREE, MOVE_USER_ITEM, MOVE_USER_COLLECTION, ADD_COLLECTION_TO_WISHLIST } from '../queries';
 import { formatEntityType, isCollectionType, isCustomCollection, isLinkedCollection } from '../utils/formatters';
+import { isFormBusy } from '../utils/formUtils';
 import { CollectionTreeSkeleton } from './SkeletonLoader';
 import { getTypeIcon } from '../utils/iconUtils.jsx';
 import './ItemDetail.css';
@@ -240,9 +241,8 @@ function ItemDetailContent({
     }
   };
 
-  // Wishlist mode state for collections
+  // Wishlist mode state for collections - always using 'track' mode (linked collection)
   const [isWishlistMode, setIsWishlistMode] = useState(externalWishlistMode);
-  const [wishlistModeType, setWishlistModeType] = useState('track'); // 'track' or 'add_to_existing'
   const [wishlistCollectionName, setWishlistCollectionName] = useState('');
   const [wishlistTargetCollectionId, setWishlistTargetCollectionId] = useState(null);
 
@@ -252,7 +252,6 @@ function ItemDetailContent({
     if (externalWishlistMode && item) {
       // Initialize wishlist state when entering wishlist mode
       setWishlistCollectionName(item.name || '');
-      setWishlistModeType('track');
       setWishlistTargetCollectionId(null);
     }
   }, [externalWishlistMode, item]);
@@ -464,40 +463,37 @@ function ItemDetailContent({
     }
   });
 
-  const isSaving = isUpdating || isUpdatingCollection || isCreatingCollection || isAdding || isMoving || isMovingCollection || isWishlisting;
+  const isSaving = isFormBusy(
+    isUpdating,
+    isUpdatingCollection,
+    isCreatingCollection,
+    isAdding,
+    isMoving,
+    isMovingCollection,
+    isWishlisting,
+    collectionsLoading
+  );
 
   // Save changes (handles both edit mode, add mode, and wishlist mode)
   const handleSave = async () => {
     try {
-      // Check if we're in wishlist mode
+      // Check if we're in wishlist mode - always creates linked collection
       if (isWishlistMode && isCollectionType(item.type)) {
-        // Validate inputs based on mode
-        if (wishlistModeType === 'track') {
-          if (!wishlistCollectionName.trim()) {
-            alert('Collection name cannot be empty');
-            return;
-          }
-        } else if (wishlistModeType === 'add_to_existing') {
-          if (!wishlistTargetCollectionId) {
-            alert('Please select a target collection');
-            return;
-          }
+        // Validate collection name
+        if (!wishlistCollectionName.trim()) {
+          alert('Collection name cannot be empty');
+          return;
         }
 
-        // Build mutation variables
+        // Build mutation variables for TRACK mode
         const variables = {
           dbot_collection_id: item.id,
-          mode: wishlistModeType === 'track' ? 'TRACK' : 'ADD_TO_EXISTING'
+          mode: 'TRACK',
+          new_collection_name: wishlistCollectionName.trim()
         };
 
-        // Add mode-specific variables
-        if (wishlistModeType === 'track') {
-          variables.new_collection_name = wishlistCollectionName.trim();
-          // Only include target_collection_id if one is selected (for parent collection)
-          if (wishlistTargetCollectionId) {
-            variables.target_collection_id = wishlistTargetCollectionId;
-          }
-        } else {
+        // Include parent collection if selected
+        if (wishlistTargetCollectionId) {
           variables.target_collection_id = wishlistTargetCollectionId;
         }
 
@@ -1018,92 +1014,37 @@ function ItemDetailContent({
             </div>
           )}
 
-          {/* Wishlist Mode UI */}
+          {/* Wishlist Mode UI - Creates linked collection */}
           {isWishlistMode && isCollectionType(item.type) && (
             <div style={{ marginTop: '16px' }}>
               <div style={{ marginBottom: '16px' }}>
                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                  Add "<strong>{item.name}</strong>" to your wishlist
+                  Track "<strong>{item.name}</strong>" as a linked collection with dual progress bars
+                  showing both your owned items and wishlist.
                 </p>
               </div>
 
-              {/* Mode Selection */}
               <div style={{ marginBottom: '16px' }}>
-                <label className="meta-label" style={{ display: 'block', marginBottom: '8px' }}>
-                  How would you like to add this collection?
+                <label className="meta-label" style={{ display: 'block', marginBottom: '6px' }}>
+                  Collection Name <span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ display: 'flex', alignItems: 'flex-start', cursor: 'pointer', padding: '12px', borderRadius: '8px', border: `2px solid ${wishlistModeType === 'track' ? 'var(--color-primary)' : 'var(--border-color)'}`, backgroundColor: wishlistModeType === 'track' ? 'var(--bg-secondary)' : 'transparent' }}>
-                    <input
-                      type="radio"
-                      name="wishlist-mode"
-                      checked={wishlistModeType === 'track'}
-                      onChange={() => setWishlistModeType('track')}
-                      style={{ marginTop: '2px', marginRight: '8px' }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>Track this collection (linked)</div>
-                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                        Track official completion with dual progress bars showing both your owned items and wishlist
-                      </div>
-                    </div>
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'flex-start', cursor: 'pointer', padding: '12px', borderRadius: '8px', border: `2px solid ${wishlistModeType === 'add_to_existing' ? 'var(--color-primary)' : 'var(--border-color)'}`, backgroundColor: wishlistModeType === 'add_to_existing' ? 'var(--bg-secondary)' : 'transparent' }}>
-                    <input
-                      type="radio"
-                      name="wishlist-mode"
-                      checked={wishlistModeType === 'add_to_existing'}
-                      onChange={() => setWishlistModeType('add_to_existing')}
-                      style={{ marginTop: '2px', marginRight: '8px' }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>Add items to existing collection</div>
-                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                        Add all items from this collection to one of your custom collections
-                      </div>
-                    </div>
-                  </label>
-                </div>
+                <input
+                  type="text"
+                  className="notes-textarea-inline"
+                  value={wishlistCollectionName}
+                  onChange={(e) => setWishlistCollectionName(e.target.value)}
+                  placeholder="Enter a name for your collection"
+                  style={{ width: '100%', padding: '8px' }}
+                />
               </div>
-
-              {/* Track Mode Fields */}
-              {wishlistModeType === 'track' && (
-                <>
-                  <div style={{ marginBottom: '16px' }}>
-                    <label className="meta-label" style={{ display: 'block', marginBottom: '6px' }}>
-                      Collection Name <span style={{ color: 'var(--color-danger)' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className="notes-textarea-inline"
-                      value={wishlistCollectionName}
-                      onChange={(e) => setWishlistCollectionName(e.target.value)}
-                      placeholder="Enter a name for your collection"
-                      style={{ width: '100%', padding: '8px' }}
-                    />
-                  </div>
-                  <div>
-                    <label className="meta-label" style={{ display: 'block', marginBottom: '6px' }}>
-                      Parent Collection (optional)
-                    </label>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                      Choose where to place this collection, or leave unselected for root level
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {/* Add to Existing Mode Fields */}
-              {wishlistModeType === 'add_to_existing' && (
-                <div>
-                  <label className="meta-label" style={{ display: 'block', marginBottom: '6px' }}>
-                    Target Collection <span style={{ color: 'var(--color-danger)' }}>*</span>
-                  </label>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                    Select the collection to add all items to
-                  </p>
-                </div>
-              )}
+              <div>
+                <label className="meta-label" style={{ display: 'block', marginBottom: '6px' }}>
+                  Parent Collection (optional)
+                </label>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                  Choose where to place this collection, or leave unselected for root level
+                </p>
+              </div>
             </div>
           )}
 
@@ -1162,7 +1103,7 @@ function ItemDetailContent({
           {!isSuggestionPreview && (isEditMode || isAddMode || isWishlistMode) && (
             <div className="detail-collections-tree">
               <h5 className="collections-tree-header">
-                {isWishlistMode ? (wishlistModeType === 'track' ? 'Parent Collection' : 'Target Collection') : 'Collection'}
+                {isWishlistMode ? 'Parent Collection' : 'Collection'}
               </h5>
               <div className="collections-tree-list">
                 {collectionsLoading ? (

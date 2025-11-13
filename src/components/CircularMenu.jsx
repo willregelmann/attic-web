@@ -5,11 +5,12 @@ import './CircularMenu.css';
  * CircularMenu - A mobile-friendly floating action button menu
  * that expands into a circular arrangement of action buttons
  *
- * @param {Array} actions - Array of action objects with { icon, label, onClick, id }
+ * @param {Array} actions - Array of action objects with { icon, label, onClick, id, disabled }
  *   - icon: FontAwesome class string (e.g., "fas fa-search") or React element
  *   - label: Aria label and title text
  *   - onClick: Callback function
  *   - id: Unique identifier (optional)
+ *   - disabled: Whether the action is disabled (optional)
  * @param {Function} onBackdropClick - Callback when backdrop is clicked
  * @param {Boolean} showOnDesktop - Whether to show menu on desktop (default: false)
  * @param {String} mainButtonMode - 'menu' (default) or 'action' for direct action button
@@ -84,13 +85,14 @@ const CircularMenu = ({
         onClick={handleMainButtonClick}
         aria-label={getMainButtonLabel()}
         aria-expanded={mainButtonMode === 'menu' ? isActive : undefined}
+        data-testid={mainButtonMode === 'menu' ? 'circular-menu-trigger' : 'fab'}
       >
         {getMainButtonIcon()}
       </button>
 
       {/* Menu Items - only shown in menu mode */}
       {mainButtonMode === 'menu' && (
-        <nav className="items-wrapper" aria-label="Circular menu">
+        <nav className="items-wrapper" aria-label="Circular menu" data-testid="circular-menu">
           {actions.map((action, index) => (
             <button
               key={action.id || index}
@@ -98,6 +100,7 @@ const CircularMenu = ({
               onClick={() => handleMenuItemClick(action.onClick)}
               aria-label={action.label}
               title={action.label}
+              disabled={action.disabled || false}
             >
               {typeof action.icon === 'string' ? (
                 <i className={action.icon}></i>
@@ -120,6 +123,7 @@ const CircularMenu = ({
             }
           }}
           aria-hidden="true"
+          data-testid="menu-backdrop"
         />
       )}
     </div>

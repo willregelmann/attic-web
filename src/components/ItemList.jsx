@@ -12,6 +12,7 @@ import {
   REMOVE_ITEM_FROM_MY_COLLECTION,
   GET_COLLECTION_PARENT_COLLECTIONS
 } from '../queries';
+import { isFormBusy } from '../utils/formUtils';
 import ItemDetail from './ItemDetail';
 import CollectionFilterPanel from './CollectionFilterPanel';
 import CircularMenu from './CircularMenu';
@@ -46,8 +47,8 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [fetchCollectionItems] = useLazyQuery(GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, {
     fetchPolicy: 'cache-first'
   });
-  const [addItemMutation] = useMutation(ADD_ITEM_TO_MY_COLLECTION);
-  const [removeItemMutation] = useMutation(REMOVE_ITEM_FROM_MY_COLLECTION);
+  const [addItemMutation, { loading: isAddingItem }] = useMutation(ADD_ITEM_TO_MY_COLLECTION);
+  const [removeItemMutation, { loading: isRemovingItem }] = useMutation(REMOVE_ITEM_FROM_MY_COLLECTION);
 
   // Fetch parent collections for filtering
   const { data: parentCollectionsData } = useQuery(GET_COLLECTION_PARENT_COLLECTIONS, {
@@ -261,46 +262,42 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     );
   }
 
-  // Collection header action buttons (filter + wishlist)
+  // Collection header action buttons (filter only)
   const headerActions = !isRootView && (
-    <>
-      <button
-        className={`filter-toggle-button ${hasActiveFilters(collection.id) ? 'active' : ''}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          setShowCollectionFilters(true);
-        }}
-        title="Filter collection items"
-      >
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-        {hasActiveFilters(collection.id) && (
-          <span className="filter-badge"></span>
-        )}
-      </button>
-
-      {/* Wishlist button - desktop only */}
-      {isAuthenticated && (
-        <button
-          className="wishlist-button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedItem(collection);
-            setSelectedItemIndex(null);
-            setIsWishlistMode(true);
-          }}
-          title="Add collection to wishlist"
-        >
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
+    <button
+      className={`filter-toggle-button ${hasActiveFilters(collection.id) ? 'active' : ''}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        setShowCollectionFilters(true);
+      }}
+      title="Filter collection items"
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      {hasActiveFilters(collection.id) && (
+        <span className="filter-badge"></span>
       )}
-    </>
+    </button>
   );
 
-  // Title action removed - now in CircularMenu
+  // Wishlist button - positioned immediately after collection name (desktop only)
+  const titleAction = !isRootView && isAuthenticated && (
+    <button
+      className="wishlist-button"
+      onClick={(e) => {
+        e.stopPropagation();
+        setSelectedItem(collection);
+        setSelectedItemIndex(null);
+        setIsWishlistMode(true);
+      }}
+      title="Add collection to wishlist"
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </button>
+  );
 
   return (
     <div className="item-list">
@@ -311,6 +308,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
         ownedCount={stats.owned}
         totalCount={stats.total}
         actions={headerActions}
+        titleAction={titleAction}
         onClick={() => {
           setSelectedItem(collection);
           setSelectedItemIndex(null);
@@ -491,7 +489,8 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
                 if (window.confirm(`Remove "${selectedItem.name}" from your collection?`)) {
                   toggleItemOwnership(selectedItem.id);
                 }
-              }
+              },
+              disabled: isFormBusy(isAddingItem, isRemovingItem)
             });
           } else {
             // For non-owned items: show add button
@@ -499,7 +498,8 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
               id: 'add-to-collection',
               icon: 'fas fa-plus-circle',
               label: 'Add to collection',
-              onClick: () => toggleItemOwnership(selectedItem.id)
+              onClick: () => toggleItemOwnership(selectedItem.id),
+              disabled: isFormBusy(isAddingItem, isRemovingItem)
             });
           }
         }

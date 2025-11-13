@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLazyQuery, useMutation } from '@apollo/client/react';
 import { SEMANTIC_SEARCH_DATABASE_OF_THINGS, ADD_ITEM_TO_MY_COLLECTION, GET_MY_ITEMS } from '../queries';
 import { formatEntityType, isCollectionType } from '../utils/formatters';
+import { isFormBusy } from '../utils/formUtils';
 import './AddItemsModal.css';
 
 function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }) {
@@ -261,13 +262,13 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }
 
         {/* Footer */}
         <div className="modal-footer">
-          <button className="btn-cancel" onClick={onClose} disabled={isAdding}>
+          <button className="btn-cancel" onClick={onClose} disabled={isFormBusy(isAdding)}>
             Cancel
           </button>
           <button
             className="btn-confirm"
             onClick={handleConfirm}
-            disabled={!selectedItem || isAdding}
+            disabled={!selectedItem || isFormBusy(isAdding, searchLoading)}
           >
             {isAdding ? 'Adding...' : 'Add to Collection'}
           </button>
