@@ -632,14 +632,14 @@ function MyCollection() {
         // Multi-select mode
         <CircularMenu
           mainButtonMode="action"
-          mainButtonIcon={selectedType === 'owned' ? 'fas fa-trash' : 'fas fa-heart-broken'}
+          mainButtonIcon={selectedType === 'owned' ? 'fas fa-trash' : 'fas fa-heart'}
           mainButtonLabel={
             selectedType === 'owned'
               ? `Delete ${selectedCount} items`
               : `Remove ${selectedCount} items`
           }
-          mainButtonOnClick={handleBatchDelete}
-          mainButtonVariant={selectedType === 'owned' ? 'danger' : 'danger'}
+          mainButtonOnClick={selectedType === 'owned' ? handleBatchDelete : handleBatchWishlist}
+          mainButtonVariant={selectedType === 'owned' ? 'danger' : 'save'}
         />
       ) : (
         // Menu mode - Normal circular menu
