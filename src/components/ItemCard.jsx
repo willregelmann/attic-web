@@ -214,11 +214,14 @@ export function ItemCard({
   itemType = null,
   isDuplicate = false,
   duplicateCount = 1,
-  duplicateGroup = null
+  duplicateGroup = null,
+  onEdit = null,
+  onDelete = null
 }) {
   const { isAuthenticated } = useAuth();
   const longPressTimer = useRef(null);
   const [isPressing, setIsPressing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Handle duplicate action
   const handleDuplicate = () => {
@@ -300,54 +303,105 @@ export function ItemCard({
   };
 
   return (
-    <div
-      className={`item-card ${isFavorite ? 'item-favorite' : ''} ${showAsWishlist ? 'item-wishlist' : ''} ${isMultiSelectMode ? 'multi-select-mode' : 'clickable'} ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
-      onClick={handleClick}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchMove={handleTouchMove}
-      onContextMenu={handleContextMenu}
-      title={isMultiSelectMode ? (isDisabled ? 'Cannot select this type' : 'Click to select') : 'Click to view details'}
-      data-testid={isOwned ? "collection-item" : "entity-card"}
-    >
-      <ItemCardImage
-        item={item}
-        index={index}
-        isOwned={isOwned}
-        isFavorite={isFavorite}
-      />
+    <>
+      <div
+        className={`item-card ${isFavorite ? 'item-favorite' : ''} ${showAsWishlist ? 'item-wishlist' : ''} ${isMultiSelectMode ? 'multi-select-mode' : 'clickable'} ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+        onClick={handleClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
+        onContextMenu={handleContextMenu}
+        title={isMultiSelectMode ? (isDisabled ? 'Cannot select this type' : 'Click to select') : 'Click to view details'}
+        data-testid={isOwned ? "collection-item" : "entity-card"}
+      >
+        <ItemCardImage
+          item={item}
+          index={index}
+          isOwned={isOwned}
+          isFavorite={isFavorite}
+        />
 
-      <div className="item-content">
-        <h4 className="item-name">{item.name}</h4>
-        <div className="item-meta">
-          <span className="item-type">
-            {formatEntityType(item.type)}
-            {item.year && ` • ${item.year}`}
-          </span>
+        <div className="item-content">
+          <h4 className="item-name">{item.name}</h4>
+          <div className="item-meta">
+            <span className="item-type">
+              {formatEntityType(item.type)}
+              {item.year && ` • ${item.year}`}
+            </span>
+          </div>
+
+          {showCompletion && isAuthenticated && (
+            <div className="item-completion-bar">
+              <div className="completion-progress">
+                <div className="completion-fill" style={{ width: `${completionPercentage}%` }}></div>
+              </div>
+            </div>
+          )}
+
+          {progress && isAuthenticated && (
+            <div className="item-progress">
+              <div className="progress-bar">
+                <div
+                  className="progress-fill"
+                  style={{ width: `${progress.percentage}%` }}
+                />
+              </div>
+              <div className="progress-text">
+                {progress.owned_count}/{progress.total_count}
+              </div>
+            </div>
+          )}
         </div>
 
-        {showCompletion && isAuthenticated && (
-          <div className="item-completion-bar">
-            <div className="completion-progress">
-              <div className="completion-fill" style={{ width: `${completionPercentage}%` }}></div>
-            </div>
-          </div>
-        )}
-
-        {progress && isAuthenticated && (
-          <div className="item-progress">
-            <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{ width: `${progress.percentage}%` }}
-              />
-            </div>
-            <div className="progress-text">
-              {progress.owned_count}/{progress.total_count}
-            </div>
+        {/* Count badge for grouped duplicates */}
+        {isDuplicate && duplicateCount > 1 && (
+          <div
+            className="absolute top-2 right-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full cursor-pointer hover:bg-blue-700 transition-colors z-10"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            aria-label={`${duplicateCount} duplicates`}
+          >
+            ×{duplicateCount}
           </div>
         )}
       </div>
-    </div>
+
+      {/* Expanded view showing all duplicates */}
+      {isExpanded && duplicateGroup && (
+        <div className="mt-4 space-y-2 border-t pt-4">
+          <div className="text-sm font-semibold text-gray-600 mb-2">
+            All {duplicateCount} copies:
+          </div>
+          <div className="space-y-2">
+            {duplicateGroup.map(duplicateItem => (
+              <div key={duplicateItem.id} className="ml-4 p-2 bg-gray-50 rounded">
+                <ItemCard
+                  item={duplicateItem}
+                  index={index}
+                  isOwned={isOwned}
+                  isFavorite={isFavorite}
+                  showCompletion={showCompletion}
+                  completionStats={completionStats}
+                  showAsWishlist={showAsWishlist}
+                  progress={progress}
+                  isMultiSelectMode={isMultiSelectMode}
+                  onSelectionToggle={onSelectionToggle}
+                  onDuplicate={onDuplicate}
+                  itemType={itemType}
+                  isDuplicate={false}
+                  duplicateCount={1}
+                  duplicateGroup={null}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onClick={onClick}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

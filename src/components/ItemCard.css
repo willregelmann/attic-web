@@ -1,7 +1,10 @@
 /* Multi-select mode styles */
+.item-card {
+  position: relative;
+}
+
 .item-card.multi-select-mode {
   cursor: pointer;
-  position: relative;
   /* Prevent context menu on mobile */
   -webkit-touch-callout: none;
   -webkit-user-select: none;
