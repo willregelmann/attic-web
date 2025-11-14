@@ -86,13 +86,21 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
   }, [childrenData]);
 
   const getItemImage = () => {
+    // Priority 1: User uploaded image (for owned items)
+    if (isOwned && item.images && item.images.length > 0) {
+      const userImage = item.images[0]; // Primary image is first in array
+      return `url(${userImage.thumbnail_url})`;
+    }
+
+    // Priority 2: DBoT canonical image
     // Use thumbnail_url for cards if available, fallback to image_url
     const imageUrl = item.thumbnail_url || item.image_url;
 
     if (imageUrl) {
       return `url(${imageUrl})`;
     }
-    // No background when no images are available (just show icon)
+
+    // Priority 3: No background when no images are available (just show icon)
     return 'transparent';
   };
 
