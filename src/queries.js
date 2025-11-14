@@ -244,13 +244,14 @@ export const SEARCH_ITEMS = gql`
 `;
 
 export const ADD_ITEM_TO_MY_COLLECTION = gql`
-  mutation AddItemToMyCollection($itemId: ID!, $metadata: JSON, $notes: String) {
-    addItemToMyCollection(entity_id: $itemId, metadata: $metadata, notes: $notes) {
+  mutation AddItemToMyCollection($itemId: ID!, $metadata: JSON, $notes: String, $images: [Upload!]) {
+    addItemToMyCollection(entity_id: $itemId, metadata: $metadata, notes: $notes, images: $images) {
       id
       entity_id
       user_id
       metadata
       notes
+      images
       created_at
     }
   }
@@ -699,6 +700,64 @@ export const ADD_COLLECTION_TO_WISHLIST = gql`
       items_added
       items_already_owned
       items_skipped
+    }
+  }
+`;
+
+// ===== IMAGE UPLOAD MUTATIONS =====
+
+// Image upload mutations for user items
+export const UPLOAD_ITEM_IMAGES = gql`
+  mutation UploadItemImages($user_item_id: ID!, $images: [Upload!]!, $remove_image_indices: [Int!]) {
+    updateMyItem(
+      user_item_id: $user_item_id
+      images: $images
+      remove_image_indices: $remove_image_indices
+    ) {
+      id
+      images
+      entity_id
+      notes
+      metadata
+    }
+  }
+`;
+
+export const REORDER_ITEM_IMAGES = gql`
+  mutation ReorderItemImages($user_item_id: ID!, $image_ids: [ID!]!) {
+    reorderItemImages(user_item_id: $user_item_id, image_ids: $image_ids) {
+      id
+      images
+    }
+  }
+`;
+
+// Image upload mutations for user collections
+export const UPLOAD_COLLECTION_IMAGES = gql`
+  mutation UploadCollectionImages($collection_id: ID!, $images: [Upload!]!) {
+    uploadCollectionImages(collection_id: $collection_id, images: $images) {
+      id
+      images
+      name
+      type
+    }
+  }
+`;
+
+export const REMOVE_COLLECTION_IMAGES = gql`
+  mutation RemoveCollectionImages($collection_id: ID!, $image_indices: [Int!]!) {
+    removeCollectionImages(collection_id: $collection_id, image_indices: $image_indices) {
+      id
+      images
+    }
+  }
+`;
+
+export const REORDER_COLLECTION_IMAGES = gql`
+  mutation ReorderCollectionImages($collection_id: ID!, $image_ids: [ID!]!) {
+    reorderCollectionImages(collection_id: $collection_id, image_ids: $image_ids) {
+      id
+      images
     }
   }
 `;
