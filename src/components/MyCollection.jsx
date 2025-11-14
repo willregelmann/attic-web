@@ -17,6 +17,7 @@ import CollectionFilterPanel from './CollectionFilterPanel';
 import { useMultiSelect } from '../hooks/useMultiSelect';
 import { BatchActionModal } from './BatchActionModal';
 import { BatchAddToCollectionModal } from './BatchAddToCollectionModal';
+import AddItemsModal from './AddItemsModal';
 import Toast from './Toast';
 import './MyCollection.css';
 import './MultiSelectToolbar.css';
@@ -38,6 +39,8 @@ function MyCollection() {
   const [showCollectionFilters, setShowCollectionFilters] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteItemModal, setShowDeleteItemModal] = useState(false);
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [preSelectedItemForAdd, setPreSelectedItemForAdd] = useState(null);
   const saveItemRef = useRef(null); // Ref to trigger save from ItemDetail
 
   // Multi-select state
@@ -825,13 +828,8 @@ function MyCollection() {
                   icon: 'fas fa-copy',
                   label: 'Duplicate',
                   onClick: () => {
-                    setSelectedItem({
-                      ...selectedItem,
-                      id: selectedItem.id, // entity_id for DBoT reference
-                      user_item_id: null,  // Clear user_item_id to create new copy
-                      notes: ''            // Clear notes for new copy
-                    });
-                    setItemAddMode(true);
+                    setPreSelectedItemForAdd(selectedItem);
+                    setShowAddItemModal(true);
                   }
                 },
                 {
@@ -904,6 +902,19 @@ function MyCollection() {
           loading={isBatchRemoving}
         />
       )}
+
+      {/* Add Items Modal (for duplicate action) */}
+      <AddItemsModal
+        isOpen={showAddItemModal}
+        onClose={() => {
+          setShowAddItemModal(false);
+          setPreSelectedItemForAdd(null);
+        }}
+        onItemsAdded={() => {
+          setToastMessage({ text: 'Item duplicated successfully', type: 'success' });
+        }}
+        preSelectedItem={preSelectedItemForAdd}
+      />
 
       {/* Batch Action Confirmation - Delete */}
       {batchAction === 'delete' && (
