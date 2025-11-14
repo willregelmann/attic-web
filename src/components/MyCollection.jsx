@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useApolloClient, useMutation } from '@apollo/client/react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MY_COLLECTION_TREE, GET_DATABASE_OF_THINGS_ENTITY, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, GET_COLLECTION_PARENT_COLLECTIONS, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, BATCH_ADD_ITEMS_TO_WISHLIST, BATCH_ADD_ITEMS_TO_MY_COLLECTION, DELETE_USER_COLLECTION } from '../queries';
+import { MY_COLLECTION_TREE, GET_DATABASE_OF_THINGS_ENTITY, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, GET_COLLECTION_PARENT_COLLECTIONS, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, BATCH_ADD_ITEMS_TO_WISHLIST, BATCH_ADD_ITEMS_TO_MY_COLLECTION, DELETE_USER_COLLECTION, UPLOAD_ITEM_IMAGES, REORDER_ITEM_IMAGES } from '../queries';
 import { CollectionHeader } from './CollectionHeader';
 import { ItemGrid } from './ItemGrid';
 import ItemDetail from './ItemDetail';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { DeleteCollectionModal } from './DeleteCollectionModal';
+import { ImageGalleryModal } from './ImageGalleryModal';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { formatEntityType, isCustomCollection, isLinkedCollection } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
@@ -45,6 +46,9 @@ function MyCollection() {
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [preSelectedItemForAdd, setPreSelectedItemForAdd] = useState(null);
   const saveItemRef = useRef(null); // Ref to trigger save from ItemDetail
+
+  // Image gallery state
+  const [galleryItem, setGalleryItem] = useState(null);
 
   // Multi-select state
   const {
@@ -98,6 +102,17 @@ function MyCollection() {
   );
 
   const [deleteCollectionMutation] = useMutation(DELETE_USER_COLLECTION, {
+    refetchQueries: [{ query: MY_COLLECTION_TREE, variables: { parentId: currentParentId } }],
+    awaitRefetchQueries: true
+  });
+
+  // Image gallery mutations
+  const [uploadImagesMutation] = useMutation(UPLOAD_ITEM_IMAGES, {
+    refetchQueries: [{ query: MY_COLLECTION_TREE, variables: { parentId: currentParentId } }],
+    awaitRefetchQueries: true
+  });
+
+  const [reorderImagesMutation] = useMutation(REORDER_ITEM_IMAGES, {
     refetchQueries: [{ query: MY_COLLECTION_TREE, variables: { parentId: currentParentId } }],
     awaitRefetchQueries: true
   });
@@ -416,6 +431,35 @@ function MyCollection() {
     setShowBatchConfirm(true);
   };
 
+  // Image gallery update handler
+  const handleImageUpdate = async (newFiles, removeIndices, reorderIds) => {
+    if (!galleryItem) return;
+
+    try {
+      if (reorderIds && reorderIds.length > 0) {
+        await reorderImagesMutation({
+          variables: {
+            user_item_id: galleryItem.user_item_id,
+            image_ids: reorderIds,
+          },
+        });
+      }
+
+      if (newFiles.length > 0 || removeIndices.length > 0) {
+        await uploadImagesMutation({
+          variables: {
+            user_item_id: galleryItem.user_item_id,
+            images: newFiles.length > 0 ? newFiles : undefined,
+            remove_image_indices: removeIndices.length > 0 ? removeIndices : undefined,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update images:', error);
+      setToastMessage({ text: 'Failed to update images', type: 'error' });
+    }
+  };
+
   const executeBatchAction = async (parentCollectionId = null) => {
     if (batchAction === 'delete') {
       try {
@@ -664,6 +708,12 @@ function MyCollection() {
           onItemClick={(item, index) => {
             // In multi-select mode, handled by ItemCard
             if (isMultiSelectMode) {
+              return;
+            }
+
+            // If item has images and is owned, open gallery instead of detail modal
+            if (item.user_item_id && item.images && item.images.length > 0) {
+              setGalleryItem(item);
               return;
             }
 
@@ -991,6 +1041,15 @@ function MyCollection() {
           message={toastMessage.text}
           type={toastMessage.type}
           onClose={() => setToastMessage(null)}
+        />
+      )}
+
+      {/* Image Gallery Modal */}
+      {galleryItem && (
+        <ImageGalleryModal
+          item={galleryItem}
+          onClose={() => setGalleryItem(null)}
+          onUpdate={handleImageUpdate}
         />
       )}
 
