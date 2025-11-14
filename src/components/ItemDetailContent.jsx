@@ -2,11 +2,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useQuery, useLazyQuery, useMutation, useApolloClient } from '@apollo/client/react';
 import { useState, useEffect, memo } from 'react';
-import { GET_DATABASE_OF_THINGS_ITEM_PARENTS, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, UPDATE_MY_ITEM, UPDATE_USER_COLLECTION, CREATE_USER_COLLECTION, BATCH_ADD_ITEMS_TO_MY_COLLECTION, MY_COLLECTION_TREE, MOVE_USER_ITEM, MOVE_USER_COLLECTION, ADD_COLLECTION_TO_WISHLIST, GET_MY_ITEMS } from '../queries';
+import { GET_DATABASE_OF_THINGS_ITEM_PARENTS, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, UPDATE_MY_ITEM, UPDATE_USER_COLLECTION, CREATE_USER_COLLECTION, BATCH_ADD_ITEMS_TO_MY_COLLECTION, MY_COLLECTION_TREE, MOVE_USER_ITEM, MOVE_USER_COLLECTION, ADD_COLLECTION_TO_WISHLIST, GET_MY_ITEMS, UPLOAD_ITEM_IMAGES, REORDER_ITEM_IMAGES } from '../queries';
 import { formatEntityType, isCollectionType, isCustomCollection, isLinkedCollection } from '../utils/formatters';
 import { isFormBusy } from '../utils/formUtils';
 import { CollectionTreeSkeleton } from './SkeletonLoader';
 import { CollectionPickerTree } from './CollectionPickerTree';
+import { ImageUpload } from './ImageUpload';
 import { getTypeIcon } from '../utils/iconUtils.jsx';
 import './ItemDetail.css';
 import './ItemList.css'; // Import for child-images-grid styles
@@ -94,6 +95,8 @@ function ItemDetailContent({
   const [isEditMode, setIsEditMode] = useState(externalEditMode);
   const [editNotes, setEditNotes] = useState('');
   const [originalParentCollectionId, setOriginalParentCollectionId] = useState(null);
+  const [uploadImages, setUploadImages] = useState([]);
+  const [removeImageIndices, setRemoveImageIndices] = useState([]);
 
   // Edit mode state for collections
   const [editCollectionName, setEditCollectionName] = useState('');
@@ -408,6 +411,10 @@ function ItemDetailContent({
     }
   });
 
+  // Image upload mutations
+  const [uploadItemImages] = useMutation(UPLOAD_ITEM_IMAGES);
+  const [reorderItemImages] = useMutation(REORDER_ITEM_IMAGES);
+
   const isSaving = isFormBusy(
     isUpdating,
     isUpdatingCollection,
@@ -546,6 +553,18 @@ function ItemDetailContent({
             notes: editNotes
           }
         });
+
+        // Handle image uploads if any
+        if (uploadImages.length > 0 || removeImageIndices.length > 0) {
+          await uploadItemImages({
+            variables: {
+              user_item_id: item.user_item_id,
+              images: uploadImages.length > 0 ? uploadImages : undefined,
+              remove_image_indices: removeImageIndices.length > 0 ? removeImageIndices : undefined
+            },
+            refetchQueries: [{ query: MY_COLLECTION_TREE }]
+          });
+        }
 
         // Check if collection has changed and move if needed
         if (selectedCollection !== originalParentCollectionId) {
@@ -1076,6 +1095,33 @@ function ItemDetailContent({
                   {item.user_notes || ''}
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Image Upload - shown in edit/add mode for user items */}
+          {(isEditMode || isAddMode) && isUserItem && (
+            <div style={{ marginTop: '16px' }}>
+              <label className="meta-label" style={{ display: 'block', marginBottom: '6px' }}>Images:</label>
+              <ImageUpload
+                existingImages={item.images || []}
+                onImagesChange={(newFiles, removedIndices) => {
+                  setUploadImages(newFiles);
+                  setRemoveImageIndices(removedIndices);
+                }}
+                onReorder={async (newOrder) => {
+                  // Immediately reorder on drag-drop
+                  if (item.user_item_id) {
+                    await reorderItemImages({
+                      variables: {
+                        user_item_id: item.user_item_id,
+                        image_ids: newOrder
+                      },
+                      refetchQueries: [{ query: MY_COLLECTION_TREE }]
+                    });
+                  }
+                }}
+                maxImages={10}
+              />
             </div>
           )}
 
