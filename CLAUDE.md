@@ -207,6 +207,29 @@ npm run start  # Uses 'serve' package
   - Incompatible items appear disabled/grayed out
   - Prevents invalid batch operations (e.g., can't batch delete wishlist and owned items together)
 
+**Image Management Components:**
+- `ImageUpload.jsx` - Drag-and-drop image upload component
+  - Multi-file upload with client-side validation (10MB per file, JPEG/PNG/WebP only)
+  - Drag-to-reorder support with visual feedback
+  - Remove individual images with X button
+  - Shows primary badge on first image
+  - Max 10 images with visual counter
+  - Preview thumbnails for new uploads using URL.createObjectURL
+- `ImageGalleryModal.jsx` - Full-screen image viewer
+  - Navigate through multiple images with previous/next buttons
+  - Displays full-resolution original images
+  - "Manage Images" mode integrates ImageUpload component
+  - Add new images, reorder existing, or remove images
+  - Image counter shows current position (e.g., "3 / 5")
+- **Display Priority in ItemCard:**
+  1. User uploaded image (primary = first in images array, shows thumbnail)
+  2. DBoT canonical image (from representative_images)
+  3. Placeholder image
+- **Integration Points:**
+  - AddItemsModal includes ImageUpload for adding images during item creation
+  - MyCollection triggers ImageGalleryModal on click (if item has images)
+  - Mobile supports camera upload via native file picker
+
 **Legacy/Deprecated:**
 - `HierarchicalSuggestions.jsx` - Curator suggestions (deprecated)
 - `SuggestionReview.jsx` - Review suggestions (deprecated)
