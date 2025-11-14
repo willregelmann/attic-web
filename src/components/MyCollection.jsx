@@ -11,6 +11,8 @@ import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { formatEntityType, isCustomCollection, isLinkedCollection } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
 import { useCollectionFilter } from '../contexts/CollectionFilterContext';
+import { useFilters } from '../contexts/FilterContext';
+import { groupDuplicateItems } from '../utils/groupDuplicates';
 import CircularMenu from './CircularMenu';
 import MobileSearch from './MobileSearch';
 import CollectionFilterPanel from './CollectionFilterPanel';
@@ -29,6 +31,7 @@ function MyCollection() {
   const { isAuthenticated } = useAuth();
   const { setBreadcrumbItems, setLoading: setBreadcrumbsLoading } = useBreadcrumbs();
   const { getFiltersForCollection, applyFilters, hasActiveFilters } = useCollectionFilter();
+  const { groupDuplicates } = useFilters();
   const [currentParentId, setCurrentParentId] = useState(id || null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
@@ -392,6 +395,11 @@ function MyCollection() {
     return applyFilters(allItems, collectionFilters, parentCollections, userOwnership);
   }, [allItems, supportsFiltering, filterCollectionId, getFiltersForCollection, applyFilters, parentCollectionsData, userOwnership]);
 
+  // Apply duplicate grouping to items (only to items, not collections)
+  const groupedItems = useMemo(() => {
+    return groupDuplicateItems(filteredItems, groupDuplicates);
+  }, [filteredItems, groupDuplicates]);
+
   // Batch action handlers
   const handleBatchDelete = () => {
     setBatchAction('delete');
@@ -524,8 +532,8 @@ function MyCollection() {
   const ownedCount = current_collection?.progress?.owned_count ?? items.length;
   const totalCount = current_collection?.progress?.total_count ?? filteredItems.length;
 
-  // Combine collections and filtered items for rendering
-  const displayItems = [...collections, ...filteredItems];
+  // Combine collections and grouped items for rendering
+  const displayItems = [...collections, ...groupedItems];
 
   // Title action - "jump to" button for linked collections (appears next to collection name)
   // Hidden on mobile since it's available in the circular menu

@@ -192,6 +192,9 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
  * @param {Function} onSelectionToggle - Callback for selection toggle (itemId, itemType)
  * @param {Function} onDuplicate - Callback for duplicate action (entityId)
  * @param {String} itemType - Optional explicit item type for multi-select (overrides computed type)
+ * @param {Boolean} isDuplicate - Whether this item has duplicates (count > 1)
+ * @param {Number} duplicateCount - Number of duplicate copies (1 if not duplicated)
+ * @param {Array} duplicateGroup - Array of all duplicate items for expansion
  */
 export function ItemCard({
   item,
@@ -208,7 +211,10 @@ export function ItemCard({
   isDisabled = false,
   onSelectionToggle = null,
   onDuplicate = null,
-  itemType = null
+  itemType = null,
+  isDuplicate = false,
+  duplicateCount = 1,
+  duplicateGroup = null
 }) {
   const { isAuthenticated } = useAuth();
   const longPressTimer = useRef(null);
