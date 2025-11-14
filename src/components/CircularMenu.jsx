@@ -97,7 +97,7 @@ const CircularMenu = ({
           {actions.map((action, index) => (
             <button
               key={action.id || index}
-              className={`menu-item ${action.variant ? `menu-item-${action.variant}` : ''}`}
+              className={`menu-item ${action.variant ? `menu-item-${action.variant}` : ''} ${action.className || ''}`}
               onClick={() => handleMenuItemClick(action.onClick)}
               aria-label={action.label}
               title={action.label}

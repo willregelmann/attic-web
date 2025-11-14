@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { useQuery, useMutation, useLazyQuery } from '@apollo/client/react';
+import { useQuery, useMutation, useLazyQuery, useApolloClient } from '@apollo/client/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCollectionFilter } from '../contexts/CollectionFilterContext';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +11,8 @@ import {
   ADD_ITEM_TO_MY_COLLECTION,
   REMOVE_ITEM_FROM_MY_COLLECTION,
   GET_COLLECTION_PARENT_COLLECTIONS,
-  BATCH_ADD_ITEMS_TO_MY_COLLECTION
+  BATCH_ADD_ITEMS_TO_MY_COLLECTION,
+  MY_COLLECTION_TREE
 } from '../queries';
 import { isFormBusy } from '../utils/formUtils';
 import ItemDetail from './ItemDetail';
@@ -27,12 +28,14 @@ import { ItemGrid } from './ItemGrid';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { useMultiSelect } from '../hooks/useMultiSelect';
 import { BatchActionModal } from './BatchActionModal';
+import { BatchAddToCollectionModal } from './BatchAddToCollectionModal';
 import './ItemList.css';
 import './MultiSelectToolbar.css';
 
 function ItemList({ collection, onBack, onSelectCollection, isRootView = false, onRefresh, navigationPath = [] }) {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const apolloClient = useApolloClient();
   const { setBreadcrumbItems, setLoading: setBreadcrumbsLoading } = useBreadcrumbs();
   const { getFiltersForCollection, applyFilters, hasActiveFilters } = useCollectionFilter();
   const [filter, setFilter] = useState('all'); // all, owned, missing
@@ -59,6 +62,9 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   } = useMultiSelect();
 
   const [showBatchConfirm, setShowBatchConfirm] = useState(false);
+  const [showSingleItemPicker, setShowSingleItemPicker] = useState(false);
+  const [singleItemToAdd, setSingleItemToAdd] = useState(null);
+
   const [batchAddMutation, { loading: isBatchAdding }] = useMutation(BATCH_ADD_ITEMS_TO_MY_COLLECTION, {
     refetchQueries: [{ query: GET_MY_ITEMS }],
     awaitRefetchQueries: true,
@@ -66,10 +72,14 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
       setToastMessage({ text: data.batchAddItemsToMyCollection.message, type: 'success' });
       exitMultiSelectMode();
       setShowBatchConfirm(false);
+      setShowSingleItemPicker(false);
+      setSingleItemToAdd(null);
     },
     onError: (error) => {
       setToastMessage({ text: `Error: ${error.message}`, type: 'error' });
       setShowBatchConfirm(false);
+      setShowSingleItemPicker(false);
+      setSingleItemToAdd(null);
     }
   });
 
@@ -124,6 +134,71 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     fetchPolicy: 'cache-and-network'
   });
 
+  // Fetch user's collections to check if DBoT collection is already linked
+  const { data: userCollectionsData } = useQuery(MY_COLLECTION_TREE, {
+    variables: { parentId: null },
+    skip: !isAuthenticated || !collection?.id,
+    fetchPolicy: 'cache-and-network'
+  });
+
+  // Check if this DBoT collection is already linked (recursively check all levels)
+  const [isCollectionLinked, setIsCollectionLinked] = useState(false);
+  const [linkedCollectionId, setLinkedCollectionId] = useState(null);
+  const [linkedCollection, setLinkedCollection] = useState(null);
+
+  useEffect(() => {
+    if (!isAuthenticated || !collection?.id || !apolloClient) {
+      setIsCollectionLinked(false);
+      setLinkedCollectionId(null);
+      setLinkedCollection(null);
+      return;
+    }
+
+    const checkLinkedRecursively = async (parentId = null) => {
+      try {
+        const { data } = await apolloClient.query({
+          query: MY_COLLECTION_TREE,
+          variables: { parentId },
+          fetchPolicy: 'cache-first'
+        });
+
+        const collections = data?.myCollectionTree?.collections || [];
+
+        // Check current level
+        for (const col of collections) {
+          if (col.linked_dbot_collection_id === collection.id) {
+            return col; // Return the full collection object
+          }
+        }
+
+        // Check nested levels
+        for (const col of collections) {
+          const foundCol = await checkLinkedRecursively(col.id);
+          if (foundCol) {
+            return foundCol;
+          }
+        }
+
+        return null;
+      } catch (error) {
+        console.error('Error checking linked collection:', error);
+        return null;
+      }
+    };
+
+    checkLinkedRecursively().then((col) => {
+      if (col) {
+        setIsCollectionLinked(true);
+        setLinkedCollectionId(col.id);
+        setLinkedCollection(col);
+      } else {
+        setIsCollectionLinked(false);
+        setLinkedCollectionId(null);
+        setLinkedCollection(null);
+      }
+    });
+  }, [isAuthenticated, collection?.id, apolloClient, userCollectionsData]);
+
   // Update ownership state when backend data is fetched
   useEffect(() => {
     if (myItemsData?.myItems) {
@@ -151,15 +226,27 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
           variables: { itemId }
         });
       } else {
-        // Add to collection
-        await addItemMutation({
-          variables: { itemId, metadata: null, notes: null }
-        });
+        // Show collection picker for adding item
+        const item = filteredItems.find(i => i.id === itemId);
+        setSingleItemToAdd(item);
+        setShowSingleItemPicker(true);
       }
       // No manual refetch needed - refetchQueries handles it automatically
     } catch (error) {
       console.error('Error toggling ownership:', error);
     }
+  };
+
+  // Handle single item addition through collection picker
+  const handleSingleItemAdd = async (parentCollectionId) => {
+    if (!singleItemToAdd) return;
+
+    await batchAddMutation({
+      variables: {
+        entityIds: [singleItemToAdd.id],
+        parentCollectionId: parentCollectionId
+      }
+    });
   };
 
 
@@ -277,9 +364,12 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   }, [setBreadcrumbItems, setBreadcrumbsLoading]);
 
   // Batch action handler
-  const handleBatchAdd = async () => {
+  const handleBatchAdd = async (parentCollectionId) => {
     await batchAddMutation({
-      variables: { entityIds: selectedIds }
+      variables: {
+        entityIds: selectedIds,
+        parentCollectionId: parentCollectionId
+      }
     });
   };
 
@@ -322,18 +412,25 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   );
 
   // Wishlist button - positioned immediately after collection name (desktop only)
+  // Hidden on mobile since it's available in the circular menu
   const titleAction = !isRootView && isAuthenticated && (
     <button
-      className="wishlist-button"
+      className={`wishlist-button desktop-only-actions ${isCollectionLinked ? 'linked' : ''}`}
       onClick={(e) => {
         e.stopPropagation();
-        setSelectedItem(collection);
-        setSelectedItemIndex(null);
-        setIsWishlistMode(true);
+        if (isCollectionLinked && linkedCollectionId) {
+          // Navigate to the linked collection in My Collection
+          navigate(`/my-collection/${linkedCollectionId}`);
+        } else {
+          // Open wishlist mode to link the collection
+          setSelectedItem(collection);
+          setSelectedItemIndex(null);
+          setIsWishlistMode(true);
+        }
       }}
-      title="Add collection to wishlist"
+      title={isCollectionLinked ? "View in My Collection" : "Add collection to wishlist"}
     >
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill={isCollectionLinked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     </button>
@@ -447,6 +544,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
           item={selectedItem}
           index={selectedItemIndex}
           collection={collection}
+          currentCollection={linkedCollection}
           isOwned={userOwnership.has(selectedItem.id)}
           isUserItem={false}  // ItemList shows DBoT collections, not user items
           onToggleOwnership={() => {
@@ -548,12 +646,19 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
           actions.push({
             id: 'add-to-wishlist',
             icon: 'fas fa-heart',
-            label: 'Add collection to wishlist',
+            label: isCollectionLinked ? 'View in My Collection' : 'Add collection to wishlist',
             onClick: () => {
-              setSelectedItem(collection);
-              setSelectedItemIndex(null);
-              setIsWishlistMode(true);
-            }
+              if (isCollectionLinked && linkedCollectionId) {
+                // Navigate to the linked collection in My Collection
+                navigate(`/my-collection/${linkedCollectionId}`);
+              } else {
+                // Open wishlist mode to link the collection
+                setSelectedItem(collection);
+                setSelectedItemIndex(null);
+                setIsWishlistMode(true);
+              }
+            },
+            className: isCollectionLinked ? 'linked-collection' : ''
           });
         }
 
@@ -593,14 +698,26 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
         onClose={() => setShowMobileSearch(false)}
       />
 
-      {/* Batch Action Confirmation */}
-      <BatchActionModal
+      {/* Batch Add to Collection Modal */}
+      <BatchAddToCollectionModal
         isOpen={showBatchConfirm}
         onClose={() => setShowBatchConfirm(false)}
         onConfirm={handleBatchAdd}
-        title="Add Items to Collection"
-        message={`Add ${selectedCount} items to your collection?`}
-        confirmText="Add Items"
+        itemCount={selectedCount}
+        defaultCollectionId={linkedCollectionId}
+        loading={isBatchAdding}
+      />
+
+      {/* Single Item Add to Collection Modal */}
+      <BatchAddToCollectionModal
+        isOpen={showSingleItemPicker}
+        onClose={() => {
+          setShowSingleItemPicker(false);
+          setSingleItemToAdd(null);
+        }}
+        onConfirm={handleSingleItemAdd}
+        itemCount={1}
+        defaultCollectionId={linkedCollectionId}
         loading={isBatchAdding}
       />
 

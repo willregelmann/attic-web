@@ -277,8 +277,8 @@ export const REMOVE_ITEM_FROM_MY_COLLECTION = gql`
 `;
 
 export const BATCH_ADD_ITEMS_TO_MY_COLLECTION = gql`
-  mutation BatchAddItemsToMyCollection($entityIds: [ID!]!) {
-    batchAddItemsToMyCollection(entity_ids: $entityIds) {
+  mutation BatchAddItemsToMyCollection($entityIds: [ID!]!, $parentCollectionId: ID) {
+    batchAddItemsToMyCollection(entity_ids: $entityIds, parent_collection_id: $parentCollectionId) {
       success
       items_processed
       items_skipped

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useApolloClient, useMutation } from '@apollo/client/react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MY_COLLECTION_TREE, GET_DATABASE_OF_THINGS_ENTITY, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, GET_COLLECTION_PARENT_COLLECTIONS, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, BATCH_ADD_ITEMS_TO_WISHLIST } from '../queries';
+import { MY_COLLECTION_TREE, GET_DATABASE_OF_THINGS_ENTITY, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, GET_COLLECTION_PARENT_COLLECTIONS, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, BATCH_ADD_ITEMS_TO_WISHLIST, BATCH_ADD_ITEMS_TO_MY_COLLECTION, DELETE_USER_COLLECTION } from '../queries';
 import { CollectionHeader } from './CollectionHeader';
 import { ItemGrid } from './ItemGrid';
 import ItemDetail from './ItemDetail';
@@ -16,6 +16,7 @@ import MobileSearch from './MobileSearch';
 import CollectionFilterPanel from './CollectionFilterPanel';
 import { useMultiSelect } from '../hooks/useMultiSelect';
 import { BatchActionModal } from './BatchActionModal';
+import { BatchAddToCollectionModal } from './BatchAddToCollectionModal';
 import Toast from './Toast';
 import './MyCollection.css';
 import './MultiSelectToolbar.css';
@@ -36,6 +37,7 @@ function MyCollection() {
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showCollectionFilters, setShowCollectionFilters] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteItemModal, setShowDeleteItemModal] = useState(false);
   const saveItemRef = useRef(null); // Ref to trigger save from ItemDetail
 
   // Multi-select state
@@ -51,7 +53,7 @@ function MyCollection() {
   } = useMultiSelect();
 
   const [showBatchConfirm, setShowBatchConfirm] = useState(false);
-  const [batchAction, setBatchAction] = useState(null); // 'delete' | 'wishlist'
+  const [batchAction, setBatchAction] = useState(null); // 'delete' | 'wishlist' | 'add'
   const [toastMessage, setToastMessage] = useState(null);
 
   // Batch mutations
@@ -79,6 +81,28 @@ function MyCollection() {
       awaitRefetchQueries: true,
       onCompleted: (data) => {
         setToastMessage({ text: data.batchAddItemsToWishlist.message, type: 'success' });
+        exitMultiSelectMode();
+        setShowBatchConfirm(false);
+      },
+      onError: (error) => {
+        setToastMessage({ text: `Error: ${error.message}`, type: 'error' });
+        setShowBatchConfirm(false);
+      }
+    }
+  );
+
+  const [deleteCollectionMutation] = useMutation(DELETE_USER_COLLECTION, {
+    refetchQueries: [{ query: MY_COLLECTION_TREE, variables: { parentId: currentParentId } }],
+    awaitRefetchQueries: true
+  });
+
+  const [batchAddMutation, { loading: isBatchAdding }] = useMutation(
+    BATCH_ADD_ITEMS_TO_MY_COLLECTION,
+    {
+      refetchQueries: [{ query: MY_COLLECTION_TREE, variables: { parentId: currentParentId } }],
+      awaitRefetchQueries: true,
+      onCompleted: (data) => {
+        setToastMessage({ text: data.batchAddItemsToMyCollection.message, type: 'success' });
         exitMultiSelectMode();
         setShowBatchConfirm(false);
       },
@@ -178,14 +202,34 @@ function MyCollection() {
   };
 
   const handleCollectionCreated = (newCollection) => {
-    // Transition from create mode to edit mode with the newly created collection
+    // Close the modal after successful creation
     setCollectionCreateMode(false);
-    setItemEditMode(true);
-    setSelectedItem({
-      ...newCollection,
-      type: newCollection.type || 'custom'
-    });
+    setItemEditMode(false);
+    setSelectedItem(null);
+    setSelectedItemIndex(null);
     // Refetch will happen automatically via the mutation's refetchQueries
+  };
+
+  const handleDeleteItem = async () => {
+    if (!selectedItem?.user_item_id) return;
+
+    try {
+      await batchRemoveMutation({
+        variables: {
+          entityIds: [selectedItem.id]
+        }
+      });
+
+      // Close modals and reset state
+      setShowDeleteItemModal(false);
+      handleCloseDetail();
+
+      // Show success message
+      setToastMessage({ text: 'Item deleted successfully', type: 'success' });
+    } catch (error) {
+      setToastMessage({ text: `Error deleting item: ${error.message}`, type: 'error' });
+      setShowDeleteItemModal(false);
+    }
   };
 
   const handleNavigateItem = (direction) => {
@@ -356,14 +400,61 @@ function MyCollection() {
     setShowBatchConfirm(true);
   };
 
-  const executeBatchAction = async () => {
+  const handleBatchAdd = () => {
+    setBatchAction('add');
+    setShowBatchConfirm(true);
+  };
+
+  const executeBatchAction = async (parentCollectionId = null) => {
     if (batchAction === 'delete') {
-      await batchRemoveMutation({ variables: { entityIds: selectedIds } });
+      try {
+        // Separate collections from items
+        const selectedCollections = collections.filter(col => selectedIds.includes(col.id));
+        const selectedItemIds = selectedIds.filter(id => !selectedCollections.some(col => col.id === id));
+
+        let collectionsDeleted = 0;
+        let itemsDeleted = 0;
+
+        // Delete collections
+        if (selectedCollections.length > 0) {
+          await Promise.all(
+            selectedCollections.map(collection =>
+              deleteCollectionMutation({ variables: { id: collection.id } })
+            )
+          );
+          collectionsDeleted = selectedCollections.length;
+        }
+
+        // Delete items
+        if (selectedItemIds.length > 0) {
+          const result = await batchRemoveMutation({ variables: { entityIds: selectedItemIds } });
+          itemsDeleted = result.data.batchRemoveItemsFromMyCollection.items_processed;
+        }
+
+        // Show success message
+        const parts = [];
+        if (collectionsDeleted > 0) parts.push(`${collectionsDeleted} collection${collectionsDeleted > 1 ? 's' : ''}`);
+        if (itemsDeleted > 0) parts.push(`${itemsDeleted} item${itemsDeleted > 1 ? 's' : ''}`);
+        setToastMessage({ text: `Deleted ${parts.join(' and ')}`, type: 'success' });
+
+        exitMultiSelectMode();
+        setShowBatchConfirm(false);
+      } catch (error) {
+        setToastMessage({ text: `Error: ${error.message}`, type: 'error' });
+        setShowBatchConfirm(false);
+      }
     } else if (batchAction === 'wishlist') {
       await batchWishlistMutation({
         variables: {
           entityIds: selectedIds,
-          parentCollectionId: currentParentId
+          parentCollectionId: parentCollectionId !== undefined ? parentCollectionId : currentParentId
+        }
+      });
+    } else if (batchAction === 'add') {
+      await batchAddMutation({
+        variables: {
+          entityIds: selectedIds,
+          parentCollectionId: parentCollectionId !== undefined ? parentCollectionId : currentParentId
         }
       });
     }
@@ -371,9 +462,17 @@ function MyCollection() {
 
   const getBatchConfirmationProps = () => {
     if (batchAction === 'delete') {
+      // Count collections and items separately
+      const selectedCollections = collections.filter(col => selectedIds.includes(col.id));
+      const selectedItemCount = selectedIds.filter(id => !selectedCollections.some(col => col.id === id)).length;
+
+      const parts = [];
+      if (selectedCollections.length > 0) parts.push(`${selectedCollections.length} collection${selectedCollections.length > 1 ? 's' : ''}`);
+      if (selectedItemCount > 0) parts.push(`${selectedItemCount} item${selectedItemCount > 1 ? 's' : ''}`);
+
       return {
-        title: 'Delete Items',
-        message: `Delete ${selectedCount} items from your collection?`,
+        title: 'Delete from Collection',
+        message: `Delete ${parts.join(' and ')}?`,
         confirmText: 'Delete',
         confirmVariant: 'danger',
         loading: isBatchRemoving
@@ -385,6 +484,14 @@ function MyCollection() {
         confirmText: 'Add to Wishlist',
         confirmVariant: 'default',
         loading: isBatchWishlisting
+      };
+    } else if (batchAction === 'add') {
+      return {
+        title: 'Add to Collection',
+        message: `Add ${selectedCount} items to your collection?`,
+        confirmText: 'Add Items',
+        confirmVariant: 'default',
+        loading: isBatchAdding
       };
     }
     return {};
@@ -416,6 +523,26 @@ function MyCollection() {
 
   // Combine collections and filtered items for rendering
   const displayItems = [...collections, ...filteredItems];
+
+  // Title action - "jump to" button for linked collections (appears next to collection name)
+  // Hidden on mobile since it's available in the circular menu
+  const titleAction = linkedDbotCollectionId ? (
+    <button
+      className="icon-btn desktop-only-actions"
+      onClick={(e) => {
+        e.stopPropagation();
+        navigate(`/collection/${linkedDbotCollectionId}`);
+      }}
+      title="Jump to original collection"
+      aria-label="Jump to original collection"
+    >
+      <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M15 3h6v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M10 14L21 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </button>
+  ) : null;
 
   // Collection header action buttons
   const headerActions = (
@@ -466,25 +593,6 @@ function MyCollection() {
     </>
   );
 
-  // Subtitle action - "jump to" button for linked collections
-  const subtitleAction = linkedDbotCollectionId ? (
-    <button
-      className="icon-btn"
-      onClick={(e) => {
-        e.stopPropagation();
-        navigate(`/collection/${linkedDbotCollectionId}`);
-      }}
-      title="Jump to original collection"
-      aria-label="Jump to original collection"
-    >
-      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M15 3h6v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M10 14L21 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </button>
-  ) : null;
-
   return (
     <div className="my-collection">
       {/* Collection Header */}
@@ -495,7 +603,7 @@ function MyCollection() {
             ? `${formatEntityType(current_collection.type)}${displayCollection?.year ? ` • ${displayCollection.year}` : ''}`
             : null
         }
-        subtitleAction={subtitleAction}
+        titleAction={titleAction}
         ownedCount={ownedCount}
         totalCount={totalCount}
         actions={headerActions}
@@ -517,30 +625,21 @@ function MyCollection() {
               Cancel
             </button>
             {selectedType === 'owned' && (
-              <>
-                <button
-                  onClick={handleBatchWishlist}
-                  className="action-btn"
-                  disabled={selectedCount === 0}
-                >
-                  Add to Wishlist
-                </button>
-                <button
-                  onClick={handleBatchDelete}
-                  className="action-btn danger"
-                  disabled={selectedCount === 0}
-                >
-                  Delete
-                </button>
-              </>
-            )}
-            {selectedType === 'wishlisted' && (
               <button
                 onClick={handleBatchDelete}
                 className="action-btn danger"
                 disabled={selectedCount === 0}
               >
-                Remove from Wishlist
+                Delete
+              </button>
+            )}
+            {(selectedType === 'wishlisted' || selectedType === 'dbot-item') && (
+              <button
+                onClick={handleBatchAdd}
+                className="action-btn"
+                disabled={selectedCount === 0}
+              >
+                Add to Collection
               </button>
             )}
           </div>
@@ -570,6 +669,7 @@ function MyCollection() {
           isMultiSelectMode={isMultiSelectMode}
           selectedItems={new Set(selectedIds)}
           onItemSelectionToggle={toggleItemSelection}
+          allowCollectionSelection={true}
         />
       ) : (
         <div className="empty-state">
@@ -608,9 +708,11 @@ function MyCollection() {
           onEditModeChange={setItemEditMode}
           externalAddMode={itemAddMode}
           onAddModeChange={setItemAddMode}
+          onItemAdded={() => refetch()}
           onSaveRequest={saveItemRef}
           onCollectionCreated={handleCollectionCreated}
           onDeleteCollection={() => setShowDeleteModal(true)}
+          onDeleteItem={() => setShowDeleteItemModal(true)}
         />
       )}
 
@@ -632,13 +734,24 @@ function MyCollection() {
         // Multi-select mode
         <CircularMenu
           mainButtonMode="action"
-          mainButtonIcon={selectedType === 'owned' ? 'fas fa-trash' : 'fas fa-heart'}
+          mainButtonIcon={selectedType === 'owned' ? 'fas fa-trash' : 'fas fa-plus-circle'}
           mainButtonLabel={
-            selectedType === 'owned'
-              ? `Delete ${selectedCount} items`
-              : `Remove ${selectedCount} items`
+            (() => {
+              if (selectedType === 'owned') {
+                // Count collections and items separately
+                const selectedCollections = collections.filter(col => selectedIds.includes(col.id));
+                const selectedItemCount = selectedIds.filter(id => !selectedCollections.some(col => col.id === id)).length;
+
+                const parts = [];
+                if (selectedCollections.length > 0) parts.push(`${selectedCollections.length} collection${selectedCollections.length > 1 ? 's' : ''}`);
+                if (selectedItemCount > 0) parts.push(`${selectedItemCount} item${selectedItemCount > 1 ? 's' : ''}`);
+
+                return `Delete ${parts.join(' & ')}`;
+              }
+              return `Add ${selectedCount} item${selectedCount !== 1 ? 's' : ''}`;
+            })()
           }
-          mainButtonOnClick={selectedType === 'owned' ? handleBatchDelete : handleBatchWishlist}
+          mainButtonOnClick={selectedType === 'owned' ? handleBatchDelete : handleBatchAdd}
           mainButtonVariant={selectedType === 'owned' ? 'danger' : 'save'}
         />
       ) : (
@@ -700,12 +813,19 @@ function MyCollection() {
             // Show item action buttons when viewing a regular item in ItemDetail
             ...(selectedItem && !isCustomCollection(selectedItem.type) && !isLinkedCollection(selectedItem.type) ?
               selectedItem.user_item_id ? [
-                // For owned items: show edit button
+                // For owned items: show edit and delete buttons
                 {
                   id: 'edit-item',
                   icon: 'fas fa-edit',
                   label: 'Edit item',
                   onClick: () => setItemEditMode(true)
+                },
+                {
+                  id: 'delete-item',
+                  icon: 'fas fa-trash',
+                  label: 'Delete item',
+                  onClick: () => setShowDeleteItemModal(true),
+                  variant: 'danger'
                 }
               ] : [
                 // For non-owned items: show add button
@@ -757,16 +877,62 @@ function MyCollection() {
         />
       )}
 
-      {/* Batch Action Confirmation */}
-      <BatchActionModal
-        isOpen={showBatchConfirm}
-        onClose={() => {
-          setShowBatchConfirm(false);
-          setBatchAction(null);
-        }}
-        onConfirm={executeBatchAction}
-        {...getBatchConfirmationProps()}
-      />
+      {/* Delete Item Modal */}
+      {showDeleteItemModal && selectedItem && selectedItem.user_item_id && (
+        <BatchActionModal
+          isOpen={showDeleteItemModal}
+          onClose={() => setShowDeleteItemModal(false)}
+          onConfirm={handleDeleteItem}
+          title="Delete Item"
+          message={`Delete "${selectedItem.name}" from your collection?`}
+          confirmText="Delete"
+          confirmVariant="danger"
+          loading={isBatchRemoving}
+        />
+      )}
+
+      {/* Batch Action Confirmation - Delete */}
+      {batchAction === 'delete' && (
+        <BatchActionModal
+          isOpen={showBatchConfirm}
+          onClose={() => {
+            setShowBatchConfirm(false);
+            setBatchAction(null);
+          }}
+          onConfirm={executeBatchAction}
+          {...getBatchConfirmationProps()}
+        />
+      )}
+
+      {/* Batch Add to Wishlist - Collection Picker */}
+      {batchAction === 'wishlist' && (
+        <BatchAddToCollectionModal
+          isOpen={showBatchConfirm}
+          onClose={() => {
+            setShowBatchConfirm(false);
+            setBatchAction(null);
+          }}
+          onConfirm={executeBatchAction}
+          itemCount={selectedCount}
+          defaultCollectionId={currentParentId}
+          loading={isBatchWishlisting}
+        />
+      )}
+
+      {/* Batch Add Items - Collection Picker */}
+      {batchAction === 'add' && (
+        <BatchAddToCollectionModal
+          isOpen={showBatchConfirm}
+          onClose={() => {
+            setShowBatchConfirm(false);
+            setBatchAction(null);
+          }}
+          onConfirm={executeBatchAction}
+          itemCount={selectedCount}
+          defaultCollectionId={currentParentId}
+          loading={isBatchAdding}
+        />
+      )}
 
       {/* Toast Notifications */}
       {toastMessage && (

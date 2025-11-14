@@ -64,19 +64,41 @@
 .cancel-button {
   background: var(--bg-secondary, #f3f4f6);
   color: var(--text-primary, #111827);
+  border: 1px solid var(--border-color, #d1d5db);
 }
 
 .cancel-button:hover:not(:disabled) {
   background: var(--bg-tertiary, #e5e7eb);
 }
 
+/* Dark mode - ensure dark background */
+.dark-mode .cancel-button {
+  background: var(--bg-tertiary, #2E2E2E);
+  color: var(--text-primary, #F5F5F5);
+  border: 1px solid var(--border-color, #3A3A3A);
+}
+
+.dark-mode .cancel-button:hover:not(:disabled) {
+  background: #3A3A3A;
+}
+
 .confirm-button {
-  background: var(--primary-color, #3b82f6);
+  background: var(--bright-blue, #4A90E2);
   color: white;
 }
 
 .confirm-button:hover:not(:disabled) {
-  background: var(--primary-hover, #2563eb);
+  background: var(--navy-blue, #2C4B7B);
+}
+
+/* Dark mode - use more muted blue */
+.dark-mode .confirm-button {
+  background: #5A8DD4;
+  color: white;
+}
+
+.dark-mode .confirm-button:hover:not(:disabled) {
+  background: #6AA6F8;
 }
 
 .confirm-button.danger {
@@ -90,4 +112,54 @@
 .batch-modal-footer button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Wide modal variant for collection picker */
+.batch-modal-wide {
+  max-width: 600px;
+}
+
+.batch-modal-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.batch-modal-close:hover {
+  color: var(--text-primary, #111827);
+}
+
+.batch-modal-wide .batch-modal-header {
+  padding-right: 48px;
+}
+
+/* Tree picker specific styles */
+.tree-picker-container {
+  margin: 16px 0;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--bg-secondary);
+}
+
+.batch-modal-message {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0 0 8px 0;
 }

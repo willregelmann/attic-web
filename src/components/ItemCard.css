@@ -2,35 +2,19 @@
 .item-card.multi-select-mode {
   cursor: pointer;
   position: relative;
+  /* Prevent context menu on mobile */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .item-card.multi-select-mode.selected {
-  border: 2px solid var(--primary-color, #3b82f6);
-  background: rgba(59, 130, 246, 0.05);
+  border: 2px solid var(--bright-blue, #4A90E2);
+  background: rgba(74, 144, 226, 0.1);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
 }
 
 .item-card.multi-select-mode.disabled {
   opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.item-checkbox {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 10;
-  background: white;
-  border-radius: 4px;
-  padding: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.item-checkbox input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-}
-
-.item-checkbox input[type="checkbox"]:disabled {
   cursor: not-allowed;
 }

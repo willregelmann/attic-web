@@ -1,10 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@apollo/client/react';
+import { useQuery, useMutation } from '@apollo/client/react';
 import { useState, useRef } from 'react';
-import { GET_MY_ITEM } from '../queries';
+import { GET_MY_ITEM, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, MY_COLLECTION_TREE } from '../queries';
 import ItemDetailContent from './ItemDetailContent';
 import CircularMenu from './CircularMenu';
 import MobileSearch from './MobileSearch';
+import { BatchActionModal } from './BatchActionModal';
+import Toast from './Toast';
 import './ItemDetail.css';
 
 /**
@@ -17,6 +19,8 @@ function MyItemDetailPage() {
   const navigate = useNavigate();
   const [itemEditMode, setItemEditMode] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
   const saveItemRef = useRef(null);
 
   // TODO: Backend needs to implement the 'myItem' query
@@ -25,6 +29,24 @@ function MyItemDetailPage() {
     variables: { userItemId: user_item_id },
     skip: !user_item_id
   });
+
+  const [batchRemoveMutation, { loading: isDeleting }] = useMutation(
+    BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION,
+    {
+      refetchQueries: [{ query: MY_COLLECTION_TREE, variables: { parentId: null } }],
+      awaitRefetchQueries: true,
+      onCompleted: () => {
+        setToastMessage({ text: 'Item deleted successfully', type: 'success' });
+        setShowDeleteModal(false);
+        // Navigate back after successful deletion
+        setTimeout(() => navigate(-1), 500);
+      },
+      onError: (error) => {
+        setToastMessage({ text: `Error deleting item: ${error.message}`, type: 'error' });
+        setShowDeleteModal(false);
+      }
+    }
+  );
 
   const handleClose = () => {
     navigate(-1); // Go back in browser history
@@ -41,6 +63,21 @@ function MyItemDetailPage() {
     } else {
       // Navigate to DBoT collection view
       navigate(`/collection/${collection.id}`);
+    }
+  };
+
+  const handleDeleteItem = async () => {
+    if (!item?.id) return;
+
+    try {
+      await batchRemoveMutation({
+        variables: {
+          entityIds: [item.id]
+        }
+      });
+    } catch (error) {
+      // Error handled in mutation onError
+      console.error('Delete error:', error);
     }
   };
 
@@ -110,7 +147,7 @@ function MyItemDetailPage() {
           mainButtonVariant="save"
         />
       ) : (
-        // Edit button when viewing
+        // Edit and delete buttons when viewing
         <CircularMenu
           actions={[
             {
@@ -124,6 +161,13 @@ function MyItemDetailPage() {
               icon: 'fas fa-edit',
               label: 'Edit item',
               onClick: () => setItemEditMode(true)
+            },
+            {
+              id: 'delete-item',
+              icon: 'fas fa-trash',
+              label: 'Delete item',
+              onClick: () => setShowDeleteModal(true),
+              variant: 'danger'
             }
           ]}
         />
@@ -133,6 +177,29 @@ function MyItemDetailPage() {
         isOpen={showMobileSearch}
         onClose={() => setShowMobileSearch(false)}
       />
+
+      {/* Delete Item Modal */}
+      {showDeleteModal && item && (
+        <BatchActionModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDeleteItem}
+          title="Delete Item"
+          message={`Delete "${item.name}" from your collection?`}
+          confirmText="Delete"
+          confirmVariant="danger"
+          loading={isDeleting}
+        />
+      )}
+
+      {/* Toast Notifications */}
+      {toastMessage && (
+        <Toast
+          message={toastMessage.text}
+          type={toastMessage.type}
+          onClose={() => setToastMessage(null)}
+        />
+      )}
     </div>
   );
 }

@@ -185,6 +185,24 @@
   transform: scale(1.1);
 }
 
+.wishlist-button.linked {
+  color: #ef4444 !important;
+}
+
+.wishlist-button.linked svg {
+  fill: #ef4444;
+  stroke: #ef4444;
+}
+
+.wishlist-button.linked:hover {
+  color: #dc2626 !important;
+}
+
+.wishlist-button.linked:hover svg {
+  fill: #dc2626;
+  stroke: #dc2626;
+}
+
 
 /* Items Grid */
 .items-grid {

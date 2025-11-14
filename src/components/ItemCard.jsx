@@ -190,6 +190,7 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
  * @param {Boolean} isSelected - Whether this item is selected
  * @param {Boolean} isDisabled - Whether this item is disabled (wrong type in multi-select)
  * @param {Function} onSelectionToggle - Callback for selection toggle (itemId, itemType)
+ * @param {String} itemType - Optional explicit item type for multi-select (overrides computed type)
  */
 export function ItemCard({
   item,
@@ -204,7 +205,8 @@ export function ItemCard({
   isMultiSelectMode = false,
   isSelected = false,
   isDisabled = false,
-  onSelectionToggle = null
+  onSelectionToggle = null,
+  itemType = null
 }) {
   const { isAuthenticated } = useAuth();
   const longPressTimer = useRef(null);
@@ -222,8 +224,9 @@ export function ItemCard({
   // Calculate completion percentage
   const completionPercentage = completionStats?.completionPercentage ?? (isOwned ? 100 : 0);
 
-  // Determine item type for multi-select
+  // Determine item type for multi-select (use explicit type if provided)
   const getItemType = () => {
+    if (itemType) return itemType;
     if (showAsWishlist) return 'wishlisted';
     if (isOwned) return 'owned';
     return 'dbot-item';
@@ -266,28 +269,30 @@ export function ItemCard({
     }
   };
 
+  const handleTouchMove = () => {
+    // Cancel long press if user moves finger (scrolling)
+    setIsPressing(false);
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+  };
+
+  const handleContextMenu = (e) => {
+    // Prevent context menu from appearing
+    e.preventDefault();
+  };
+
   return (
     <div
       className={`item-card ${isFavorite ? 'item-favorite' : ''} ${showAsWishlist ? 'item-wishlist' : ''} ${isMultiSelectMode ? 'multi-select-mode' : 'clickable'} ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
       onClick={handleClick}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
+      onContextMenu={handleContextMenu}
       title={isMultiSelectMode ? (isDisabled ? 'Cannot select this type' : 'Click to select') : 'Click to view details'}
       data-testid={isOwned ? "collection-item" : "entity-card"}
     >
-      {/* Multi-select checkbox */}
-      {isMultiSelectMode && (
-        <div className="item-checkbox">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            disabled={isDisabled}
-            readOnly
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
-
       <ItemCardImage
         item={item}
         index={index}

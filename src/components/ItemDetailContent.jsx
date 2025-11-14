@@ -2,131 +2,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useQuery, useLazyQuery, useMutation, useApolloClient } from '@apollo/client/react';
 import { useState, useEffect, memo } from 'react';
-import { GET_DATABASE_OF_THINGS_ITEM_PARENTS, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, UPDATE_MY_ITEM, UPDATE_USER_COLLECTION, CREATE_USER_COLLECTION, ADD_ITEM_TO_MY_COLLECTION, MY_COLLECTION_TREE, MOVE_USER_ITEM, MOVE_USER_COLLECTION, ADD_COLLECTION_TO_WISHLIST } from '../queries';
+import { GET_DATABASE_OF_THINGS_ITEM_PARENTS, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, UPDATE_MY_ITEM, UPDATE_USER_COLLECTION, CREATE_USER_COLLECTION, BATCH_ADD_ITEMS_TO_MY_COLLECTION, MY_COLLECTION_TREE, MOVE_USER_ITEM, MOVE_USER_COLLECTION, ADD_COLLECTION_TO_WISHLIST, GET_MY_ITEMS } from '../queries';
 import { formatEntityType, isCollectionType, isCustomCollection, isLinkedCollection } from '../utils/formatters';
 import { isFormBusy } from '../utils/formUtils';
 import { CollectionTreeSkeleton } from './SkeletonLoader';
+import { CollectionPickerTree } from './CollectionPickerTree';
 import { getTypeIcon } from '../utils/iconUtils.jsx';
 import './ItemDetail.css';
 import './ItemList.css'; // Import for child-images-grid styles
-
-// Collection picker node - expandable tree for selecting collection
-const CollectionPickerNode = memo(({ collection, depth = 0, selectedId, onSelect, selectedCollectionParentId, excludeCollectionId = null }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [fetchSubcollections, { data: subData, loading: subLoading }] = useLazyQuery(MY_COLLECTION_TREE, {
-    fetchPolicy: 'network-only',  // Force network fetch to bypass cache issue
-    notifyOnNetworkStatusChange: true
-  });
-
-  // Don't render this node if it's the excluded collection
-  if (excludeCollectionId && collection.id === excludeCollectionId) {
-    return null;
-  }
-
-  const subcollections = subData?.myCollectionTree?.collections || [];
-  const hasSubcollections = subcollections.length > 0;
-  const isSelected = selectedId === collection.id;
-
-  // Auto-expand if this collection is the parent of the selected collection
-  useEffect(() => {
-    if (selectedCollectionParentId === collection.id && !subData) {
-      fetchSubcollections({
-        variables: { parentId: collection.id }
-      });
-      setIsExpanded(true);
-    }
-  }, [selectedCollectionParentId, collection.id, subData, fetchSubcollections]);
-
-  // Check if the selected collection is a descendant of this collection
-  const isDescendantSelected = (collections, targetId) => {
-    if (!collections || !targetId) return false;
-    return collections.some(c => {
-      if (c.id === targetId) return true;
-      // Recursively check if we've fetched this collection's children
-      // Note: we can't check deeper without fetching, so we'll only check direct children
-      return false;
-    });
-  };
-
-  // Collapse when a sibling (non-descendant) is selected
-  useEffect(() => {
-    // Don't collapse if we're the parent of the selected collection (we should be auto-expanded)
-    if (selectedCollectionParentId === collection.id) {
-      return;
-    }
-
-    if (selectedId && selectedId !== collection.id) {
-      // Check if the selected collection is one of our direct children
-      const currentSubcollections = subData?.myCollectionTree?.collections || [];
-      const isChild = isDescendantSelected(currentSubcollections, selectedId);
-      if (!isChild) {
-        // Selected collection is not us and not our child, so collapse
-        setIsExpanded(false);
-      }
-    }
-  }, [selectedId, collection.id, subData, selectedCollectionParentId]); // Don't include isExpanded to avoid infinite loop
-
-  // Handler: if already selected, deselect and collapse; otherwise select and expand
-  const handleClick = (e) => {
-    e.stopPropagation();
-    if (isSelected) {
-      // Explicitly deselect and collapse
-      onSelect(null);
-      setIsExpanded(false);
-    } else {
-      // Select this collection and expand
-      onSelect(collection.id);
-      if (!isExpanded && !subData) {
-        fetchSubcollections({
-          variables: { parentId: collection.id }
-        });
-      }
-      setIsExpanded(true);
-    }
-  };
-
-  return (
-    <li className="tree-item">
-      <button
-        className={`tree-collection-link ${isSelected ? 'selected' : ''}`}
-        style={{
-          paddingLeft: `${12 + (depth * 20)}px`,
-          fontWeight: isSelected ? '600' : '400',
-          backgroundColor: isSelected ? 'var(--bg-tertiary)' : 'transparent',
-          borderRadius: isSelected ? '6px' : '0'
-        }}
-        onClick={handleClick}
-        title={`Select ${collection.name}`}
-      >
-        {depth > 0 && (
-          <svg className="tree-branch" viewBox="0 0 16 16" width="16" height="16">
-            <path d="M8 0 L8 8 L16 8" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-          </svg>
-        )}
-        <span className="tree-collection-name">
-          {collection.name}
-        </span>
-      </button>
-
-      {/* Subcollections */}
-      {isExpanded && hasSubcollections && (
-        <ul className="tree-nested-list">
-          {subcollections.map((sub) => (
-            <CollectionPickerNode
-              key={sub.id}
-              collection={sub}
-              depth={depth + 1}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              selectedCollectionParentId={selectedCollectionParentId}
-              excludeCollectionId={excludeCollectionId}
-            />
-          ))}
-        </ul>
-      )}
-    </li>
-  );
-});
 
 // Recursive component to render collection tree - memoized to prevent unnecessary re-renders
 const CollectionTreeNode = memo(({ collection, depth = 0, onNavigateToCollection, onClose }) => {
@@ -198,7 +81,10 @@ function ItemDetailContent({
   onCollectionWishlisted = null,  // New prop: called when a collection is wishlisted
   onSaveRequest = null,  // New prop: called when parent wants to trigger save
   onCollectionCreated = null,  // New prop: called when a collection is successfully created
-  onDeleteCollection = null  // New prop: called when delete button is clicked
+  onDeleteCollection = null,  // New prop: called when delete button is clicked
+  onDeleteItem = null,  // New prop: called when delete item button is clicked
+  onItemAdded = null,  // New prop: called when an item is added to collection
+  onSavingChange = null  // New prop: callback when saving state changes
 }) {
   const { isAuthenticated } = useAuth();
   const { isDarkMode } = useTheme();
@@ -266,8 +152,7 @@ function ItemDetailContent({
   };
 
   const [selectedCollection, setSelectedCollection] = useState(currentCollection?.id || null);
-  const [selectedCollectionParentId, setSelectedCollectionParentId] = useState(currentCollection?.parent_collection_id || null);
-  const [isRootExpanded, setIsRootExpanded] = useState(true); // Root collection expanded by default
+  const [expandedIds, setExpandedIds] = useState(new Set());
 
   // Initialize edit state when item changes
   useEffect(() => {
@@ -306,6 +191,55 @@ function ItemDetailContent({
     skip: !isAuthenticated,
     fetchPolicy: 'cache-and-network'
   });
+
+  // Find path to selected collection and auto-expand
+  useEffect(() => {
+    if (!selectedCollection || !client) {
+      setExpandedIds(new Set());
+      return;
+    }
+
+    const findPathToCollection = async (targetId, parentId = null, path = []) => {
+      try {
+        const { data } = await client.query({
+          query: MY_COLLECTION_TREE,
+          variables: { parentId },
+          fetchPolicy: 'cache-first'
+        });
+
+        const collections = data?.myCollectionTree?.collections || [];
+
+        for (const col of collections) {
+          const currentPath = [...path, col.id];
+
+          if (col.id === targetId) {
+            // Found it! Return the path (excluding the target itself)
+            return path;
+          }
+
+          // Recursively search in this collection's children
+          const childPath = await findPathToCollection(targetId, col.id, currentPath);
+          if (childPath) {
+            return childPath;
+          }
+        }
+
+        return null;
+      } catch (error) {
+        console.error('Error finding collection path:', error);
+        return null;
+      }
+    };
+
+    findPathToCollection(selectedCollection).then((pathIds) => {
+      if (pathIds && pathIds.length > 0) {
+        setExpandedIds(new Set(pathIds));
+      } else {
+        // Not found or at root
+        setExpandedIds(new Set());
+      }
+    });
+  }, [selectedCollection, client]);
 
   // Build user collection hierarchy for owned items, linked collections, and custom collections
   const [userCollectionPath, setUserCollectionPath] = useState([]);
@@ -377,7 +311,8 @@ function ItemDetailContent({
     },
     refetchQueries: [
       { query: MY_COLLECTION_TREE, variables: { parentId: item.parent_collection_id || null } }
-    ]
+    ],
+    awaitRefetchQueries: true
   });
 
   // Create mutation for new collections
@@ -388,6 +323,8 @@ function ItemDetailContent({
       if (onCollectionCreated && data?.createUserCollection) {
         onCollectionCreated(data.createUserCollection);
       } else {
+        // No callback provided, exit edit mode and close
+        handleSetEditMode(false);
         onClose();
       }
     },
@@ -402,11 +339,18 @@ function ItemDetailContent({
     refetchQueries: [
       { query: MY_COLLECTION_TREE, variables: { parentId: null } },
       { query: MY_COLLECTION_TREE, variables: { parentId: selectedCollection } }
-    ]
+    ],
+    awaitRefetchQueries: true
   });
 
   // Add mutation for new items
-  const [addItemToMyCollection, { loading: isAdding }] = useMutation(ADD_ITEM_TO_MY_COLLECTION, {
+  const [addItemToMyCollection, { loading: isAdding }] = useMutation(BATCH_ADD_ITEMS_TO_MY_COLLECTION, {
+    refetchQueries: [
+      { query: GET_MY_ITEMS },
+      { query: MY_COLLECTION_TREE, variables: { parentId: null } },
+      { query: MY_COLLECTION_TREE, variables: { parentId: selectedCollection } }
+    ],
+    awaitRefetchQueries: true,
     onError: (error) => {
       console.error('Failed to add item:', error);
       if (error.message.includes('Unauthenticated') || error.networkError?.statusCode === 401) {
@@ -474,6 +418,13 @@ function ItemDetailContent({
     isWishlisting,
     collectionsLoading
   );
+
+  // Notify parent when saving state changes
+  useEffect(() => {
+    if (onSavingChange) {
+      onSavingChange(isSaving);
+    }
+  }, [isSaving, onSavingChange]);
 
   // Save changes (handles both edit mode, add mode, and wishlist mode)
   const handleSave = async () => {
@@ -569,28 +520,24 @@ function ItemDetailContent({
       }
 
       if (isAddMode) {
-        // Add new item to collection
-        const result = await addItemToMyCollection({
+        // Add new item to collection using batch mutation
+        await addItemToMyCollection({
           variables: {
-            itemId: item.id,
-            notes: editNotes.trim() || null
+            entityIds: [item.id],
+            parentCollectionId: selectedCollection
           }
         });
 
-        // If a collection is selected, move the item to that collection
-        if (selectedCollection && result.data?.addItemToMyCollection?.id) {
-          await moveUserItem({
-            variables: {
-              itemId: result.data.addItemToMyCollection.id,
-              newParentCollectionId: selectedCollection
-            }
-          });
+        // Notify parent that item was added (triggers refetch in MyCollection)
+        if (onItemAdded) {
+          onItemAdded();
         }
 
         // Success - close modal and reset state
         handleSetAddMode(false);
         setEditNotes('');
         onClose();
+        return;
       } else {
         // Update existing item
         await updateMyItem({
@@ -624,14 +571,7 @@ function ItemDetailContent({
     setEditNotes('');
     // Default to current collection if viewing one
     const defaultCollection = currentCollection?.id || null;
-    const defaultParentId = currentCollection?.parent_collection_id || null;
     setSelectedCollection(defaultCollection);
-    setSelectedCollectionParentId(defaultParentId);
-
-    // If a collection is selected, expand the root to show it
-    if (defaultCollection) {
-      setIsRootExpanded(true);
-    }
   };
 
   // Fetch parent collections for this item
@@ -950,8 +890,8 @@ function ItemDetailContent({
                   )}
                 </div>
               )}
-              {/* View Full Page icon for non-custom collections - Hidden on mobile */}
-              {isCollectionType(item.type) && !isCustomCollection(item.type) && !isLinkedCollection(item.type) && onNavigateToCollection && (
+              {/* View Full Page icon for non-custom collections - Hidden on mobile and in wishlist mode */}
+              {isCollectionType(item.type) && !isCustomCollection(item.type) && !isLinkedCollection(item.type) && !isWishlistMode && onNavigateToCollection && (
                 <button
                   className="icon-btn desktop-only-actions"
                   onClick={() => {
@@ -967,7 +907,7 @@ function ItemDetailContent({
                   </svg>
                 </button>
               )}
-              {/* Edit/Save icons for user items - Hidden on mobile (use CircularMenu) */}
+              {/* Edit/Save/Delete icons for user items - Hidden on mobile (use CircularMenu) */}
               {!isSuggestionPreview && isAuthenticated && !isCollectionType(item.type) && isUserItem && (
                 <div className="desktop-only-actions" style={{ display: 'flex', gap: '8px' }}>
                   {isEditMode ? (
@@ -982,16 +922,29 @@ function ItemDetailContent({
                       </button>
                     </>
                   ) : (
-                    <button
-                      className="icon-btn edit-icon"
-                      onClick={() => handleSetEditMode(true)}
-                      title="Edit item"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </button>
+                    <>
+                      <button
+                        className="icon-btn edit-icon"
+                        onClick={() => handleSetEditMode(true)}
+                        title="Edit item"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                      {onDeleteItem && (
+                        <button
+                          className="icon-btn delete-icon"
+                          onClick={onDeleteItem}
+                          title="Delete item"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -1016,6 +969,17 @@ function ItemDetailContent({
                   <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
                     <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
+                </button>
+              )}
+              {/* Save icon for wishlist mode (linking DBoT collection) - Hidden on mobile (use CircularMenu) */}
+              {!isSuggestionPreview && isAuthenticated && isCollectionType(item.type) && isWishlistMode && (
+                <button
+                  className="icon-btn save-icon desktop-only-actions"
+                  onClick={handleSave}
+                  disabled={isWishlisting || !wishlistCollectionName.trim()}
+                  title="Create linked collection"
+                >
+                  <i className="fas fa-save"></i>
                 </button>
               )}
             </div>
@@ -1049,32 +1013,17 @@ function ItemDetailContent({
           {isWishlistMode && isCollectionType(item.type) && (
             <div style={{ marginTop: '16px' }}>
               <div style={{ marginBottom: '16px' }}>
-                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                  Track "<strong>{item.name}</strong>" as a linked collection with dual progress bars
-                  showing both your owned items and wishlist.
-                </p>
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
                 <label className="meta-label" style={{ display: 'block', marginBottom: '6px' }}>
                   Collection Name <span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
                 <input
                   type="text"
-                  className="notes-textarea-inline"
+                  className="collection-name-input"
                   value={wishlistCollectionName}
                   onChange={(e) => setWishlistCollectionName(e.target.value)}
                   placeholder="Enter a name for your collection"
                   style={{ width: '100%', padding: '8px' }}
                 />
-              </div>
-              <div>
-                <label className="meta-label" style={{ display: 'block', marginBottom: '6px' }}>
-                  Parent Collection (optional)
-                </label>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                  Choose where to place this collection, or leave unselected for root level
-                </p>
               </div>
             </div>
           )}
@@ -1132,63 +1081,17 @@ function ItemDetailContent({
 
           {/* Collection Picker - Shows in add/edit/wishlist mode */}
           {!isSuggestionPreview && (isEditMode || isAddMode || isWishlistMode) && (
-            <div className="detail-collections-tree">
+            <div>
               <h5 className="collections-tree-header">
                 {isWishlistMode ? 'Parent Collection' : 'Collection'}
               </h5>
-              <div className="collections-tree-list">
-                {collectionsLoading ? (
-                  <CollectionTreeSkeleton count={2} />
-                ) : (
-                  <ul className="tree-list">
-                    {/* Root collection option - expandable */}
-                    <li className="tree-item">
-                      <button
-                        onClick={() => {
-                          const currentSelection = isWishlistMode ? wishlistTargetCollectionId : selectedCollection;
-                          const setSelection = isWishlistMode ? setWishlistTargetCollectionId : setSelectedCollection;
-
-                          if (currentSelection === null) {
-                            // Already selected, just toggle collapse
-                            setIsRootExpanded(!isRootExpanded);
-                          } else {
-                            // Not selected, select and expand
-                            setSelection(null);
-                            setIsRootExpanded(true);
-                          }
-                        }}
-                        className={`tree-collection-link ${(isWishlistMode ? wishlistTargetCollectionId : selectedCollection) === null ? 'selected' : ''}`}
-                        style={{
-                          paddingLeft: '12px',
-                          fontWeight: (isWishlistMode ? wishlistTargetCollectionId : selectedCollection) === null ? '600' : '400',
-                          backgroundColor: (isWishlistMode ? wishlistTargetCollectionId : selectedCollection) === null ? 'var(--bg-tertiary)' : 'transparent',
-                          borderRadius: (isWishlistMode ? wishlistTargetCollectionId : selectedCollection) === null ? '6px' : '0'
-                        }}
-                        title="Select My Collection"
-                      >
-                        <span className="tree-collection-name">My Collection</span>
-                      </button>
-
-                      {/* User collections tree - nested under root */}
-                      {isRootExpanded && (
-                        <ul className="tree-nested-list">
-                          {collectionsData?.myCollectionTree?.collections?.map((collection) => (
-                            <CollectionPickerNode
-                              key={collection.id}
-                              collection={collection}
-                              depth={1}
-                              selectedId={isWishlistMode ? wishlistTargetCollectionId : selectedCollection}
-                              onSelect={isWishlistMode ? setWishlistTargetCollectionId : setSelectedCollection}
-                              selectedCollectionParentId={selectedCollectionParentId}
-                              excludeCollectionId={isCustomCollection(item.type) || isLinkedCollection(item.type) ? item.id : null}
-                            />
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  </ul>
-                )}
-              </div>
+              <CollectionPickerTree
+                selectedId={isWishlistMode ? wishlistTargetCollectionId : selectedCollection}
+                onSelect={isWishlistMode ? setWishlistTargetCollectionId : setSelectedCollection}
+                expandedIds={expandedIds}
+                excludeCollectionId={isCustomCollection(item.type) || isLinkedCollection(item.type) ? item.id : null}
+                isAuthenticated={isAuthenticated}
+              />
             </div>
           )}
 

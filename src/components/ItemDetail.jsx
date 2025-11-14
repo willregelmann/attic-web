@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import ItemDetailContent from './ItemDetailContent';
 import './ItemDetail.css';
 
@@ -24,19 +25,25 @@ function ItemDetail({
   onCollectionWishlisted = null,
   onSaveRequest = null,
   onCollectionCreated = null,
-  onDeleteCollection = null
+  onDeleteCollection = null,
+  onDeleteItem = null,
+  onItemAdded = null
 }) {
+  const [isSaving, setIsSaving] = useState(false);
+
   // Handle modal close - reset edit/add mode
   const handleClose = () => {
-    onClose();
+    if (!isSaving) {
+      onClose();
+    }
   };
 
   if (!item) return null;
 
   return (
     <div className="item-detail-overlay" onClick={handleClose} role="dialog" aria-modal="true" aria-labelledby="item-detail-title">
-      <div className={`item-detail-modal ${isSuggestionPreview ? 'suggestion-preview' : ''}`} onClick={(e) => e.stopPropagation()}>
-        <button className="detail-close-btn" onClick={handleClose} aria-label="Close item details">
+      <div className={`item-detail-modal ${isSuggestionPreview ? 'suggestion-preview' : ''} ${isSaving ? 'saving' : ''}`} onClick={(e) => e.stopPropagation()}>
+        <button className="detail-close-btn" onClick={handleClose} aria-label="Close item details" disabled={isSaving}>
           <svg viewBox="0 0 24 24" fill="none" width="24" height="24" aria-hidden="true">
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
@@ -66,6 +73,9 @@ function ItemDetail({
           onSaveRequest={onSaveRequest}
           onCollectionCreated={onCollectionCreated}
           onDeleteCollection={onDeleteCollection}
+          onDeleteItem={onDeleteItem}
+          onItemAdded={onItemAdded}
+          onSavingChange={setIsSaving}
         />
       </div>
     </div>

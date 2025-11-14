@@ -15,6 +15,7 @@ import { isCollectionType } from '../utils/formatters';
  * @param {Boolean} isMultiSelectMode - Whether multi-select mode is active
  * @param {Set} selectedItems - Set of selected item IDs
  * @param {Function} onItemSelectionToggle - Callback for selection toggle (itemId, itemType)
+ * @param {Boolean} allowCollectionSelection - Whether collections can be selected in multi-select mode
  */
 export function ItemGrid({
   items = [],
@@ -27,7 +28,8 @@ export function ItemGrid({
   showWishlistStyling = false,
   isMultiSelectMode = false,
   selectedItems = new Set(),
-  onItemSelectionToggle = null
+  onItemSelectionToggle = null,
+  allowCollectionSelection = false
 }) {
   const gridClass = viewMode === 'grid' ? 'items-grid' : 'items-list';
 
@@ -38,10 +40,22 @@ export function ItemGrid({
         const isFavorite = isRoot && userFavorites.has(item.id);
         const isCollection = isCollectionType(item.type);
 
+        // Collections are selectable in MyCollection context (allowCollectionSelection)
+        const isCollectionSelectable = isCollection && allowCollectionSelection;
+        const canParticipateInMultiSelect = !isCollection || isCollectionSelectable;
+
+        // For collections, only show owned indicator if complete (100% owned, no wishlist)
+        const isCollectionComplete = isCollection && item.progress
+          && item.progress.wishlist_count === 0
+          && item.progress.owned_count === item.progress.total_count
+          && item.progress.total_count > 0;
+
+        const shouldShowAsOwned = isCollection ? isCollectionComplete : isOwned;
+
         // Determine item type for multi-select
         const getItemType = () => {
           if (showWishlistStyling && item.wishlist_id) return 'wishlisted';
-          if (isOwned) return 'owned';
+          if (isOwned || isCollectionSelectable) return 'owned';
           return 'dbot-item';
         };
 
@@ -52,14 +66,15 @@ export function ItemGrid({
             item={item}
             index={index}
             onClick={() => isCollection ? onCollectionClick?.(item) : onItemClick?.(item, index)}
-            isOwned={isOwned}
+            isOwned={shouldShowAsOwned}
             isFavorite={isFavorite}
             showAsWishlist={showWishlistStyling && !isOwned && !isCollection}
             progress={item.progress || null}
-            isMultiSelectMode={isMultiSelectMode && !isCollection}
+            isMultiSelectMode={isMultiSelectMode && canParticipateInMultiSelect}
             isSelected={selectedItems.has(item.id)}
-            isDisabled={isMultiSelectMode && isCollection}
+            isDisabled={isMultiSelectMode && !canParticipateInMultiSelect}
             onSelectionToggle={onItemSelectionToggle}
+            itemType={getItemType()}
           />
         );
       })}
