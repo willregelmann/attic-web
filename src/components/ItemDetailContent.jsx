@@ -94,6 +94,8 @@ function ItemDetailContent({
   // Edit mode state for user items
   const [isEditMode, setIsEditMode] = useState(externalEditMode);
   const [editNotes, setEditNotes] = useState('');
+  const [editVariant, setEditVariant] = useState(null);
+  const [viewVariant, setViewVariant] = useState(null);  // For browsing DBoT item variants
   const [originalParentCollectionId, setOriginalParentCollectionId] = useState(null);
   const [uploadImages, setUploadImages] = useState([]);
   const [removeImageIndices, setRemoveImageIndices] = useState([]);
@@ -161,6 +163,7 @@ function ItemDetailContent({
   useEffect(() => {
     if (isUserItem && item) {
       setEditNotes(item.user_notes || '');
+      setEditVariant(item.variant_id || null);
       // Store the original parent collection ID
       setOriginalParentCollectionId(item.parent_collection_id || null);
       setSelectedCollection(item.parent_collection_id || null);
@@ -419,7 +422,7 @@ function ItemDetailContent({
   const { data: freshItemData } = useQuery(GET_MY_ITEM, {
     variables: { userItemId: item.user_item_id },
     skip: !isUserItem || !item.user_item_id,
-    fetchPolicy: 'cache-first' // Use cache but update when cache changes
+    fetchPolicy: 'cache-first'
   });
 
   const isSaving = isFormBusy(
@@ -557,6 +560,7 @@ function ItemDetailContent({
         await updateMyItem({
           variables: {
             userItemId: item.user_item_id,
+            variantId: editVariant || null,
             notes: editNotes
           }
         });
@@ -668,6 +672,8 @@ function ItemDetailContent({
   const handleEnterAddMode = () => {
     handleSetAddMode(true);
     setEditNotes('');
+    // Carry over selected variant from view mode
+    setEditVariant(viewVariant);
     // Default to current collection if viewing one
     const defaultCollection = currentCollection?.id || null;
     setSelectedCollection(defaultCollection);
@@ -805,12 +811,20 @@ function ItemDetailContent({
       return `url(/storage/${imagePath})`;
     }
 
-    // Priority 2: DBoT canonical image - use full quality for detail view
+    // Priority 2: Variant image (when viewing a variant for DBoT items)
+    if (viewVariant && freshItem.entity_variants && freshItem.entity_variants.length > 0) {
+      const variant = freshItem.entity_variants.find(v => v.id === viewVariant);
+      if (variant && variant.image_url) {
+        return `url(${variant.image_url})`;
+      }
+    }
+
+    // Priority 3: DBoT canonical image - use full quality for detail view
     if (freshItem.image_url) {
       return `url(${freshItem.image_url})`;
     }
 
-    // Priority 3: No background when no images are available (just show icon)
+    // Priority 4: No background when no images are available (just show icon)
     return 'none';
   };
 
@@ -954,7 +968,7 @@ function ItemDetailContent({
         </div>
 
         <div className="detail-info-section">
-          <div className="detail-header">
+          <div className="detail-header" style={{ gap: (!isEditMode && !isAddMode && isUserItem) ? '0' : undefined }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {/* Editable collection name */}
               {isEditMode && isCustomCollection(item.type) ? (
@@ -1143,9 +1157,68 @@ function ItemDetailContent({
                 </button>
               )}
             </div>
+
+            {/* Variant Selection - Shown between title and subtitle */}
+            {(() => {
+              if (!item.entity_variants || item.entity_variants.length === 0) return null;
+
+              const variants = item.entity_variants;
+              const isDBoTItem = !isUserItem && !isAddMode;
+
+              return (
+                <div style={{ marginTop: (isEditMode || isAddMode || isDBoTItem) ? '8px' : '4px' }}>
+                  {(isEditMode || isAddMode || isDBoTItem) ? (
+                    <select
+                      className="variant-dropdown"
+                      value={isDBoTItem ? (viewVariant || '') : (editVariant || '')}
+                      onChange={(e) => {
+                        const newValue = e.target.value || null;
+                        if (isDBoTItem) {
+                          setViewVariant(newValue);
+                        } else {
+                          setEditVariant(newValue);
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '6px 8px',
+                        border: `1px solid ${isDarkMode ? '#4b5563' : '#ddd'}`,
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        backgroundColor: isDarkMode ? '#1f2937' : 'white',
+                        color: isDarkMode ? '#f3f4f6' : '#1f2937'
+                      }}
+                    >
+                      <option value="">Base</option>
+                      {variants.map((variant) => (
+                        <option key={variant.id} value={variant.id}>
+                          {variant.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p style={{ margin: '0 0 2px 0', fontSize: '14px', color: isDarkMode ? '#9ca3af' : '#6b7280', fontStyle: 'italic' }}>
+                      {editVariant ? (() => {
+                        const variant = variants.find(v => v.id === editVariant);
+                        return variant ? variant.name : 'Base';
+                      })() : 'Base'}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
             <p className="detail-subtitle">
               {isLinkedCollection(item.type) ? 'LINKED' : formatEntityType(item.type)}
-              {item.year && ` • ${item.year}`}
+              {(() => {
+                // Show variant year if viewing a variant, otherwise base item year
+                if (viewVariant && item.entity_variants && item.entity_variants.length > 0) {
+                  const variant = item.entity_variants.find(v => v.id === viewVariant);
+                  const variantYear = variant?.attributes?.year;
+                  if (variantYear) return ` • ${variantYear}`;
+                }
+                return item.year ? ` • ${item.year}` : '';
+              })()}
             </p>
           </div>
 

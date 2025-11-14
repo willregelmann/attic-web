@@ -26,8 +26,6 @@ function MyItemDetailPage() {
   const [toastMessage, setToastMessage] = useState(null);
   const saveItemRef = useRef(null);
 
-  // TODO: Backend needs to implement the 'myItem' query
-  // For now, this will fail gracefully until implemented
   const { loading, error, data } = useQuery(GET_MY_ITEM, {
     variables: { userItemId: user_item_id },
     skip: !user_item_id

@@ -15,6 +15,13 @@ export const GET_DATABASE_OF_THINGS_COLLECTIONS = gql`
       thumbnail_url
       representative_image_urls
       external_ids
+      entity_variants {
+        id
+        name
+        attributes
+        image_url
+        thumbnail_url
+      }
     }
   }
 `;
@@ -32,6 +39,13 @@ export const GET_DATABASE_OF_THINGS_COLLECTION_ITEMS = gql`
       thumbnail_url
       representative_image_urls
       external_ids
+      entity_variants {
+        id
+        name
+        attributes
+        image_url
+        thumbnail_url
+      }
     }
   }
 `;
@@ -49,6 +63,13 @@ export const SEARCH_DATABASE_OF_THINGS_ENTITIES = gql`
       thumbnail_url
       representative_image_urls
       external_ids
+      entity_variants {
+        id
+        name
+        attributes
+        image_url
+        thumbnail_url
+      }
     }
   }
 `;
@@ -84,6 +105,13 @@ export const GET_DATABASE_OF_THINGS_ENTITY = gql`
       thumbnail_url
       representative_image_urls
       external_ids
+      entity_variants {
+        id
+        name
+        attributes
+        image_url
+        thumbnail_url
+      }
     }
   }
 `;
@@ -244,28 +272,38 @@ export const SEARCH_ITEMS = gql`
 `;
 
 export const ADD_ITEM_TO_MY_COLLECTION = gql`
-  mutation AddItemToMyCollection($itemId: ID!, $metadata: JSON, $notes: String, $images: [Upload!]) {
-    addItemToMyCollection(entity_id: $itemId, metadata: $metadata, notes: $notes, images: $images) {
+  mutation AddItemToMyCollection($itemId: ID!, $variantId: ID, $metadata: JSON, $notes: String, $images: [Upload!]) {
+    addItemToMyCollection(entity_id: $itemId, variant_id: $variantId, metadata: $metadata, notes: $notes, images: $images) {
       id
       entity_id
+      variant_id
       user_id
       metadata
       notes
-      images
+      images {
+        id
+        original
+        thumbnail
+      }
       created_at
     }
   }
 `;
 
 export const UPDATE_MY_ITEM = gql`
-  mutation UpdateMyItem($userItemId: ID!, $metadata: JSON, $notes: String) {
-    updateMyItem(user_item_id: $userItemId, metadata: $metadata, notes: $notes) {
+  mutation UpdateMyItem($userItemId: ID!, $variantId: ID, $metadata: JSON, $notes: String) {
+    updateMyItem(user_item_id: $userItemId, variant_id: $variantId, metadata: $metadata, notes: $notes) {
       id
       entity_id
+      variant_id
       user_id
       metadata
       notes
-      images
+      images {
+        id
+        original
+        thumbnail
+      }
       updated_at
     }
   }
@@ -329,6 +367,7 @@ export const GET_MY_ITEMS = gql`
     myItems {
       id
       entity_id
+      variant_id
       notes
       metadata
       created_at
@@ -345,8 +384,13 @@ export const GET_MY_ITEM = gql`
       user_id
       user_metadata
       user_notes
-      user_images
+      user_images {
+        id
+        original
+        thumbnail
+      }
       parent_collection_id
+      variant_id
       id
       type
       name
@@ -354,6 +398,13 @@ export const GET_MY_ITEM = gql`
       attributes
       image_url
       thumbnail_url
+      entity_variants {
+        id
+        name
+        attributes
+        image_url
+        thumbnail_url
+      }
     }
   }
 `;
@@ -366,9 +417,14 @@ export const GET_MY_COLLECTION = gql`
       user_id
       user_metadata
       user_notes
-      user_images
+      user_images {
+        id
+        original
+        thumbnail
+      }
       user_created_at
       user_updated_at
+      variant_id
 
       # Entity fields (from Database of Things)
       id
@@ -381,6 +437,13 @@ export const GET_MY_COLLECTION = gql`
       thumbnail_url
       representative_image_urls
       external_ids
+      entity_variants {
+        id
+        name
+        attributes
+        image_url
+        thumbnail_url
+      }
     }
   }
 `;
@@ -398,9 +461,8 @@ export const GET_ITEM_DETAILS = gql`
       }
       images {
         id
-        url
-        alt_text
-        is_primary
+        original
+        thumbnail
       }
       parents {
         id
@@ -498,10 +560,11 @@ export const GET_MY_WISHLIST = gql`
 // ===== WISHLIST MUTATIONS =====
 
 export const ADD_ITEM_TO_WISHLIST = gql`
-  mutation AddItemToWishlist($itemId: ID!) {
-    addItemToWishlist(entity_id: $itemId) {
+  mutation AddItemToWishlist($itemId: ID!, $variantId: ID) {
+    addItemToWishlist(entity_id: $itemId, variant_id: $variantId) {
       id
       entity_id
+      variant_id
       created_at
     }
   }
@@ -540,7 +603,11 @@ export const MY_COLLECTION_TREE = gql`
         user_id
         user_metadata
         user_notes
-        user_images
+        user_images {
+        id
+        original
+        thumbnail
+      }
         parent_collection_id
         id
         type
@@ -549,6 +616,14 @@ export const MY_COLLECTION_TREE = gql`
         attributes
         image_url
         thumbnail_url
+        entity_variants {
+        id
+        name
+        attributes
+        image_url
+        thumbnail_url
+      }
+        variant_id
       }
       wishlists {
         wishlist_id
@@ -560,6 +635,14 @@ export const MY_COLLECTION_TREE = gql`
         attributes
         image_url
         thumbnail_url
+        entity_variants {
+        id
+        name
+        attributes
+        image_url
+        thumbnail_url
+      }
+        variant_id
       }
       current_collection {
         id
@@ -715,7 +798,11 @@ export const UPLOAD_ITEM_IMAGES = gql`
       remove_image_indices: $remove_image_indices
     ) {
       id
-      images
+      images {
+        id
+        original
+        thumbnail
+      }
       entity_id
       notes
       metadata
@@ -727,7 +814,11 @@ export const REORDER_ITEM_IMAGES = gql`
   mutation ReorderItemImages($user_item_id: ID!, $image_ids: [ID!]!) {
     reorderItemImages(user_item_id: $user_item_id, image_ids: $image_ids) {
       id
-      images
+      images {
+        id
+        original
+        thumbnail
+      }
     }
   }
 `;
@@ -737,7 +828,11 @@ export const UPLOAD_COLLECTION_IMAGES = gql`
   mutation UploadCollectionImages($collection_id: ID!, $images: [Upload!]!) {
     uploadCollectionImages(collection_id: $collection_id, images: $images) {
       id
-      images
+      images {
+        id
+        original
+        thumbnail
+      }
       name
       type
     }
@@ -748,7 +843,11 @@ export const REMOVE_COLLECTION_IMAGES = gql`
   mutation RemoveCollectionImages($collection_id: ID!, $image_indices: [Int!]!) {
     removeCollectionImages(collection_id: $collection_id, image_indices: $image_indices) {
       id
-      images
+      images {
+        id
+        original
+        thumbnail
+      }
     }
   }
 `;
@@ -757,7 +856,11 @@ export const REORDER_COLLECTION_IMAGES = gql`
   mutation ReorderCollectionImages($collection_id: ID!, $image_ids: [ID!]!) {
     reorderCollectionImages(collection_id: $collection_id, image_ids: $image_ids) {
       id
-      images
+      images {
+        id
+        original
+        thumbnail
+      }
     }
   }
 `;

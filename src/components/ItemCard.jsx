@@ -335,7 +335,13 @@ export function ItemCard({
         />
 
         <div className="item-content">
-          <h4 className="item-name">{item.name}</h4>
+          <h4 className="item-name">
+            {item.name}
+            {item.variant_id && item.entity_variants && (() => {
+              const variant = item.entity_variants.find(v => v.id === item.variant_id);
+              return variant ? ` (${variant.name})` : '';
+            })()}
+          </h4>
           <div className="item-meta">
             <span className="item-type">
               {formatEntityType(item.type)}

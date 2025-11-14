@@ -9,6 +9,7 @@ import './AddItemsModal.css';
 function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(null);
   const [notes, setNotes] = useState('');
   const [uploadImages, setUploadImages] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
@@ -33,6 +34,7 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }
     if (isOpen) {
       setSearchQuery('');
       setSelectedItem(preSelectedItem);
+      setSelectedVariant(null);
       setNotes('');
       setUploadImages([]);
       setError(null);
@@ -59,6 +61,7 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }
 
   const handleSelectItem = (item) => {
     setSelectedItem(item);
+    setSelectedVariant(null);
     setNotes('');
     setUploadImages([]);
     setError(null);
@@ -66,6 +69,7 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }
 
   const handleBack = () => {
     setSelectedItem(null);
+    setSelectedVariant(null);
     setNotes('');
     setUploadImages([]);
     setError(null);
@@ -81,6 +85,7 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }
       await addItemToCollection({
         variables: {
           itemId: selectedItem.id,
+          variantId: selectedVariant || null,
           notes: notes || null,
           images: uploadImages.length > 0 ? uploadImages : null
         }
@@ -241,6 +246,26 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }
                     {selectedItem.year && <p className="item-year">Year: {selectedItem.year}</p>}
                   </div>
                 </div>
+
+                {/* Variant dropdown - only show if entity has variants */}
+                {selectedItem.entity_variants && selectedItem.entity_variants.length > 0 && (
+                  <div className="modal-section">
+                    <label htmlFor="variant-select">Variant</label>
+                    <select
+                      id="variant-select"
+                      className="variant-dropdown"
+                      value={selectedVariant || ''}
+                      onChange={(e) => setSelectedVariant(e.target.value || null)}
+                    >
+                      <option value="">Base</option>
+                      {selectedItem.entity_variants.map((variant) => (
+                        <option key={variant.id} value={variant.id}>
+                          {variant.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="notes-section">
                   <label htmlFor="item-notes">Notes (optional)</label>
