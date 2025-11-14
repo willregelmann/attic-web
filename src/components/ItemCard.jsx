@@ -5,7 +5,6 @@ import { isCollectionType, formatEntityType } from '../utils/formatters';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getTypeIcon } from '../utils/iconUtils.jsx';
-import { Copy } from 'lucide-react';
 import './ItemCard.css';
 
 /**
