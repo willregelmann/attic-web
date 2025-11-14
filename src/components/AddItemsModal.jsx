@@ -3,12 +3,14 @@ import { useLazyQuery, useMutation } from '@apollo/client/react';
 import { SEMANTIC_SEARCH_DATABASE_OF_THINGS, ADD_ITEM_TO_MY_COLLECTION, GET_MY_ITEMS } from '../queries';
 import { formatEntityType, isCollectionType } from '../utils/formatters';
 import { isFormBusy } from '../utils/formUtils';
+import { ImageUpload } from './ImageUpload';
 import './AddItemsModal.css';
 
 function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
   const [notes, setNotes] = useState('');
+  const [uploadImages, setUploadImages] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState(null);
 
@@ -32,6 +34,7 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }
       setSearchQuery('');
       setSelectedItem(preSelectedItem);
       setNotes('');
+      setUploadImages([]);
       setError(null);
       setIsAdding(false);
     }
@@ -57,12 +60,14 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }
   const handleSelectItem = (item) => {
     setSelectedItem(item);
     setNotes('');
+    setUploadImages([]);
     setError(null);
   };
 
   const handleBack = () => {
     setSelectedItem(null);
     setNotes('');
+    setUploadImages([]);
     setError(null);
   };
 
@@ -76,7 +81,8 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }
       await addItemToCollection({
         variables: {
           itemId: selectedItem.id,
-          notes: notes || null
+          notes: notes || null,
+          images: uploadImages.length > 0 ? uploadImages : null
         }
       });
 
@@ -91,6 +97,8 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }
       // Handle duplicate error
       if (err.message.includes('Duplicate') || err.message.includes('already exists')) {
         setError('This item is already in your collection!');
+      } else if (err.message.includes('Image upload failed')) {
+        setError(`Failed to upload images: ${err.message}`);
       } else {
         setError('Failed to add item. Please try again.');
       }
@@ -243,6 +251,17 @@ function AddItemsModal({ isOpen, onClose, onItemsAdded, preSelectedItem = null }
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={4}
+                  />
+                </div>
+
+                <div className="modal-section">
+                  <label>Images (optional)</label>
+                  <ImageUpload
+                    existingImages={[]}
+                    onImagesChange={(newFiles) => {
+                      setUploadImages(newFiles);
+                    }}
+                    maxImages={5}
                   />
                 </div>
 
