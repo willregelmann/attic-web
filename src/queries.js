@@ -708,7 +708,7 @@ export const ADD_COLLECTION_TO_WISHLIST = gql`
 
 // Image upload mutations for user items
 export const UPLOAD_ITEM_IMAGES = gql`
-  mutation UploadItemImages($user_item_id: ID!, $images: [Upload!]!, $remove_image_indices: [Int!]) {
+  mutation UploadItemImages($user_item_id: ID!, $images: [Upload!], $remove_image_indices: [Int!]) {
     updateMyItem(
       user_item_id: $user_item_id
       images: $images

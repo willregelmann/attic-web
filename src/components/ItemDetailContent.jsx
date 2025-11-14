@@ -2,7 +2,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useQuery, useLazyQuery, useMutation, useApolloClient } from '@apollo/client/react';
 import { useState, useEffect, memo } from 'react';
-import { GET_DATABASE_OF_THINGS_ITEM_PARENTS, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, UPDATE_MY_ITEM, UPDATE_USER_COLLECTION, CREATE_USER_COLLECTION, BATCH_ADD_ITEMS_TO_MY_COLLECTION, MY_COLLECTION_TREE, MOVE_USER_ITEM, MOVE_USER_COLLECTION, ADD_COLLECTION_TO_WISHLIST, GET_MY_ITEMS, UPLOAD_ITEM_IMAGES, REORDER_ITEM_IMAGES } from '../queries';
+import { GET_DATABASE_OF_THINGS_ITEM_PARENTS, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, UPDATE_MY_ITEM, UPDATE_USER_COLLECTION, CREATE_USER_COLLECTION, BATCH_ADD_ITEMS_TO_MY_COLLECTION, MY_COLLECTION_TREE, MOVE_USER_ITEM, MOVE_USER_COLLECTION, ADD_COLLECTION_TO_WISHLIST, GET_MY_ITEMS, UPLOAD_ITEM_IMAGES, REORDER_ITEM_IMAGES, GET_MY_ITEM } from '../queries';
 import { formatEntityType, isCollectionType, isCustomCollection, isLinkedCollection } from '../utils/formatters';
 import { isFormBusy } from '../utils/formUtils';
 import { CollectionTreeSkeleton } from './SkeletonLoader';
@@ -415,6 +415,13 @@ function ItemDetailContent({
   const [uploadItemImages] = useMutation(UPLOAD_ITEM_IMAGES);
   const [reorderItemImages] = useMutation(REORDER_ITEM_IMAGES);
 
+  // Query to get fresh item data (for images in view mode)
+  const { data: freshItemData } = useQuery(GET_MY_ITEM, {
+    variables: { userItemId: item.user_item_id },
+    skip: !isUserItem || !item.user_item_id,
+    fetchPolicy: 'cache-first' // Use cache but update when cache changes
+  });
+
   const isSaving = isFormBusy(
     isUpdating,
     isUpdatingCollection,
@@ -556,14 +563,87 @@ function ItemDetailContent({
 
         // Handle image uploads if any
         if (uploadImages.length > 0 || removeImageIndices.length > 0) {
-          await uploadItemImages({
-            variables: {
-              user_item_id: item.user_item_id,
-              images: uploadImages.length > 0 ? uploadImages : undefined,
-              remove_image_indices: removeImageIndices.length > 0 ? removeImageIndices : undefined
-            },
-            refetchQueries: [{ query: MY_COLLECTION_TREE }]
-          });
+          if (uploadImages.length > 0 && uploadImages.every(f => f instanceof File)) {
+            // Manual file upload using fetch with multipart/form-data
+            const token = localStorage.getItem('token');
+            const formData = new FormData();
+
+            // Build GraphQL multipart request according to spec
+            const operations = {
+              query: `
+                mutation UploadItemImages($user_item_id: ID!, $images: [Upload!], $remove_image_indices: [Int!]) {
+                  updateMyItem(user_item_id: $user_item_id, images: $images, remove_image_indices: $remove_image_indices) {
+                    id images entity_id notes metadata
+                  }
+                }
+              `,
+              variables: {
+                user_item_id: item.user_item_id,
+                images: uploadImages.map(() => null),
+                remove_image_indices: removeImageIndices.length > 0 ? removeImageIndices : undefined
+              }
+            };
+
+            formData.append('operations', JSON.stringify(operations));
+
+            const map = {};
+            uploadImages.forEach((file, index) => {
+              map[index] = [`variables.images.${index}`];
+            });
+            formData.append('map', JSON.stringify(map));
+
+            uploadImages.forEach((file, index) => {
+              formData.append(index.toString(), file);
+            });
+
+            const apiUrl = import.meta.env.VITE_API_URL || '';
+            const response = await fetch(`${apiUrl}/graphql`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`
+              },
+              credentials: 'include',
+              body: formData
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('Upload failed:', response.status, errorText);
+              throw new Error(`Upload failed: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+
+            if (result.errors) {
+              console.error('GraphQL errors:', result.errors);
+              throw new Error(result.errors[0].message);
+            }
+
+            // Clear upload state
+            setUploadImages([]);
+            setRemoveImageIndices([]);
+
+            // Refetch queries to update the UI
+            await client.refetchQueries({
+              include: [
+                { query: MY_COLLECTION_TREE },
+                { query: GET_MY_ITEM, variables: { userItemId: item.user_item_id } }
+              ]
+            });
+          } else if (removeImageIndices.length > 0) {
+            // Just removing images, no files to upload
+            await uploadItemImages({
+              variables: {
+                user_item_id: item.user_item_id,
+                remove_image_indices: removeImageIndices
+              },
+              refetchQueries: [
+                { query: MY_COLLECTION_TREE },
+                { query: GET_MY_ITEM, variables: { userItemId: item.user_item_id } }
+              ],
+              awaitRefetchQueries: true
+            });
+          }
         }
 
         // Check if collection has changed and move if needed
@@ -615,6 +695,14 @@ function ItemDetailContent({
 
   // Child images state for collections without images
   const [childImages, setChildImages] = useState([]);
+
+  // Selected image index for user-uploaded images
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  // Reset selected image index when item changes
+  useEffect(() => {
+    setSelectedImageIndex(0);
+  }, [item.id]);
 
   // Determine if this is a user collection (custom or linked)
   const isUserCollection = isCustomCollection(item.type) || isLinkedCollection(item.type) ||
@@ -706,12 +794,24 @@ function ItemDetailContent({
   }, [userChildrenData]);
 
   const getItemImage = () => {
-    // Use image_url for detail view (full quality)
-    if (item.image_url) {
-      return `url(${item.image_url})`;
+    // Priority 1: User uploaded image (for owned items)
+    // Use freshItemData if available (has latest cache data), otherwise fall back to prop
+    const freshItem = freshItemData?.myItem || item;
+    const userImages = freshItem.user_images || freshItem.images;
+    if (isUserItem && userImages && userImages.length > 0) {
+      const userImage = userImages[selectedImageIndex] || userImages[0]; // Use selected image
+      // Image path needs /storage/ prefix
+      const imagePath = userImage.original || userImage.original_url;
+      return `url(/storage/${imagePath})`;
     }
-    // No background when no images are available (just show icon)
-    return 'transparent';
+
+    // Priority 2: DBoT canonical image - use full quality for detail view
+    if (freshItem.image_url) {
+      return `url(${freshItem.image_url})`;
+    }
+
+    // Priority 3: No background when no images are available (just show icon)
+    return 'none';
   };
 
   // Use representative images if available, otherwise use client-side fetched child images
@@ -721,8 +821,11 @@ function ItemDetailContent({
 
   // Determine icon color and get icon
   const iconColor = isDarkMode ? '#9ca3af' : '#6b7280';
-  const shouldShowIcon = !item.image_url && imagesToDisplay.length === 0;
-  const typeIcon = shouldShowIcon ? getTypeIcon(item.type, iconColor, 96) : null;
+  const freshItem = freshItemData?.myItem || item;
+  const userImages = freshItem.user_images || freshItem.images;
+  const hasUserImages = isUserItem && userImages && userImages.length > 0;
+  const shouldShowIcon = !hasUserImages && !freshItem.image_url && imagesToDisplay.length === 0;
+  const typeIcon = shouldShowIcon ? getTypeIcon(freshItem.type, iconColor, 96) : null;
 
   return (
     <>
@@ -752,7 +855,8 @@ function ItemDetailContent({
           {(isEditMode || isAddMode) && isUserItem ? (
             // Show ImageUpload component in edit/add mode
             <ImageUpload
-              existingImages={item.images || []}
+              key={`image-upload-${item.user_item_id}-${(freshItem.user_images || freshItem.images || []).map(i => i.id).join(',')}`}
+              existingImages={freshItem.user_images || freshItem.images || []}
               onImagesChange={(newFiles, removedIndices) => {
                 setUploadImages(newFiles);
                 setRemoveImageIndices(removedIndices);
@@ -761,7 +865,11 @@ function ItemDetailContent({
                 if (item.user_item_id) {
                   await reorderItemImages({
                     variables: { user_item_id: item.user_item_id, image_ids: newOrder },
-                    refetchQueries: [{ query: MY_COLLECTION_TREE }]
+                    refetchQueries: [
+                      { query: MY_COLLECTION_TREE },
+                      { query: GET_MY_ITEM, variables: { userItemId: item.user_item_id } }
+                    ],
+                    awaitRefetchQueries: true
                   });
                 }
               }}
@@ -769,12 +877,11 @@ function ItemDetailContent({
             />
           ) : (
             // Show existing image display in view mode
-            <div className={`detail-image ${showAsWishlist ? 'detail-image-unowned' : ''}`} style={{
-              background: getItemImage(),
-              backgroundSize: 'contain',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat'
-            }}>
+            <div
+              className={`detail-image ${showAsWishlist ? 'detail-image-unowned' : ''}`}
+              style={{
+                backgroundImage: getItemImage()
+              }}>
               {/* Type icon for items without images */}
               {typeIcon && (
                 <div style={{
@@ -827,6 +934,21 @@ function ItemDetailContent({
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Image gallery thumbnails (show all images) */}
+          {!isEditMode && !isAddMode && isUserItem && (freshItem.user_images || freshItem.images || []).length > 1 && (
+            <div className="detail-image-gallery">
+              {(freshItem.user_images || freshItem.images || []).map((img, idx) => (
+                <div
+                  key={img.id || idx}
+                  className={`detail-image-gallery-thumbnail ${idx === selectedImageIndex ? 'selected' : ''}`}
+                  style={{ backgroundImage: `url(/storage/${img.thumbnail || img.original})` }}
+                  onClick={() => setSelectedImageIndex(idx)}
+                  title={`View image ${idx + 1}`}
+                />
+              ))}
             </div>
           )}
         </div>

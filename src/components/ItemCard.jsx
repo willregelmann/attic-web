@@ -87,9 +87,12 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
 
   const getItemImage = () => {
     // Priority 1: User uploaded image (for owned items)
-    if (isOwned && item.images && item.images.length > 0) {
-      const userImage = item.images[0]; // Primary image is first in array
-      return `url(${userImage.thumbnail_url})`;
+    const userImages = item.user_images || item.images;
+    if (isOwned && userImages && userImages.length > 0) {
+      const userImage = userImages[0]; // Primary image is first in array
+      // Image path needs /storage/ prefix
+      const thumbnailPath = userImage.thumbnail || userImage.thumbnail_url;
+      return `url(/storage/${thumbnailPath})`;
     }
 
     // Priority 2: DBoT canonical image
@@ -101,7 +104,7 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
     }
 
     // Priority 3: No background when no images are available (just show icon)
-    return 'transparent';
+    return 'none';
   };
 
   // Use representative images if available, otherwise use client-side fetched child images
@@ -111,11 +114,13 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
 
   // Determine icon color and get icon
   const iconColor = isDarkMode ? '#9ca3af' : '#6b7280';
-  const shouldShowIcon = !item.image_url && imagesToDisplay.length === 0;
+  const userImages = item.user_images || item.images;
+  const hasUserImages = isOwned && userImages && userImages.length > 0;
+  const shouldShowIcon = !hasUserImages && !item.image_url && imagesToDisplay.length === 0;
   const typeIcon = shouldShowIcon ? getTypeIcon(item.type, iconColor, 64) : null;
 
   return (
-    <div className="item-image" ref={imageRef} style={{ background: getItemImage() }}>
+    <div className="item-image" ref={imageRef} style={{ backgroundImage: getItemImage() }}>
       {/* Type icon for items without images */}
       {typeIcon && (
         <div style={{

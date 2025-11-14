@@ -20,6 +20,10 @@ export default defineConfig({
       '/graphql': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+      },
+      '/storage': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
       }
     }
   }

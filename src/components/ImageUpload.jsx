@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Upload, X, GripVertical } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Upload, X, GripVertical, Camera } from 'lucide-react';
 import './ImageUpload.css';
 
 /**
@@ -18,13 +18,34 @@ export function ImageUpload({
 }) {
   const [newFiles, setNewFiles] = useState([]);
   const [draggedIndex, setDraggedIndex] = useState(null);
+  const [displayImages, setDisplayImages] = useState([]);
+  const [removedIndices, setRemovedIndices] = useState([]);
   const fileInputRef = useRef(null);
+  const draggedIndexRef = useRef(null);
 
-  // Combine existing and new images for display
+  // Combine existing and new images for display, filtering out removed ones
   const allImages = [
-    ...existingImages.map((img, idx) => ({ type: 'existing', index: idx, data: img })),
+    ...existingImages
+      .map((img, originalIdx) => ({ img, originalIdx })) // Track original index
+      .filter(({ originalIdx }) => !removedIndices.includes(originalIdx))
+      .map(({ img, originalIdx }) => ({
+        type: 'existing',
+        index: originalIdx, // Use original index for removal
+        data: img
+      })),
     ...newFiles.map((file, idx) => ({ type: 'new', index: idx, data: file }))
   ];
+
+  // Update display images when props change
+  useEffect(() => {
+    // Always update displayImages to reflect current state (including removals)
+    setDisplayImages(allImages);
+  }, [existingImages, newFiles, removedIndices]);
+
+  // Separate effect to reset removedIndices when existingImages changes (new item loaded)
+  useEffect(() => {
+    setRemovedIndices([]);
+  }, [existingImages]);
 
   const handleFileSelect = (event) => {
     const files = Array.from(event.target.files);
@@ -47,51 +68,73 @@ export function ImageUpload({
 
     setNewFiles([...newFiles, ...validFiles]);
     if (onImagesChange) {
-      onImagesChange([...newFiles, ...validFiles], []);
+      onImagesChange([...newFiles, ...validFiles], removedIndices);
     }
   };
 
   const handleRemove = (imageObj) => {
     if (imageObj.type === 'existing') {
-      // Remove existing image - notify parent
+      // Remove existing image - track locally and notify parent
+      const updatedRemoved = [...removedIndices, imageObj.index];
+      setRemovedIndices(updatedRemoved);
       if (onImagesChange) {
-        onImagesChange(newFiles, [imageObj.index]);
+        onImagesChange(newFiles, updatedRemoved);
       }
     } else {
       // Remove new file
       const updated = newFiles.filter((_, idx) => idx !== imageObj.index);
       setNewFiles(updated);
       if (onImagesChange) {
-        onImagesChange(updated, []);
+        onImagesChange(updated, removedIndices);
       }
     }
   };
 
-  const handleDragStart = (index) => {
+  const handleDragStart = (event, index) => {
+    draggedIndexRef.current = index;
     setDraggedIndex(index);
+    event.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (event) => {
+  const handleDragOver = (event, dropIndex) => {
     event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+
+    const dragIndex = draggedIndexRef.current;
+    if (dragIndex === null || dragIndex === dropIndex) {
+      return;
+    }
+
+    // Create live preview by reordering display array
+    const reordered = [...displayImages];
+    const [draggedItem] = reordered.splice(dragIndex, 1);
+    reordered.splice(dropIndex, 0, draggedItem);
+
+    setDisplayImages(reordered);
+    draggedIndexRef.current = dropIndex; // Update ref to new position
+  };
+
+  const handleDragEnd = () => {
+    draggedIndexRef.current = null;
+    setDraggedIndex(null);
   };
 
   const handleDrop = (event, dropIndex) => {
     event.preventDefault();
-    if (draggedIndex === null || draggedIndex === dropIndex) return;
+    event.stopPropagation();
 
-    const reordered = [...allImages];
-    const [draggedItem] = reordered.splice(draggedIndex, 1);
-    reordered.splice(dropIndex, 0, draggedItem);
-
-    // Extract order of existing images only
-    const newOrder = reordered
+    // Display is already reordered from dragOver, just notify parent
+    const newOrder = displayImages
       .filter(img => img.type === 'existing')
       .map(img => img.data.id);
 
-    setDraggedIndex(null);
     if (onReorder && newOrder.length > 0) {
       onReorder(newOrder);
     }
+
+    // Clean up drag state
+    draggedIndexRef.current = null;
+    setDraggedIndex(null);
   };
 
   // Helper to get image URL for display
@@ -111,13 +154,14 @@ export function ImageUpload({
   return (
     <div className="image-upload">
       <div className="image-upload-grid">
-        {allImages.map((imageObj, idx) => (
+        {displayImages.map((imageObj, idx) => (
           <div
-            key={`${imageObj.type}-${imageObj.index}`}
-            className="image-upload-item"
+            key={`${imageObj.type}-${imageObj.index}-${idx}`}
+            className={`image-upload-item ${draggedIndex === idx ? 'dragging' : ''}`}
             draggable
-            onDragStart={() => handleDragStart(idx)}
-            onDragOver={handleDragOver}
+            onDragStart={(e) => handleDragStart(e, idx)}
+            onDragEnd={handleDragEnd}
+            onDragOver={(e) => handleDragOver(e, idx)}
             onDrop={(e) => handleDrop(e, idx)}
           >
             <div className="image-upload-drag-handle">
@@ -140,12 +184,15 @@ export function ImageUpload({
           </div>
         ))}
 
-        {allImages.length < maxImages && (
+        {displayImages.length < maxImages && (
           <div
             className="image-upload-dropzone"
             onClick={() => fileInputRef.current?.click()}
           >
-            <Upload size={32} />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <Camera size={28} />
+              <Upload size={28} />
+            </div>
             <span>Add Images</span>
             <span className="image-upload-hint">
               {allImages.length}/{maxImages} • 5MB max • JPEG, PNG, WebP
@@ -158,6 +205,7 @@ export function ImageUpload({
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
+        capture="environment"
         multiple
         onChange={handleFileSelect}
         style={{ display: 'none' }}
