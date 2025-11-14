@@ -749,67 +749,86 @@ function ItemDetailContent({
 
       <div className="detail-content">
         <div className="detail-image-section">
-          <div className={`detail-image ${showAsWishlist ? 'detail-image-unowned' : ''}`} style={{
-            background: getItemImage(),
-            backgroundSize: 'contain',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }}>
-            {/* Type icon for items without images */}
-            {typeIcon && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-                height: '100%'
-              }}>
-                {typeIcon}
-              </div>
-            )}
+          {(isEditMode || isAddMode) && isUserItem ? (
+            // Show ImageUpload component in edit/add mode
+            <ImageUpload
+              existingImages={item.images || []}
+              onImagesChange={(newFiles, removedIndices) => {
+                setUploadImages(newFiles);
+                setRemoveImageIndices(removedIndices);
+              }}
+              onReorder={async (newOrder) => {
+                if (item.user_item_id) {
+                  await reorderItemImages({
+                    variables: { user_item_id: item.user_item_id, image_ids: newOrder },
+                    refetchQueries: [{ query: MY_COLLECTION_TREE }]
+                  });
+                }
+              }}
+              maxImages={10}
+            />
+          ) : (
+            // Show existing image display in view mode
+            <div className={`detail-image ${showAsWishlist ? 'detail-image-unowned' : ''}`} style={{
+              background: getItemImage(),
+              backgroundSize: 'contain',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat'
+            }}>
+              {/* Type icon for items without images */}
+              {typeIcon && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: '100%'
+                }}>
+                  {typeIcon}
+                </div>
+              )}
 
-            {/* Representative/child images - special handling for 1 or 2 images */}
-            {!item.image_url && imagesToDisplay.length === 1 && (
-              <div
-                className="child-image-single"
-                style={{ backgroundImage: `url(${imagesToDisplay[0]})` }}
-              />
-            )}
+              {/* Representative/child images - special handling for 1 or 2 images */}
+              {!item.image_url && imagesToDisplay.length === 1 && (
+                <div
+                  className="child-image-single"
+                  style={{ backgroundImage: `url(${imagesToDisplay[0]})` }}
+                />
+              )}
 
-            {!item.image_url && imagesToDisplay.length === 2 && (
-              <div className="child-images-grid child-images-diagonal">
-                <div className="child-image" style={{ backgroundImage: `url(${imagesToDisplay[0]})` }} />
-                <div className="child-image child-image-empty" />
-                <div className="child-image child-image-empty" />
-                <div className="child-image" style={{ backgroundImage: `url(${imagesToDisplay[1]})` }} />
-              </div>
-            )}
+              {!item.image_url && imagesToDisplay.length === 2 && (
+                <div className="child-images-grid child-images-diagonal">
+                  <div className="child-image" style={{ backgroundImage: `url(${imagesToDisplay[0]})` }} />
+                  <div className="child-image child-image-empty" />
+                  <div className="child-image child-image-empty" />
+                  <div className="child-image" style={{ backgroundImage: `url(${imagesToDisplay[1]})` }} />
+                </div>
+              )}
 
-            {/* Standard grid for 3+ images */}
-            {!item.image_url && imagesToDisplay.length >= 3 && (
-              <div className="child-images-grid">
-                {displayImages.map((imageUrl, idx) => (
-                  <div
-                    key={idx}
-                    className={`child-image ${hasMoreImages && idx === 3 ? 'child-image-more' : ''}`}
-                    style={{ backgroundImage: `url(${imageUrl})` }}
-                  >
-                    {hasMoreImages && idx === 3 && (
-                      <div className="more-indicator">
-                        <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
-                          <circle cx="4" cy="12" r="2" fill="white"/>
-                          <circle cx="12" cy="12" r="2" fill="white"/>
-                          <circle cx="20" cy="12" r="2" fill="white"/>
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-
+              {/* Standard grid for 3+ images */}
+              {!item.image_url && imagesToDisplay.length >= 3 && (
+                <div className="child-images-grid">
+                  {displayImages.map((imageUrl, idx) => (
+                    <div
+                      key={idx}
+                      className={`child-image ${hasMoreImages && idx === 3 ? 'child-image-more' : ''}`}
+                      style={{ backgroundImage: `url(${imageUrl})` }}
+                    >
+                      {hasMoreImages && idx === 3 && (
+                        <div className="more-indicator">
+                          <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                            <circle cx="4" cy="12" r="2" fill="white"/>
+                            <circle cx="12" cy="12" r="2" fill="white"/>
+                            <circle cx="20" cy="12" r="2" fill="white"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="detail-info-section">
@@ -1095,33 +1114,6 @@ function ItemDetailContent({
                   {item.user_notes || ''}
                 </p>
               )}
-            </div>
-          )}
-
-          {/* Image Upload - shown in edit/add mode for user items */}
-          {(isEditMode || isAddMode) && isUserItem && (
-            <div style={{ marginTop: '16px' }}>
-              <label className="meta-label" style={{ display: 'block', marginBottom: '6px' }}>Images:</label>
-              <ImageUpload
-                existingImages={item.images || []}
-                onImagesChange={(newFiles, removedIndices) => {
-                  setUploadImages(newFiles);
-                  setRemoveImageIndices(removedIndices);
-                }}
-                onReorder={async (newOrder) => {
-                  // Immediately reorder on drag-drop
-                  if (item.user_item_id) {
-                    await reorderItemImages({
-                      variables: {
-                        user_item_id: item.user_item_id,
-                        image_ids: newOrder
-                      },
-                      refetchQueries: [{ query: MY_COLLECTION_TREE }]
-                    });
-                  }
-                }}
-                maxImages={10}
-              />
             </div>
           )}
 
