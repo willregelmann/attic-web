@@ -681,6 +681,24 @@ function MyCollection() {
           selectedItems={new Set(selectedIds)}
           onItemSelectionToggle={toggleItemSelection}
           allowCollectionSelection={true}
+          onDuplicate={(entityId) => {
+            // Find the item with this entity_id
+            const item = displayItems.find(i => (i.entity_id || i.id) === entityId);
+            if (item) {
+              setPreSelectedItemForAdd(item);
+              setShowAddItemModal(true);
+            }
+          }}
+          onEdit={(item) => {
+            setSelectedItem(item);
+            setSelectedItemIndex(null);
+            setItemEditMode(true);
+          }}
+          onDelete={(item) => {
+            setSelectedItem(item);
+            setSelectedItemIndex(null);
+            setShowDeleteItemModal(true);
+          }}
         />
       ) : (
         <div className="empty-state">

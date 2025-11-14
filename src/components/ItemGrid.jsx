@@ -16,6 +16,9 @@ import { isCollectionType } from '../utils/formatters';
  * @param {Set} selectedItems - Set of selected item IDs
  * @param {Function} onItemSelectionToggle - Callback for selection toggle (itemId, itemType)
  * @param {Boolean} allowCollectionSelection - Whether collections can be selected in multi-select mode
+ * @param {Function} onDuplicate - Callback for duplicate action (entityId)
+ * @param {Function} onEdit - Callback for edit action (item)
+ * @param {Function} onDelete - Callback for delete action (item)
  */
 export function ItemGrid({
   items = [],
@@ -29,7 +32,10 @@ export function ItemGrid({
   isMultiSelectMode = false,
   selectedItems = new Set(),
   onItemSelectionToggle = null,
-  allowCollectionSelection = false
+  allowCollectionSelection = false,
+  onDuplicate = null,
+  onEdit = null,
+  onDelete = null
 }) {
   const gridClass = viewMode === 'grid' ? 'items-grid' : 'items-list';
 
@@ -75,6 +81,12 @@ export function ItemGrid({
             isDisabled={isMultiSelectMode && !canParticipateInMultiSelect}
             onSelectionToggle={onItemSelectionToggle}
             itemType={getItemType()}
+            isDuplicate={item.isDuplicate || false}
+            duplicateCount={item.duplicateCount || 1}
+            duplicateGroup={item.duplicateGroup || null}
+            onDuplicate={onDuplicate}
+            onEdit={onEdit}
+            onDelete={onDelete}
           />
         );
       })}

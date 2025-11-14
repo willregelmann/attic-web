@@ -355,16 +355,17 @@ export function ItemCard({
 
         {/* Count badge for grouped duplicates */}
         {isDuplicate && duplicateCount > 1 && (
-          <div
-            className="absolute top-2 right-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full cursor-pointer hover:bg-blue-700 transition-colors z-10"
+          <button
+            className="absolute top-2 right-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full cursor-pointer hover:bg-blue-700 transition-colors z-10 border-0"
             onClick={(e) => {
               e.stopPropagation();
               setIsExpanded(!isExpanded);
             }}
             aria-label={`${duplicateCount} duplicates`}
+            type="button"
           >
             ×{duplicateCount}
-          </div>
+          </button>
         )}
       </div>
 
