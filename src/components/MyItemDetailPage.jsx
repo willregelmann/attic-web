@@ -5,6 +5,7 @@ import { GET_MY_ITEM, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, MY_COLLECTION_TREE 
 import ItemDetailContent from './ItemDetailContent';
 import CircularMenu from './CircularMenu';
 import MobileSearch from './MobileSearch';
+import AddItemsModal from './AddItemsModal';
 import { BatchActionModal } from './BatchActionModal';
 import Toast from './Toast';
 import './ItemDetail.css';
@@ -20,6 +21,8 @@ function MyItemDetailPage() {
   const [itemEditMode, setItemEditMode] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [preSelectedItem, setPreSelectedItem] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const saveItemRef = useRef(null);
 
@@ -147,7 +150,7 @@ function MyItemDetailPage() {
           mainButtonVariant="save"
         />
       ) : (
-        // Edit and delete buttons when viewing
+        // Edit, duplicate, and delete buttons when viewing
         <CircularMenu
           actions={[
             {
@@ -163,6 +166,16 @@ function MyItemDetailPage() {
               onClick: () => setItemEditMode(true)
             },
             {
+              id: 'duplicate-item',
+              icon: 'fas fa-copy',
+              label: 'Duplicate',
+              onClick: () => {
+                // Open AddItemsModal with this entity pre-selected
+                setPreSelectedItem(item);
+                setShowAddItemModal(true);
+              }
+            },
+            {
               id: 'delete-item',
               icon: 'fas fa-trash',
               label: 'Delete item',
@@ -176,6 +189,19 @@ function MyItemDetailPage() {
       <MobileSearch
         isOpen={showMobileSearch}
         onClose={() => setShowMobileSearch(false)}
+      />
+
+      {/* Add Items Modal (for duplicate) */}
+      <AddItemsModal
+        isOpen={showAddItemModal}
+        onClose={() => {
+          setShowAddItemModal(false);
+          setPreSelectedItem(null);
+        }}
+        onItemsAdded={() => {
+          setToastMessage({ text: 'Item duplicated successfully', type: 'success' });
+        }}
+        preSelectedItem={preSelectedItem}
       />
 
       {/* Delete Item Modal */}

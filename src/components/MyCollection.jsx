@@ -813,12 +813,26 @@ function MyCollection() {
             // Show item action buttons when viewing a regular item in ItemDetail
             ...(selectedItem && !isCustomCollection(selectedItem.type) && !isLinkedCollection(selectedItem.type) ?
               selectedItem.user_item_id ? [
-                // For owned items: show edit and delete buttons
+                // For owned items: show edit, duplicate, and delete buttons
                 {
                   id: 'edit-item',
                   icon: 'fas fa-edit',
                   label: 'Edit item',
                   onClick: () => setItemEditMode(true)
+                },
+                {
+                  id: 'duplicate-item',
+                  icon: 'fas fa-copy',
+                  label: 'Duplicate',
+                  onClick: () => {
+                    setSelectedItem({
+                      ...selectedItem,
+                      id: selectedItem.id, // entity_id for DBoT reference
+                      user_item_id: null,  // Clear user_item_id to create new copy
+                      notes: ''            // Clear notes for new copy
+                    });
+                    setItemAddMode(true);
+                  }
                 },
                 {
                   id: 'delete-item',
