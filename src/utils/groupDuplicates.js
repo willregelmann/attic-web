@@ -12,6 +12,13 @@ export function groupDuplicateItems(items, shouldGroup) {
   const grouped = {};
 
   items.forEach(item => {
+    // Treat items without entity_id as unique (cannot be duplicated)
+    if (!item.entity_id) {
+      const uniqueKey = `_no_entity_${item.id || Math.random()}`;
+      grouped[uniqueKey] = [item];
+      return;
+    }
+
     const entityId = item.entity_id;
 
     if (!grouped[entityId]) {
