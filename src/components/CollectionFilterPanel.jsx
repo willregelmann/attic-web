@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GET_COLLECTION_FILTER_FIELDS, GET_COLLECTION_PARENT_COLLECTIONS } from '../queries';
 import { useCollectionFilter } from '../contexts/CollectionFilterContext';
+import { useFilters } from '../contexts/FilterContext';
 import { useAuth } from '../contexts/AuthContext';
 import { countFilterValues, formatFilterValue, countParentCollections } from '../utils/collectionFilterUtils';
 import { FilterFieldsSkeleton } from './SkeletonLoader';
@@ -15,6 +16,7 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
     clearFiltersForCollection,
     hasActiveFilters
   } = useCollectionFilter();
+  const { groupDuplicates, setGroupDuplicates } = useFilters();
 
   const [expandedFields, setExpandedFields] = useState(new Set());
 
@@ -233,6 +235,20 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Group Duplicates Filter */}
+          <div className="filter-option" style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <label className="flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={groupDuplicates}
+                onChange={(e) => setGroupDuplicates(e.target.checked)}
+                className="filter-checkbox"
+                style={{ cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '14px' }}>Group duplicates</span>
+            </label>
           </div>
 
           {(!isRootLevel && (isLoadingFilterFields || isLoadingParentCollections)) ? (

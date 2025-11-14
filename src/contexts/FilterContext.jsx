@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { getFilterPreferences, setFilterPreference } from '../utils/localStorage';
 
 const FilterContext = createContext();
 
@@ -39,6 +40,12 @@ export function FilterProvider({ children }) {
     };
   });
 
+  // Group duplicates filter with localStorage persistence
+  const [groupDuplicates, setGroupDuplicatesState] = useState(() => {
+    const prefs = getFilterPreferences();
+    return prefs.groupDuplicates ?? false; // Default: ungrouped
+  });
+
   // Save filters to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('appFilters', JSON.stringify(filters));
@@ -77,6 +84,12 @@ export function FilterProvider({ children }) {
     });
   };
 
+  // Handler for group duplicates with localStorage persistence
+  const setGroupDuplicates = (value) => {
+    setGroupDuplicatesState(value);
+    setFilterPreference('groupDuplicates', value);
+  };
+
   // Check if any filters are active (not default)
   const hasActiveFilters = filters.languages && filters.languages.length > 0;
 
@@ -86,7 +99,9 @@ export function FilterProvider({ children }) {
       updateFilter,
       toggleLanguage,
       resetFilters,
-      hasActiveFilters
+      hasActiveFilters,
+      groupDuplicates,
+      setGroupDuplicates
     }}>
       {children}
     </FilterContext.Provider>
