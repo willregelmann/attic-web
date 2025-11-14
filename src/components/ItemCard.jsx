@@ -5,6 +5,7 @@ import { isCollectionType, formatEntityType } from '../utils/formatters';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getTypeIcon } from '../utils/iconUtils.jsx';
+import { Copy } from 'lucide-react';
 import './ItemCard.css';
 
 /**
@@ -190,6 +191,7 @@ export function ItemCardImage({ item, index = 0, isOwned = false, isFavorite = f
  * @param {Boolean} isSelected - Whether this item is selected
  * @param {Boolean} isDisabled - Whether this item is disabled (wrong type in multi-select)
  * @param {Function} onSelectionToggle - Callback for selection toggle (itemId, itemType)
+ * @param {Function} onDuplicate - Callback for duplicate action (entityId)
  * @param {String} itemType - Optional explicit item type for multi-select (overrides computed type)
  */
 export function ItemCard({
@@ -206,11 +208,21 @@ export function ItemCard({
   isSelected = false,
   isDisabled = false,
   onSelectionToggle = null,
+  onDuplicate = null,
   itemType = null
 }) {
   const { isAuthenticated } = useAuth();
   const longPressTimer = useRef(null);
   const [isPressing, setIsPressing] = useState(false);
+
+  // Handle duplicate action
+  const handleDuplicate = () => {
+    // Open AddItemModal with entity_id but blank fields
+    // This will be passed to the parent component that controls the modal
+    if (onDuplicate) {
+      onDuplicate(item.entity_id || item.id);
+    }
+  };
 
   // Cleanup effect for long-press timer
   useEffect(() => {
