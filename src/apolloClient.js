@@ -36,6 +36,18 @@ const authLink = new ApolloLink((operation, forward) => {
 // Configure cache with proper type policies
 const cache = new InMemoryCache({
   typePolicies: {
+    // Use user_item_id as the unique identifier for UserItemWithEntity
+    UserItemWithEntity: {
+      keyFields: ['user_item_id'],
+      fields: {
+        entity_variants: {
+          merge(existing, incoming) {
+            // Always use incoming data, but don't overwrite with null/undefined
+            return incoming !== null && incoming !== undefined ? incoming : existing;
+          },
+        },
+      },
+    },
     Query: {
       fields: {
         // Canonical data queries - cache by ID

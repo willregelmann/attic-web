@@ -159,6 +159,19 @@ function ItemDetailContent({
   const [selectedCollection, setSelectedCollection] = useState(currentCollection?.id || null);
   const [expandedIds, setExpandedIds] = useState(new Set());
 
+  // Sync external modes with internal state
+  useEffect(() => {
+    setIsEditMode(externalEditMode);
+  }, [externalEditMode]);
+
+  useEffect(() => {
+    setIsAddMode(externalAddMode);
+  }, [externalAddMode]);
+
+  useEffect(() => {
+    setIsWishlistMode(externalWishlistMode);
+  }, [externalWishlistMode]);
+
   // Initialize edit state when item changes
   useEffect(() => {
     if (isUserItem && item) {
@@ -1198,10 +1211,16 @@ function ItemDetailContent({
                     </select>
                   ) : (
                     <p style={{ margin: '0 0 2px 0', fontSize: '14px', color: isDarkMode ? '#9ca3af' : '#6b7280', fontStyle: 'italic' }}>
-                      {editVariant ? (() => {
-                        const variant = variants.find(v => v.id === editVariant);
-                        return variant ? variant.name : 'Base';
-                      })() : 'Base'}
+                      {(() => {
+                        // In view mode for user items, check item.variant_id (from backend)
+                        // In edit mode, check editVariant (from state)
+                        const variantId = isUserItem ? item.variant_id : editVariant;
+                        if (variantId) {
+                          const variant = variants.find(v => v.id === variantId);
+                          return variant ? variant.name : 'Base';
+                        }
+                        return 'Base';
+                      })()}
                     </p>
                   )}
                 </div>
