@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@apollo/client/react';
-import { Grid3x3, List, Filter } from 'lucide-react';
+import { Grid3x3, List, Filter, Image as ImageIcon } from 'lucide-react';
 import { SEMANTIC_SEARCH_DATABASE_OF_THINGS } from '../queries';
 import { parseSearchUrlParams, buildSearchUrl, applySearchFilters } from '../utils/searchFilterUtils';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
+import { useSearch } from '../contexts/SearchContext';
 import SearchFilterPanel from './SearchFilterPanel';
 import SearchResultListItem from './SearchResultListItem';
 import { ItemCard } from './ItemCard';
@@ -18,10 +19,14 @@ function SearchResultsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setBreadcrumbItems } = useBreadcrumbs();
+  const { searchResults: imageSearchResults, imagePreview, isSearching, clearSearch } = useSearch();
 
-  // Parse filters from URL
+  // Parse filters from URL (for text search)
   const filters = parseSearchUrlParams(searchParams);
   const { query, types } = filters;
+
+  // Determine if this is an image search or text search
+  const isImageSearch = imageSearchResults !== null && imageSearchResults !== undefined;
 
   // View mode state (saved in localStorage)
   const [viewMode, setViewMode] = useState(
@@ -30,7 +35,7 @@ function SearchResultsPage() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
 
-  // GraphQL query for search results
+  // GraphQL query for text search results (skip if image search)
   // Note: We don't pass type to backend - all type filtering happens client-side
   // This allows users to see and select all available types regardless of current filter
   const { data, loading, error, fetchMore } = useQuery(
@@ -41,7 +46,7 @@ function SearchResultsPage() {
         type: null,
         first: 30
       },
-      skip: !query
+      skip: !query || isImageSearch
     }
   );
 
@@ -49,24 +54,45 @@ function SearchResultsPage() {
   const [allResults, setAllResults] = useState([]);
   const [hasMore, setHasMore] = useState(false);
 
-  // Update results when data changes
+  // Update results when data changes (text search) or from image search
   useEffect(() => {
-    if (data?.databaseOfThingsSemanticSearch) {
+    if (isImageSearch && imageSearchResults) {
+      // For image search, we need to transform the results to match the expected format
+      // Image search returns: {image_id, image_url, thumbnail_url, similarity, parent_type, parent_id, parent_name}
+      // We need to transform to: {id, name, type, image_url, thumbnail_url, ...}
+      const transformedResults = imageSearchResults.map(result => ({
+        id: result.parent_id,
+        name: result.parent_name,
+        type: result.parent_type,
+        image_url: result.image_url,
+        thumbnail_url: result.thumbnail_url,
+        similarity: result.similarity,
+        // Flag to identify image search results
+        _imageSearchResult: true
+      }));
+      setAllResults(transformedResults);
+      setHasMore(false); // No pagination for image search results
+    } else if (data?.databaseOfThingsSemanticSearch) {
       setAllResults(data.databaseOfThingsSemanticSearch);
       // If we got 30 results, there might be more
       setHasMore(data.databaseOfThingsSemanticSearch.length === 30);
     }
-  }, [data]);
+  }, [data, isImageSearch, imageSearchResults]);
 
   // Update breadcrumbs
   useEffect(() => {
-    if (query) {
+    if (isImageSearch) {
+      setBreadcrumbItems([
+        { name: 'Home', path: '/' },
+        { name: 'Image Search', path: null }
+      ]);
+    } else if (query) {
       setBreadcrumbItems([
         { name: 'Home', path: '/' },
         { name: `Search: "${query}"`, path: null }
       ]);
     }
-  }, [query, setBreadcrumbItems]);
+  }, [query, isImageSearch, setBreadcrumbItems]);
 
   // Update view mode in localStorage
   const handleViewModeChange = (mode) => {
@@ -95,7 +121,7 @@ function SearchResultsPage() {
     setHasMore(false);
   };
 
-  if (!query) {
+  if (!query && !isImageSearch) {
     return (
       <div className="search-results-page">
         <div className="search-results-empty">
@@ -124,13 +150,31 @@ function SearchResultsPage() {
           {/* Header */}
           <div className="search-results-header">
             <div className="search-results-title">
-              <h1>Search results for: "{query}"</h1>
-              {!loading && (
-                <p className="search-results-count">
-                  {filteredResults.length === 0
-                    ? 'No results found'
-                    : `Showing ${filteredResults.length} result${filteredResults.length !== 1 ? 's' : ''}`}
-                </p>
+              {isImageSearch ? (
+                <>
+                  <div className="image-search-header">
+                    <ImageIcon size={24} />
+                    <h1>Similar Items</h1>
+                  </div>
+                  {!isSearching && (
+                    <p className="search-results-count">
+                      {filteredResults.length === 0
+                        ? 'No similar items found'
+                        : `Found ${filteredResults.length} visually similar item${filteredResults.length !== 1 ? 's' : ''}`}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h1>Search results for: "{query}"</h1>
+                  {!loading && (
+                    <p className="search-results-count">
+                      {filteredResults.length === 0
+                        ? 'No results found'
+                        : `Showing ${filteredResults.length} result${filteredResults.length !== 1 ? 's' : ''}`}
+                    </p>
+                  )}
+                </>
               )}
             </div>
 
@@ -154,7 +198,7 @@ function SearchResultsPage() {
           </div>
 
           {/* Loading State */}
-          {loading && (
+          {(loading || isSearching) && (
             <div className={`search-results-${viewMode}`}>
               {Array.from({ length: 12 }).map((_, i) => (
                 <ItemCardSkeleton key={i} />
@@ -172,18 +216,29 @@ function SearchResultsPage() {
           )}
 
           {/* Empty State */}
-          {!loading && !error && filteredResults.length === 0 && (
+          {!loading && !isSearching && !error && filteredResults.length === 0 && (
             <div className="search-results-empty">
-              <div className="search-results-empty-icon">🔍</div>
-              <p>No results found for "{query}"</p>
-              <p className="search-results-empty-hint">
-                Try adjusting your filters or search term
-              </p>
+              <div className="search-results-empty-icon">{isImageSearch ? '🖼️' : '🔍'}</div>
+              {isImageSearch ? (
+                <>
+                  <p>No similar items found</p>
+                  <p className="search-results-empty-hint">
+                    Try uploading a different image or adjusting the similarity threshold
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>No results found for "{query}"</p>
+                  <p className="search-results-empty-hint">
+                    Try adjusting your filters or search term
+                  </p>
+                </>
+              )}
             </div>
           )}
 
           {/* Results Grid/List */}
-          {!loading && !error && filteredResults.length > 0 && (
+          {!loading && !isSearching && !error && filteredResults.length > 0 && (
             <>
               {viewMode === 'grid' ? (
                 <div className="search-results-grid">

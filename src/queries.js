@@ -882,3 +882,19 @@ export const REORDER_COLLECTION_IMAGES = gql`
     }
   }
 `;
+
+// ===== IMAGE SEARCH MUTATIONS =====
+
+export const SEARCH_BY_IMAGE = gql`
+  mutation SearchByImage($image: Upload!, $limit: Int, $minSimilarity: Float) {
+    searchByImage(image: $image, limit: $limit, min_similarity: $minSimilarity) {
+      image_id
+      image_url
+      thumbnail_url
+      similarity
+      parent_type
+      parent_id
+      parent_name
+    }
+  }
+`;

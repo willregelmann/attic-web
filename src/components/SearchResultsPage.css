@@ -63,6 +63,18 @@
   margin: 0;
 }
 
+/* Image Search Header */
+.image-search-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.image-search-header svg {
+  color: var(--primary);
+}
+
 /* View Toggle */
 .search-view-toggle {
   display: flex;

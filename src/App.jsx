@@ -7,6 +7,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { FilterProvider } from './contexts/FilterContext';
 import { CollectionFilterProvider } from './contexts/CollectionFilterContext';
 import { BreadcrumbsProvider } from './contexts/BreadcrumbsContext';
+import { SearchProvider } from './contexts/SearchContext';
 import client from './apolloClient';
 import Navigation from './components/Navigation';
 import LoginModal from './components/LoginModal';
@@ -135,11 +136,13 @@ function App() {
     <ApolloProvider client={client}>
       <ThemeProvider>
         <FilterProvider>
-          <CollectionFilterProvider>
-            <AuthProvider>
-              <AppContent />
-            </AuthProvider>
-          </CollectionFilterProvider>
+          <SearchProvider>
+            <CollectionFilterProvider>
+              <AuthProvider>
+                <AppContent />
+              </AuthProvider>
+            </CollectionFilterProvider>
+          </SearchProvider>
         </FilterProvider>
       </ThemeProvider>
     </ApolloProvider>

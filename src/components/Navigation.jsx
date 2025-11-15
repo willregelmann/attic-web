@@ -1,15 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
+import { Camera } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
+import { useSearch } from '../contexts/SearchContext';
 import { useLazyQuery } from '@apollo/client/react';
 import { SEMANTIC_SEARCH_DATABASE_OF_THINGS } from '../queries';
 import { isCollectionType, formatEntityType } from '../utils/formatters';
 import Breadcrumbs from './Breadcrumbs';
 import ItemDetail from './ItemDetail';
 import MobileMenuPanel from './MobileMenuPanel';
+import { ImageSearchModal } from './ImageSearchModal';
 import './Navigation.css';
 
 // Get Google Client ID from environment variable
@@ -19,12 +22,14 @@ function Navigation({ onLogin, onSignup }) {
   const { user, logout, login } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const { breadcrumbItems, loading: breadcrumbsLoading } = useBreadcrumbs();
+  const { searchMode, setSearchMode } = useSearch();
   const navigate = useNavigate();
   const location = useLocation();
   const [showMenu, setShowMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [showImageSearchModal, setShowImageSearchModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
@@ -182,6 +187,14 @@ function Navigation({ onLogin, onSignup }) {
                   </svg>
                 </button>
               )}
+              <button
+                type="button"
+                className="search-image-toggle"
+                onClick={() => setShowImageSearchModal(true)}
+                title="Search by image"
+              >
+                <Camera size={18} />
+              </button>
             </div>
           </form>
 
@@ -367,7 +380,7 @@ function Navigation({ onLogin, onSignup }) {
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
       />
-    {breadcrumbItems.length > 0 && !location.pathname.startsWith('/search') && (
+    {breadcrumbItems.length > 0 && (
       <Breadcrumbs items={breadcrumbItems} loading={breadcrumbsLoading} />
     )}
 
@@ -384,6 +397,12 @@ function Navigation({ onLogin, onSignup }) {
         onClose={() => setSelectedItem(null)}
       />
     )}
+
+    {/* Image Search Modal */}
+    <ImageSearchModal
+      isOpen={showImageSearchModal}
+      onClose={() => setShowImageSearchModal(false)}
+    />
 
     </>
   );
