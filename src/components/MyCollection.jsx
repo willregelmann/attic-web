@@ -21,6 +21,7 @@ import { useMultiSelect } from '../hooks/useMultiSelect';
 import { BatchActionModal } from './BatchActionModal';
 import { BatchAddToCollectionModal } from './BatchAddToCollectionModal';
 import AddItemsModal from './AddItemsModal';
+import AddCustomItemModal from './AddCustomItemModal';
 import Toast from './Toast';
 import './MyCollection.css';
 import './MultiSelectToolbar.css';
@@ -44,6 +45,7 @@ function MyCollection() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteItemModal, setShowDeleteItemModal] = useState(false);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [showAddCustomItemModal, setShowAddCustomItemModal] = useState(false);
   const [preSelectedItemForAdd, setPreSelectedItemForAdd] = useState(null);
   const saveItemRef = useRef(null); // Ref to trigger save from ItemDetail
 
@@ -874,6 +876,13 @@ function MyCollection() {
                 setCollectionCreateMode(true);
               }
             }] : []),
+            // Show "Quick Add Custom Item" if no item is selected
+            ...(!selectedItem ? [{
+              id: 'quick-add-custom-item',
+              icon: 'fas fa-plus',
+              label: 'Quick Add Custom Item',
+              onClick: () => setShowAddCustomItemModal(true)
+            }] : []),
             // Show edit button for custom and linked collections
             ...(selectedItem && (isCustomCollection(selectedItem.type) || isLinkedCollection(selectedItem.type)) ? [{
               id: 'edit-collection',
@@ -990,6 +999,16 @@ function MyCollection() {
           setToastMessage({ text: 'Item duplicated successfully', type: 'success' });
         }}
         preSelectedItem={preSelectedItemForAdd}
+      />
+
+      {/* Add Custom Item Modal */}
+      <AddCustomItemModal
+        isOpen={showAddCustomItemModal}
+        onClose={() => setShowAddCustomItemModal(false)}
+        parentCollectionId={currentParentId}
+        onSuccess={() => {
+          setToastMessage({ text: 'Custom item added successfully', type: 'success' });
+        }}
       />
 
       {/* Batch Action Confirmation - Delete */}

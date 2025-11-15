@@ -290,6 +290,24 @@ export const ADD_ITEM_TO_MY_COLLECTION = gql`
   }
 `;
 
+export const ADD_CUSTOM_ITEM_TO_MY_COLLECTION = gql`
+  mutation AddCustomItemToMyCollection($name: String!, $parentCollectionId: ID, $notes: String, $images: [Upload!]) {
+    addCustomItemToMyCollection(name: $name, parent_collection_id: $parentCollectionId, notes: $notes, images: $images) {
+      id
+      name
+      entity_id
+      user_id
+      notes
+      images {
+        id
+        original
+        thumbnail
+      }
+      created_at
+    }
+  }
+`;
+
 export const UPDATE_MY_ITEM = gql`
   mutation UpdateMyItem($userItemId: ID!, $variantId: ID, $metadata: JSON, $notes: String) {
     updateMyItem(user_item_id: $userItemId, variant_id: $variantId, metadata: $metadata, notes: $notes) {
