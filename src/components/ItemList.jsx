@@ -458,10 +458,10 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
       {/* Multi-select toolbar (desktop) */}
       {isMultiSelectMode && (
-        <div className="multi-select-toolbar">
-          <span className="selection-count">{selectedCount} items selected</span>
+        <div className="multi-select-toolbar" data-testid="multi-select-toolbar">
+          <span className="selection-count" data-testid="selection-count">{selectedCount} items selected</span>
           <div className="toolbar-actions">
-            <button onClick={exitMultiSelectMode} className="cancel-btn">
+            <button onClick={exitMultiSelectMode} className="cancel-btn" data-testid="cancel-multi-select-btn">
               Cancel
             </button>
             <button
