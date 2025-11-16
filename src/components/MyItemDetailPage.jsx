@@ -5,6 +5,7 @@ import { GET_MY_ITEM, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, MY_COLLECTION_TREE 
 import ItemDetailContent from './ItemDetailContent';
 import CircularMenu from './CircularMenu';
 import MobileSearch from './MobileSearch';
+import { ImageSearchModal } from './ImageSearchModal';
 import AddItemsModal from './AddItemsModal';
 import { BatchActionModal } from './BatchActionModal';
 import Toast from './Toast';
@@ -20,6 +21,7 @@ function MyItemDetailPage() {
   const navigate = useNavigate();
   const [itemEditMode, setItemEditMode] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showImageSearchModal, setShowImageSearchModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [preSelectedItem, setPreSelectedItem] = useState(null);
@@ -187,6 +189,12 @@ function MyItemDetailPage() {
       <MobileSearch
         isOpen={showMobileSearch}
         onClose={() => setShowMobileSearch(false)}
+        onOpenImageSearch={() => setShowImageSearchModal(true)}
+      />
+
+      <ImageSearchModal
+        isOpen={showImageSearchModal}
+        onClose={() => setShowImageSearchModal(false)}
       />
 
       {/* Add Items Modal (for duplicate) */}

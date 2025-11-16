@@ -616,10 +616,9 @@
     font-size: 1.125rem;
   }
 
-  /* Keep search bar visible on mobile but make it responsive */
+  /* Hide desktop search bar on mobile (MobileSearch component is used instead) */
   .nav-search-desktop {
-    flex: 1;
-    max-width: none;
+    display: none;
   }
 
   /* Show mobile menu button */

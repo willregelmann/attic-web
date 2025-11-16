@@ -12,6 +12,7 @@ import client from './apolloClient';
 import Navigation from './components/Navigation';
 import LoginModal from './components/LoginModal';
 import MobileSearch from './components/MobileSearch';
+import { ImageSearchModal } from './components/ImageSearchModal';
 import LandingPage from './components/LandingPage';
 import CollectionView from './components/CollectionView';
 import UserProfile from './components/UserProfile';
@@ -30,6 +31,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 function AppContent() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showImageSearchModal, setShowImageSearchModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
@@ -114,6 +116,12 @@ function AppContent() {
         <MobileSearch
           isOpen={showMobileSearch}
           onClose={() => setShowMobileSearch(false)}
+          onOpenImageSearch={() => setShowImageSearchModal(true)}
+        />
+
+        <ImageSearchModal
+          isOpen={showImageSearchModal}
+          onClose={() => setShowImageSearchModal(false)}
         />
 
         {/* Mobile Circular Menu - context-aware actions */}

@@ -7,6 +7,7 @@ import { isCollectionType } from '../utils/formatters';
 import ItemDetailContent from './ItemDetailContent';
 import CircularMenu from './CircularMenu';
 import MobileSearch from './MobileSearch';
+import { ImageSearchModal } from './ImageSearchModal';
 import './ItemDetail.css';
 
 /**
@@ -21,6 +22,7 @@ function ItemDetailPage() {
   const { isAuthenticated } = useAuth();
   const [itemAddMode, setItemAddMode] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showImageSearchModal, setShowImageSearchModal] = useState(false);
   const saveItemRef = useRef(null);
 
   // Check if navigated from MyCollection (for wishlist styling and collection context)
@@ -147,6 +149,12 @@ function ItemDetailPage() {
       <MobileSearch
         isOpen={showMobileSearch}
         onClose={() => setShowMobileSearch(false)}
+        onOpenImageSearch={() => setShowImageSearchModal(true)}
+      />
+
+      <ImageSearchModal
+        isOpen={showImageSearchModal}
+        onClose={() => setShowImageSearchModal(false)}
       />
     </div>
   );

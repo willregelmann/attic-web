@@ -16,6 +16,7 @@ import { useFilters } from '../contexts/FilterContext';
 import { groupDuplicateItems } from '../utils/groupDuplicates';
 import CircularMenu from './CircularMenu';
 import MobileSearch from './MobileSearch';
+import { ImageSearchModal } from './ImageSearchModal';
 import CollectionFilterPanel from './CollectionFilterPanel';
 import { useMultiSelect } from '../hooks/useMultiSelect';
 import { BatchActionModal } from './BatchActionModal';
@@ -41,6 +42,7 @@ function MyCollection() {
   const [itemAddMode, setItemAddMode] = useState(false);
   const [collectionCreateMode, setCollectionCreateMode] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showImageSearchModal, setShowImageSearchModal] = useState(false);
   const [showCollectionFilters, setShowCollectionFilters] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteItemModal, setShowDeleteItemModal] = useState(false);
@@ -942,6 +944,13 @@ function MyCollection() {
       <MobileSearch
         isOpen={showMobileSearch}
         onClose={() => setShowMobileSearch(false)}
+        onOpenImageSearch={() => setShowImageSearchModal(true)}
+      />
+
+      {/* Image Search Modal */}
+      <ImageSearchModal
+        isOpen={showImageSearchModal}
+        onClose={() => setShowImageSearchModal(false)}
       />
 
       {/* Collection Filter Panel - for linked and custom collections */}

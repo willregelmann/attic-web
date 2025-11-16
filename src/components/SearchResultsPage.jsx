@@ -12,6 +12,7 @@ import { ItemCard } from './ItemCard';
 import { ItemCardSkeleton } from './SkeletonLoader';
 import CircularMenu from './CircularMenu';
 import MobileSearch from './MobileSearch';
+import { ImageSearchModal } from './ImageSearchModal';
 import './CollectionFilterPanel.css';
 import './SearchResultsPage.css';
 
@@ -34,6 +35,7 @@ function SearchResultsPage() {
   );
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showImageSearchModal, setShowImageSearchModal] = useState(false);
 
   // GraphQL query for text search results (skip if image search)
   // Note: We don't pass type to backend - all type filtering happens client-side
@@ -274,6 +276,13 @@ function SearchResultsPage() {
       <MobileSearch
         isOpen={showMobileSearch}
         onClose={() => setShowMobileSearch(false)}
+        onOpenImageSearch={() => setShowImageSearchModal(true)}
+      />
+
+      {/* Image Search Modal */}
+      <ImageSearchModal
+        isOpen={showImageSearchModal}
+        onClose={() => setShowImageSearchModal(false)}
       />
 
       {/* Mobile Filter Modal */}

@@ -19,6 +19,7 @@ import ItemDetail from './ItemDetail';
 import CollectionFilterPanel from './CollectionFilterPanel';
 import CircularMenu from './CircularMenu';
 import MobileSearch from './MobileSearch';
+import { ImageSearchModal } from './ImageSearchModal';
 import Toast from './Toast';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { formatEntityType, isCollectionType } from '../utils/formatters';
@@ -47,6 +48,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [showCollectionFilters, setShowCollectionFilters] = useState(false);
   const [isWishlistMode, setIsWishlistMode] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showImageSearchModal, setShowImageSearchModal] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const saveCollectionRef = useRef(null); // Ref to trigger save from CircularMenu
 
@@ -696,6 +698,13 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
       <MobileSearch
         isOpen={showMobileSearch}
         onClose={() => setShowMobileSearch(false)}
+        onOpenImageSearch={() => setShowImageSearchModal(true)}
+      />
+
+      {/* Image Search Modal */}
+      <ImageSearchModal
+        isOpen={showImageSearchModal}
+        onClose={() => setShowImageSearchModal(false)}
       />
 
       {/* Batch Add to Collection Modal */}

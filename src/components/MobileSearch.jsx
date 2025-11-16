@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLazyQuery } from '@apollo/client/react';
+import { Camera } from 'lucide-react';
 import { SEMANTIC_SEARCH_DATABASE_OF_THINGS } from '../queries';
 import { isCollectionType, formatEntityType } from '../utils/formatters';
 import './MobileSearch.css';
 
-function MobileSearch({ isOpen, onClose, onAddToCollection }) {
+function MobileSearch({ isOpen, onClose, onAddToCollection, onOpenImageSearch }) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -98,6 +99,17 @@ function MobileSearch({ isOpen, onClose, onAddToCollection }) {
                 </svg>
               </button>
             )}
+            <button
+              type="button"
+              className="mobile-search-image-toggle"
+              onClick={() => {
+                onOpenImageSearch?.(); // Open image search modal
+                onClose(); // Close mobile search when switching to image search
+              }}
+              title="Search by image"
+            >
+              <Camera size={18} />
+            </button>
           </div>
         </div>
 
