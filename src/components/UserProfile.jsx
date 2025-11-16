@@ -123,12 +123,13 @@ function UserProfile() {
         </div>
       </div>
 
-      <div className="profile-section">
+      <div className="profile-section" data-testid="api-tokens-section">
         <div className="section-header">
           <h2>API Tokens</h2>
           <button
             className="btn-primary"
             onClick={() => setShowNewTokenModal(true)}
+            data-testid="create-token-btn"
           >
             <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
               <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -142,13 +143,13 @@ function UserProfile() {
         </div>
 
         {loading ? (
-          <p>Loading tokens...</p>
+          <p data-testid="tokens-loading">Loading tokens...</p>
         ) : (
-          <div className="tokens-list">
+          <div className="tokens-list" data-testid="tokens-list">
             {data?.myApiTokens?.length === 0 ? (
-              <p className="no-tokens">No API tokens yet. Create one to get started.</p>
+              <p className="no-tokens" data-testid="tokens-empty-state">No API tokens yet. Create one to get started.</p>
             ) : (
-              <table className="tokens-table">
+              <table className="tokens-table" data-testid="tokens-table">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -160,15 +161,16 @@ function UserProfile() {
                 </thead>
                 <tbody>
                   {data?.myApiTokens?.map((token) => (
-                    <tr key={token.id}>
-                      <td className="token-name">{token.name}</td>
-                      <td>{new Date(token.created_at).toLocaleDateString()}</td>
-                      <td>{token.last_used_at ? new Date(token.last_used_at).toLocaleDateString() : 'Never'}</td>
-                      <td>{token.expires_at ? new Date(token.expires_at).toLocaleDateString() : 'Never'}</td>
+                    <tr key={token.id} data-testid={`token-row-${token.id}`}>
+                      <td className="token-name" data-testid={`token-name-${token.id}`}>{token.name}</td>
+                      <td data-testid={`token-created-${token.id}`}>{new Date(token.created_at).toLocaleDateString()}</td>
+                      <td data-testid={`token-last-used-${token.id}`}>{token.last_used_at ? new Date(token.last_used_at).toLocaleDateString() : 'Never'}</td>
+                      <td data-testid={`token-expires-${token.id}`}>{token.expires_at ? new Date(token.expires_at).toLocaleDateString() : 'Never'}</td>
                       <td>
                         <button
                           className="btn-danger"
                           onClick={() => handleRevokeToken(token.id)}
+                          data-testid={`revoke-token-btn-${token.id}`}
                         >
                           Revoke
                         </button>
@@ -185,11 +187,11 @@ function UserProfile() {
 
       {/* New Token Modal */}
       {showNewTokenModal && (
-        <div className="modal-overlay" onClick={closeTokenModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={closeTokenModal} data-testid="token-modal-overlay">
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} data-testid="token-modal">
             <div className="modal-header">
               <h2>{generatedToken ? 'Token Created Successfully' : 'Create New API Token'}</h2>
-              <button className="modal-close" onClick={closeTokenModal}>
+              <button className="modal-close" onClick={closeTokenModal} data-testid="modal-close-btn">
                 <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
                   <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
@@ -210,17 +212,19 @@ function UserProfile() {
                       placeholder="e.g., Mobile App, CLI Tool"
                       className="form-input"
                       autoFocus
+                      data-testid="token-name-input"
                     />
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button className="btn-secondary" onClick={closeTokenModal}>
+                  <button className="btn-secondary" onClick={closeTokenModal} data-testid="modal-cancel-btn">
                     Cancel
                   </button>
                   <button
                     className="btn-primary"
                     onClick={handleCreateToken}
                     disabled={!newTokenName.trim() || isFormBusy(isCreatingToken)}
+                    data-testid="modal-create-token-btn"
                   >
                     Create Token
                   </button>
@@ -229,21 +233,22 @@ function UserProfile() {
             ) : (
               <>
                 <div className="modal-body">
-                  <div className="token-warning">
+                  <div className="token-warning" data-testid="token-warning">
                     <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
                       <path d="M12 9v4M12 17h.01M12 2l10 17H2L12 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                     <p>
-                      <strong>Important:</strong> This is the only time you'll see this token. 
+                      <strong>Important:</strong> This is the only time you'll see this token.
                       Make sure to copy it now and store it securely.
                     </p>
                   </div>
-                  <div className="token-display">
-                    <code className="token-value">{generatedToken}</code>
+                  <div className="token-display" data-testid="token-display">
+                    <code className="token-value" data-testid="token-value">{generatedToken}</code>
                     <button
                       className="btn-copy"
                       onClick={handleCopyToken}
                       title="Copy to clipboard"
+                      data-testid="copy-token-btn"
                     >
                       {copiedToken ? (
                         <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
@@ -257,7 +262,7 @@ function UserProfile() {
                       )}
                     </button>
                   </div>
-                  <div className="token-usage">
+                  <div className="token-usage" data-testid="token-usage">
                     <h3>How to use this token:</h3>
                     <p>Include it in your API requests using one of these methods:</p>
                     <ul>
@@ -267,7 +272,7 @@ function UserProfile() {
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button className="btn-primary" onClick={closeTokenModal}>
+                  <button className="btn-primary" onClick={closeTokenModal} data-testid="modal-done-btn">
                     Done
                   </button>
                 </div>
