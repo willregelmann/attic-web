@@ -163,8 +163,9 @@ export function ImageUpload({
             onDragEnd={handleDragEnd}
             onDragOver={(e) => handleDragOver(e, idx)}
             onDrop={(e) => handleDrop(e, idx)}
+            data-testid="image-preview"
           >
-            <div className="image-upload-drag-handle">
+            <div className="image-upload-drag-handle" data-testid="drag-handle">
               <GripVertical size={16} />
             </div>
             <img
@@ -177,10 +178,11 @@ export function ImageUpload({
               className="image-upload-remove"
               onClick={() => handleRemove(imageObj)}
               aria-label="Remove image"
+              data-testid="remove-image-btn"
             >
               <X size={16} />
             </button>
-            {idx === 0 && <span className="image-upload-primary">Primary</span>}
+            {idx === 0 && <span className="image-upload-primary" data-testid="primary-image-badge">Primary</span>}
           </div>
         ))}
 
@@ -209,6 +211,7 @@ export function ImageUpload({
         multiple
         onChange={handleFileSelect}
         style={{ display: 'none' }}
+        data-testid="image-upload"
       />
     </div>
   );

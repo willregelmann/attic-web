@@ -27,8 +27,8 @@ export function ImageGalleryModal({ item, onClose, onUpdate }) {
 
   return (
     <div className="image-gallery-modal-overlay" onClick={onClose}>
-      <div className="image-gallery-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="image-gallery-close" onClick={onClose}>
+      <div className="image-gallery-modal" onClick={(e) => e.stopPropagation()} data-testid="image-gallery-modal">
+        <button className="image-gallery-close" onClick={onClose} data-testid="close-gallery-btn">
           <X size={24} />
         </button>
 
@@ -43,10 +43,10 @@ export function ImageGalleryModal({ item, onClose, onUpdate }) {
 
               {images.length > 1 && (
                 <>
-                  <button className="image-gallery-nav prev" onClick={handlePrevious}>
+                  <button className="image-gallery-nav prev" onClick={handlePrevious} data-testid="gallery-prev-btn">
                     <ChevronLeft size={32} />
                   </button>
-                  <button className="image-gallery-nav next" onClick={handleNext}>
+                  <button className="image-gallery-nav next" onClick={handleNext} data-testid="gallery-next-btn">
                     <ChevronRight size={32} />
                   </button>
                 </>
@@ -60,6 +60,7 @@ export function ImageGalleryModal({ item, onClose, onUpdate }) {
               <button
                 className="image-gallery-manage-btn"
                 onClick={() => setIsManaging(true)}
+                data-testid="manage-images-btn"
               >
                 Manage Images
               </button>
