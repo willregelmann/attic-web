@@ -38,7 +38,7 @@ function LoginModal({ isOpen, onClose }) {
 
         <div className="modal-body">
           {GOOGLE_CLIENT_ID ? (
-            <div className="google-login-wrapper">
+            <div className="google-login-wrapper" data-testid="google-oauth-btn">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={handleGoogleError}
@@ -50,7 +50,7 @@ function LoginModal({ isOpen, onClose }) {
               />
             </div>
           ) : (
-            <div className="google-login-unavailable">
+            <div className="google-login-unavailable" data-testid="google-oauth-unavailable">
               <p>Google Sign-In is not configured.</p>
               <p className="config-note">Set VITE_GOOGLE_CLIENT_ID to enable authentication.</p>
             </div>

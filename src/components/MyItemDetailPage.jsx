@@ -180,7 +180,8 @@ function MyItemDetailPage() {
               icon: 'fas fa-trash',
               label: 'Delete item',
               onClick: () => setShowDeleteModal(true),
-              variant: 'danger'
+              variant: 'danger',
+              testid: 'delete-item-action'
             }
           ]}
         />

@@ -1125,6 +1125,7 @@ function ItemDetailContent({
                           className="icon-btn delete-icon"
                           onClick={onDeleteItem}
                           title="Delete item"
+                          data-testid="delete-item-btn"
                         >
                           <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
                             <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

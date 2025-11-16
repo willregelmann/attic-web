@@ -5,13 +5,14 @@ import './CircularMenu.css';
  * CircularMenu - A mobile-friendly floating action button menu
  * that expands into a circular arrangement of action buttons
  *
- * @param {Array} actions - Array of action objects with { icon, label, onClick, id, disabled, variant }
+ * @param {Array} actions - Array of action objects with { icon, label, onClick, id, disabled, variant, testid }
  *   - icon: FontAwesome class string (e.g., "fas fa-search") or React element
  *   - label: Aria label and title text
  *   - onClick: Callback function
  *   - id: Unique identifier (optional)
  *   - disabled: Whether the action is disabled (optional)
  *   - variant: Visual variant: 'default', 'danger', etc. (optional)
+ *   - testid: data-testid attribute value (optional)
  * @param {Function} onBackdropClick - Callback when backdrop is clicked
  * @param {Boolean} showOnDesktop - Whether to show menu on desktop (default: false)
  * @param {String} mainButtonMode - 'menu' (default) or 'action' for direct action button
@@ -102,6 +103,7 @@ const CircularMenu = ({
               aria-label={action.label}
               title={action.label}
               disabled={action.disabled || false}
+              data-testid={action.testid}
             >
               {typeof action.icon === 'string' ? (
                 <i className={action.icon}></i>
