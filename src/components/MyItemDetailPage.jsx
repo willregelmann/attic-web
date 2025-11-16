@@ -163,7 +163,8 @@ function MyItemDetailPage() {
               id: 'edit-item',
               icon: 'fas fa-edit',
               label: 'Edit item',
-              onClick: () => setItemEditMode(true)
+              onClick: () => setItemEditMode(true),
+              testid: 'edit-item-action'
             },
             {
               id: 'duplicate-item',

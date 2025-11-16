@@ -1107,6 +1107,7 @@ function ItemDetailContent({
                         onClick={handleSave}
                         disabled={isSaving}
                         title="Save changes"
+                        data-testid="save-item-btn"
                       >
                         <i className="fas fa-save"></i>
                       </button>
@@ -1117,6 +1118,7 @@ function ItemDetailContent({
                         className="icon-btn edit-icon"
                         onClick={() => handleSetEditMode(true)}
                         title="Edit item"
+                        data-testid="edit-item-btn"
                       >
                         <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1327,6 +1329,7 @@ function ItemDetailContent({
                   onChange={(e) => setEditNotes(e.target.value)}
                   placeholder="Add your notes about this item..."
                   rows={3}
+                  data-testid="item-notes-input"
                 />
               ) : (
                 <p className="meta-value notes-value" style={{ margin: 0, lineHeight: 1.6 }}>
