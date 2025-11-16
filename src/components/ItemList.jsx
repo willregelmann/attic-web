@@ -468,6 +468,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
               onClick={() => setShowBatchConfirm(true)}
               className="action-btn"
               disabled={selectedCount === 0}
+              data-testid="batch-add-collection-btn"
             >
               Add to My Collection
             </button>

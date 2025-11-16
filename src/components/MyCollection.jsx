@@ -688,6 +688,7 @@ function MyCollection() {
                 onClick={handleBatchDelete}
                 className="action-btn danger"
                 disabled={selectedCount === 0}
+                data-testid="batch-delete-btn"
               >
                 Delete
               </button>
@@ -697,6 +698,7 @@ function MyCollection() {
                 onClick={handleBatchAdd}
                 className="action-btn"
                 disabled={selectedCount === 0}
+                data-testid="batch-add-collection-btn"
               >
                 Add to Collection
               </button>
