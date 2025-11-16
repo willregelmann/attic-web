@@ -991,6 +991,7 @@ function ItemDetailContent({
                   onChange={(e) => setEditCollectionName(e.target.value)}
                   className="detail-title-edit"
                   placeholder="Collection name"
+                  data-testid="collection-name-input"
                 />
               ) : (
                 <h2 className="detail-title" style={{ margin: 0 }}>{item.name}</h2>
@@ -1004,6 +1005,7 @@ function ItemDetailContent({
                       onClick={handleSave}
                       disabled={isSaving}
                       title="Save changes"
+                      data-testid="save-collection-btn"
                     >
                       <i className="fas fa-save"></i>
                     </button>
@@ -1013,6 +1015,7 @@ function ItemDetailContent({
                         className="icon-btn edit-icon"
                         onClick={() => handleSetEditMode(true)}
                         title="Edit collection"
+                        data-testid="edit-collection-btn"
                       >
                         <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1253,6 +1256,7 @@ function ItemDetailContent({
                   onChange={(e) => setEditCollectionDescription(e.target.value)}
                   placeholder="Add a description for this collection..."
                   rows={3}
+                  data-testid="collection-description-input"
                 />
               ) : (
                 <p className="meta-value notes-value" style={{ margin: 0, lineHeight: 1.6 }}>

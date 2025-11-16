@@ -890,7 +890,8 @@ function MyCollection() {
               id: 'edit-collection',
               icon: 'fas fa-edit',
               label: isLinkedCollection(selectedItem.type) ? 'Move collection' : 'Edit collection',
-              onClick: () => setItemEditMode(true)
+              onClick: () => setItemEditMode(true),
+              testid: 'edit-collection-action'
             }] : []),
             // Show delete button for custom and linked collections
             ...(selectedItem && (isCustomCollection(selectedItem.type) || isLinkedCollection(selectedItem.type)) ? [{
