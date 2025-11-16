@@ -140,7 +140,7 @@ function MyCollection() {
 
   const { loading, error, data, refetch } = useQuery(MY_COLLECTION_TREE, {
     variables: { parentId: currentParentId },
-    fetchPolicy: 'cache-first'
+    fetchPolicy: 'cache-and-network'
   });
 
   // Fetch DBoT collection metadata for linked collections
