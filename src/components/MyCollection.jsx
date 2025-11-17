@@ -3,7 +3,7 @@ import { useQuery, useApolloClient, useMutation } from '@apollo/client/react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MY_COLLECTION_TREE, GET_DATABASE_OF_THINGS_ENTITY, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, GET_COLLECTION_PARENT_COLLECTIONS, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, BATCH_ADD_ITEMS_TO_WISHLIST, BATCH_ADD_ITEMS_TO_MY_COLLECTION, DELETE_USER_COLLECTION, UPLOAD_ITEM_IMAGES, REORDER_ITEM_IMAGES } from '../queries';
 import { CollectionHeader } from './CollectionHeader';
-import { ItemGrid } from './ItemGrid';
+import { EntityCardGrid } from './EntityCardGrid';
 import ItemDetail from './ItemDetail';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { DeleteCollectionModal } from './DeleteCollectionModal';
@@ -393,7 +393,7 @@ function MyCollection() {
       }
     : current_collection;
 
-  // Create ownership set for ItemGrid
+  // Create ownership set for EntityCardGrid
   const userOwnership = new Set(items.map(item => item.id));
 
   // Determine if current collection supports filtering
@@ -709,7 +709,7 @@ function MyCollection() {
 
       {/* Collections and Items Grid */}
       {displayItems.length > 0 ? (
-        <ItemGrid
+        <EntityCardGrid
           items={displayItems}
           onItemClick={(item, index) => {
             // In multi-select mode, handled by ItemCard
@@ -737,24 +737,6 @@ function MyCollection() {
           selectedItems={new Set(selectedIds)}
           onItemSelectionToggle={toggleItemSelection}
           allowCollectionSelection={true}
-          onDuplicate={(entityId) => {
-            // Find the item with this entity_id
-            const item = displayItems.find(i => (i.entity_id || i.id) === entityId);
-            if (item) {
-              setPreSelectedItemForAdd(item);
-              setShowAddItemModal(true);
-            }
-          }}
-          onEdit={(item) => {
-            setSelectedItem(item);
-            setSelectedItemIndex(null);
-            setItemEditMode(true);
-          }}
-          onDelete={(item) => {
-            setSelectedItem(item);
-            setSelectedItemIndex(null);
-            setShowDeleteItemModal(true);
-          }}
         />
       ) : (
         <div className="empty-state">

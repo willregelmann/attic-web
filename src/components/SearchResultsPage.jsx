@@ -8,8 +8,8 @@ import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { useSearch } from '../contexts/SearchContext';
 import SearchFilterPanel from './SearchFilterPanel';
 import SearchResultListItem from './SearchResultListItem';
-import { ItemCard } from './ItemCard';
-import { ItemCardSkeleton } from './SkeletonLoader';
+import { EntityCard } from './EntityCard';
+import { EntityCardSkeleton } from './SkeletonLoader';
 import CircularMenu from './CircularMenu';
 import MobileSearch from './MobileSearch';
 import { ImageSearchModal } from './ImageSearchModal';
@@ -203,7 +203,7 @@ function SearchResultsPage() {
           {(loading || isSearching) && (
             <div className={`search-results-${viewMode}`}>
               {Array.from({ length: 12 }).map((_, i) => (
-                <ItemCardSkeleton key={i} />
+                <EntityCardSkeleton key={i} />
               ))}
             </div>
           )}
@@ -245,7 +245,7 @@ function SearchResultsPage() {
               {viewMode === 'grid' ? (
                 <div className="search-results-grid">
                   {filteredResults.map(item => (
-                    <ItemCard key={item.id} item={item} />
+                    <EntityCard key={item.id} item={item} />
                   ))}
                 </div>
               ) : (

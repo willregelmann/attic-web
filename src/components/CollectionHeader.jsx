@@ -1,5 +1,4 @@
-import { useTheme } from '../contexts/ThemeContext';
-import { getTypeIcon } from '../utils/iconUtils.jsx';
+import { EntityImage } from './EntityImage';
 import './CollectionHeader.css';
 
 /**
@@ -30,25 +29,11 @@ export function CollectionHeader({
   showProgress = true,
   hideImage = false
 }) {
-  const { isDarkMode } = useTheme();
   const progressPercentage = totalCount > 0 ? Math.round((ownedCount / totalCount) * 100) : 0;
 
   const headerClass = clickable
     ? 'collection-header-detail clickable'
     : 'collection-header-detail';
-
-  // Determine image to display - priority order:
-  // 1. thumbnail_url/image_url (for DBoT entities)
-  // 2. representative_images[0] (for custom collections)
-  const imageUrl = collection?.thumbnail_url
-    || collection?.image_url
-    || (collection?.representative_images && collection.representative_images.length > 0
-      ? collection.representative_images[0]
-      : null);
-
-  // Get appropriate icon for collection type
-  const iconColor = isDarkMode ? '#9ca3af' : '#6b7280';
-  const fallbackIcon = getTypeIcon(collection?.type || 'collection', iconColor, 60);
 
   return (
     <div
@@ -58,30 +43,15 @@ export function CollectionHeader({
       style={clickable ? { cursor: 'pointer' } : undefined}
     >
       {/* Collection Image */}
-      {!hideImage && (imageUrl ? (
-        <div
+      {!hideImage && (
+        <EntityImage
+          item={collection}
+          showBadges={false}
+          lazyLoad={false}
           className="collection-image-large"
-          style={{
-            backgroundImage: `url(${imageUrl})`,
-            backgroundSize: 'contain',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            backgroundColor: 'transparent'
-          }}
+          iconSize={60}
         />
-      ) : (
-        <div
-          className="collection-image-large"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'transparent'
-          }}
-        >
-          {fallbackIcon}
-        </div>
-      ))}
+      )}
 
       {/* Collection Details */}
       <div className="collection-details">

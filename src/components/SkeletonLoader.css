@@ -25,7 +25,7 @@
 }
 
 .skeleton-card .collection-content,
-.skeleton-card .item-content {
+.skeleton-card .entity-content {
   padding: 16px;
   display: flex;
   flex-direction: column;

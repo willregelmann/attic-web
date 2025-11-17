@@ -14,12 +14,12 @@ export function Skeleton({ width = '100%', height = '20px', borderRadius = '4px'
   );
 }
 
-// Item Card Skeleton (used for both items and collections)
-export function ItemCardSkeleton() {
+// Entity Card Skeleton (used for both items and collections)
+export function EntityCardSkeleton() {
   return (
-    <div className="item-card skeleton-card">
+    <div className="entity-card skeleton-card">
       <Skeleton height="250px" borderRadius="12px 12px 0 0" className="skeleton-image" />
-      <div className="item-content">
+      <div className="entity-content">
         <Skeleton width="80%" height="20px" />
         <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
           <Skeleton width="60px" height="18px" borderRadius="12px" />
@@ -53,18 +53,18 @@ export function ItemListSkeleton({ count = 12 }) {
   return (
     <div className="items-grid">
       {Array.from({ length: count }).map((_, index) => (
-        <ItemCardSkeleton key={index} />
+        <EntityCardSkeleton key={index} />
       ))}
     </div>
   );
 }
 
-// Collection Grid Skeleton (uses ItemCardSkeleton)
+// Collection Grid Skeleton (uses EntityCardSkeleton)
 export function CollectionGridSkeleton({ count = 6 }) {
   return (
     <div className="items-grid">
       {Array.from({ length: count }).map((_, index) => (
-        <ItemCardSkeleton key={index} />
+        <EntityCardSkeleton key={index} />
       ))}
     </div>
   );

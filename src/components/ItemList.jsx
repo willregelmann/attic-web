@@ -23,9 +23,9 @@ import { ImageSearchModal } from './ImageSearchModal';
 import Toast from './Toast';
 import { CollectionHeaderSkeleton, ItemListSkeleton } from './SkeletonLoader';
 import { formatEntityType, isCollectionType } from '../utils/formatters';
-import { ItemCard, ItemCardImage } from './ItemCard';
+import { EntityCard } from './EntityCard';
 import { CollectionHeader } from './CollectionHeader';
-import { ItemGrid } from './ItemGrid';
+import { EntityCardGrid } from './EntityCardGrid';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { useMultiSelect } from '../hooks/useMultiSelect';
 import { BatchActionModal } from './BatchActionModal';
@@ -478,7 +478,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
       {/* Items Grid/List */}
       {filteredItems.length > 0 ? (
-        <ItemGrid
+        <EntityCardGrid
           items={filteredItems}
           onItemClick={(item, index) => {
             // In multi-select mode, handle via ItemCard

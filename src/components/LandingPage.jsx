@@ -5,7 +5,7 @@ import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFilters } from '../contexts/FilterContext';
 import { filterEntities } from '../utils/filterUtils';
-import { ItemGrid } from './ItemGrid';
+import { EntityCardGrid } from './EntityCardGrid';
 import './LandingPage.css';
 
 const LandingPage = () => {
@@ -55,7 +55,7 @@ const LandingPage = () => {
             <h2 className="section-title">Recently Viewed</h2>
           </div>
 
-          <ItemGrid
+          <EntityCardGrid
             items={filteredRecentlyViewed}
             onCollectionClick={(collection) => handleCollectionClick(collection.id)}
             onItemClick={(item) => handleCollectionClick(item.id)}

@@ -1,8 +1,9 @@
-import { ItemCard } from './ItemCard';
+import { useState } from 'react';
+import { EntityCard } from './EntityCard';
 import { isCollectionType } from '../utils/formatters';
 
 /**
- * ItemGrid - Reusable grid wrapper for rendering items and collections
+ * EntityCardGrid - Reusable grid wrapper for rendering entity cards (items and collections)
  *
  * @param {Array} items - Array of items/collections to render
  * @param {Function} onItemClick - Click handler for items (receives item, index)
@@ -16,11 +17,8 @@ import { isCollectionType } from '../utils/formatters';
  * @param {Set} selectedItems - Set of selected item IDs
  * @param {Function} onItemSelectionToggle - Callback for selection toggle (itemId, itemType)
  * @param {Boolean} allowCollectionSelection - Whether collections can be selected in multi-select mode
- * @param {Function} onDuplicate - Callback for duplicate action (entityId)
- * @param {Function} onEdit - Callback for edit action (item)
- * @param {Function} onDelete - Callback for delete action (item)
  */
-export function ItemGrid({
+export function EntityCardGrid({
   items = [],
   onItemClick,
   onCollectionClick,
@@ -32,12 +30,23 @@ export function ItemGrid({
   isMultiSelectMode = false,
   selectedItems = new Set(),
   onItemSelectionToggle = null,
-  allowCollectionSelection = false,
-  onDuplicate = null,
-  onEdit = null,
-  onDelete = null
+  allowCollectionSelection = false
 }) {
+  const [expandedGroups, setExpandedGroups] = useState(new Set());
   const gridClass = viewMode === 'grid' ? 'items-grid' : 'items-list';
+
+  // Toggle expansion state for a duplicate group
+  const toggleExpansion = (itemId) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  };
 
   return (
     <div className={gridClass}>
@@ -65,9 +74,51 @@ export function ItemGrid({
           return 'dbot-item';
         };
 
-        // Universal ItemCard for both items and collections
+        // Check if this is a duplicate group that's expanded
+        const isDuplicateGroup = item.isDuplicate && item.duplicateGroup && item.duplicateGroup.length > 0;
+        const isExpanded = expandedGroups.has(item.id);
+
+        // If it's an expanded duplicate group, render all duplicates
+        if (isDuplicateGroup && isExpanded) {
+          return (
+            <div key={item.id} className="duplicate-group-expanded">
+              <div className="duplicate-group-header">
+                All {item.duplicateCount} copies:
+              </div>
+              {item.duplicateGroup.map((duplicateItem, dupIndex) => (
+                <div key={duplicateItem.id} className="duplicate-item-wrapper">
+                  <EntityCard
+                    item={duplicateItem}
+                    index={index}
+                    onClick={() => isCollection ? onCollectionClick?.(duplicateItem) : onItemClick?.(duplicateItem, index)}
+                    isOwned={userOwnership.has(duplicateItem.id)}
+                    isFavorite={isRoot && userFavorites.has(duplicateItem.id)}
+                    showAsWishlist={showWishlistStyling && !userOwnership.has(duplicateItem.id) && !isCollectionType(duplicateItem.type)}
+                    progress={duplicateItem.progress || null}
+                    isMultiSelectMode={isMultiSelectMode && canParticipateInMultiSelect}
+                    isSelected={selectedItems.has(duplicateItem.id)}
+                    isDisabled={isMultiSelectMode && !canParticipateInMultiSelect}
+                    onSelectionToggle={onItemSelectionToggle}
+                    itemType={getItemType()}
+                    isDuplicate={false}
+                    duplicateCount={1}
+                    onExpandToggle={null}
+                  />
+                </div>
+              ))}
+              <button
+                className="duplicate-group-collapse"
+                onClick={() => toggleExpansion(item.id)}
+              >
+                Collapse
+              </button>
+            </div>
+          );
+        }
+
+        // Otherwise, render a single card (possibly with duplicate count badge)
         return (
-          <ItemCard
+          <EntityCard
             key={item.id}
             item={item}
             index={index}
@@ -83,10 +134,7 @@ export function ItemGrid({
             itemType={getItemType()}
             isDuplicate={item.isDuplicate || false}
             duplicateCount={item.duplicateCount || 1}
-            duplicateGroup={item.duplicateGroup || null}
-            onDuplicate={onDuplicate}
-            onEdit={onEdit}
-            onDelete={onDelete}
+            onExpandToggle={isDuplicateGroup ? toggleExpansion : null}
           />
         );
       })}

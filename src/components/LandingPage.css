@@ -35,7 +35,7 @@
   margin: 0 auto 1em;
 }
 
-.starred-collections .item-card {
+.starred-collections .entity-card {
   flex: 0 0 180px;
 }
 
@@ -45,7 +45,7 @@
   margin: 2rem auto 1em;
 }
 
-/* ItemGrid within recently-viewed gets proper spacing */
+/* EntityCardGrid within recently-viewed gets proper spacing */
 .recently-viewed .items-grid {
   margin-top: 0;
 }
@@ -116,7 +116,7 @@
     margin-bottom: 1em;
   }
 
-  .starred-collections .item-card {
+  .starred-collections .entity-card {
     flex: 0 0 150px;
   }
 
