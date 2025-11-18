@@ -1,0 +1,38 @@
+{
+  "myItems": [
+    {
+      "id": "user-item-1",
+      "entity_id": "entity-pikachu",
+      "notes": "First edition",
+      "created_at": "2024-01-15T10:30:00Z",
+      "entity": {
+        "id": "entity-pikachu",
+        "name": "Pikachu #025",
+        "type": "collectible",
+        "images": ["https://example.com/pikachu.jpg"],
+        "attributes": {
+          "number": "025",
+          "rarity": "Common",
+          "type": "Electric"
+        }
+      }
+    },
+    {
+      "id": "user-item-2",
+      "entity_id": "entity-charizard",
+      "notes": "Near mint condition",
+      "created_at": "2024-01-16T14:20:00Z",
+      "entity": {
+        "id": "entity-charizard",
+        "name": "Charizard #006",
+        "type": "collectible",
+        "images": ["https://example.com/charizard.jpg"],
+        "attributes": {
+          "number": "006",
+          "rarity": "Rare Holo",
+          "type": "Fire"
+        }
+      }
+    }
+  ]
+}

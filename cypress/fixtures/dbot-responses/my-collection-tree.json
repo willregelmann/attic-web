@@ -1,0 +1,32 @@
+{
+  "myCollectionTree": [
+    {
+      "id": "user-col-1",
+      "name": "Pokemon Cards",
+      "description": "My Pokemon card collection",
+      "parent_id": null,
+      "images": [],
+      "item_count": 25,
+      "children": [
+        {
+          "id": "user-col-2",
+          "name": "Base Set",
+          "description": "Original base set cards",
+          "parent_id": "user-col-1",
+          "images": [],
+          "item_count": 15,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "user-col-3",
+      "name": "Magic Cards",
+      "description": "My MTG collection",
+      "parent_id": null,
+      "images": [],
+      "item_count": 10,
+      "children": []
+    }
+  ]
+}

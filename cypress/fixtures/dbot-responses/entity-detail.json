@@ -1,0 +1,18 @@
+{
+  "databaseOfThingsEntity": {
+    "id": "entity-pikachu",
+    "name": "Pikachu #025",
+    "type": "collectible",
+    "images": ["https://example.com/pikachu.jpg", "https://example.com/pikachu-back.jpg"],
+    "attributes": {
+      "number": "025",
+      "rarity": "Common",
+      "type": "Electric",
+      "hp": "40",
+      "artist": "Mitsuhiro Arita"
+    },
+    "external_ids": {
+      "tcgp": "base1-25"
+    }
+  }
+}

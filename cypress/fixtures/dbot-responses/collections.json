@@ -1,0 +1,34 @@
+{
+  "databaseOfThingsCollections": {
+    "edges": [
+      {
+        "node": {
+          "id": "col-pokemon-base",
+          "name": "Pokemon Base Set",
+          "type": "collection",
+          "images": ["https://example.com/pokemon-base.jpg"],
+          "attributes": {
+            "year": "1999",
+            "country": "Japan"
+          }
+        }
+      },
+      {
+        "node": {
+          "id": "col-pokemon-jungle",
+          "name": "Pokemon Jungle",
+          "type": "collection",
+          "images": ["https://example.com/pokemon-jungle.jpg"],
+          "attributes": {
+            "year": "1999",
+            "country": "Japan"
+          }
+        }
+      }
+    ],
+    "pageInfo": {
+      "hasNextPage": false,
+      "endCursor": null
+    }
+  }
+}

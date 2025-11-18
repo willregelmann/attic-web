@@ -1,0 +1,34 @@
+{
+  "searchDatabaseOfThingsEntities": {
+    "edges": [
+      {
+        "node": {
+          "id": "entity-pikachu",
+          "name": "Pikachu #025",
+          "type": "collectible",
+          "images": ["https://example.com/pikachu.jpg"],
+          "attributes": {
+            "number": "025",
+            "rarity": "Common"
+          }
+        }
+      },
+      {
+        "node": {
+          "id": "entity-pikachu-promo",
+          "name": "Pikachu Promo",
+          "type": "collectible",
+          "images": ["https://example.com/pikachu-promo.jpg"],
+          "attributes": {
+            "number": "001",
+            "rarity": "Promo"
+          }
+        }
+      }
+    ],
+    "pageInfo": {
+      "hasNextPage": false,
+      "endCursor": null
+    }
+  }
+}
