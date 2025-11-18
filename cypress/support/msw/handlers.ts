@@ -49,12 +49,30 @@ export const handlers = [
   graphql.query('MyCollectionTree', ({ variables }) => {
     const parentId = variables.parentId
 
-    // If requesting a specific collection, return that collection's context
+    // If requesting subcollections of Pokemon Cards, return Base Set
     if (parentId === 'user-col-1') {
       return HttpResponse.json({
         data: {
           myCollectionTree: {
-            collections: [],
+            collections: [
+              {
+                id: 'user-col-2',
+                name: 'Base Set',
+                type: 'custom',
+                description: 'Original base set cards',
+                custom_image: null,
+                linked_dbot_collection_id: null,
+                image_url: null,
+                progress: {
+                  owned_count: 10,
+                  wishlist_count: 3,
+                  total_count: 15,
+                  percentage: 67
+                },
+                representative_images: [],
+                created_at: '2024-01-03T10:00:00Z'
+              }
+            ],
             items: [],
             wishlists: [],
             current_collection: {
