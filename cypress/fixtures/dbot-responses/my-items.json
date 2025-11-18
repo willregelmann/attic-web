@@ -3,7 +3,9 @@
     {
       "id": "user-item-1",
       "entity_id": "entity-pikachu",
+      "variant_id": null,
       "notes": "First edition",
+      "metadata": null,
       "created_at": "2024-01-15T10:30:00Z",
       "entity": {
         "id": "entity-pikachu",
@@ -20,7 +22,9 @@
     {
       "id": "user-item-2",
       "entity_id": "entity-charizard",
+      "variant_id": null,
       "notes": "Near mint condition",
+      "metadata": null,
       "created_at": "2024-01-16T14:20:00Z",
       "entity": {
         "id": "entity-charizard",

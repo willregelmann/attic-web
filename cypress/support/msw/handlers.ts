@@ -46,7 +46,7 @@ export const handlers = [
     })
   }),
 
-  graphql.query('GetMyCollectionTree', () => {
+  graphql.query('MyCollectionTree', () => {
     return HttpResponse.json({
       data: myCollectionTreeFixture,
     })
@@ -114,8 +114,12 @@ export const handlers = [
       data: {
         addItemToMyCollection: {
           id: 'new-item-' + Date.now(),
-          entity_id: variables.entity_id,
+          entity_id: variables.itemId,
+          variant_id: variables.variantId || null,
+          user_id: 'user-123',
+          metadata: variables.metadata || null,
           notes: variables.notes || null,
+          images: [],
           created_at: new Date().toISOString(),
         },
       },
@@ -166,6 +170,63 @@ export const handlers = [
         deleteUserItem: {
           id: variables.id,
           success: true,
+        },
+      },
+    })
+  }),
+
+  // Get single user item
+  graphql.query('GetMyItem', ({ variables }) => {
+    // Return a mock item based on the userItemId
+    return HttpResponse.json({
+      data: {
+        myItem: {
+          user_item_id: variables.userItemId,
+          user_id: 'user-123',
+          user_metadata: null,
+          user_notes: 'Test notes',
+          user_images: [],
+          parent_collection_id: null,
+          variant_id: null,
+          id: 'entity-pikachu',
+          type: 'collectible',
+          name: 'Pikachu #025',
+          year: 1999,
+          attributes: {
+            number: '025',
+            rarity: 'Common',
+            type: 'Electric',
+          },
+          image_url: 'https://example.com/pikachu.jpg',
+          thumbnail_url: 'https://example.com/pikachu-thumb.jpg',
+          entity_variants: [],
+        },
+      },
+    })
+  }),
+
+  // Remove item from collection (uses itemId which maps to entity_id)
+  graphql.mutation('RemoveItemFromMyCollection', ({ variables }) => {
+    return HttpResponse.json({
+      data: {
+        removeItemFromMyCollection: true,
+      },
+    })
+  }),
+
+  // Update user item
+  graphql.mutation('UpdateMyItem', ({ variables }) => {
+    return HttpResponse.json({
+      data: {
+        updateMyItem: {
+          id: variables.userItemId,
+          entity_id: 'entity-pikachu',
+          variant_id: variables.variantId || null,
+          user_id: 'user-123',
+          metadata: variables.metadata || null,
+          notes: variables.notes || null,
+          images: [],
+          updated_at: new Date().toISOString(),
         },
       },
     })
