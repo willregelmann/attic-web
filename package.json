@@ -12,7 +12,13 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
+    "cy:component": "cypress open --component",
+    "cy:e2e": "cypress open --e2e",
+    "cy:run:component": "cypress run --component",
+    "cy:run:e2e": "cypress run --e2e"
   },
   "dependencies": {
     "@apollo/client": "^4.0.5",
