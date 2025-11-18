@@ -6,7 +6,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFilters } from '../contexts/FilterContext';
 import { filterEntities } from '../utils/filterUtils';
 import { EntityCardGrid } from './EntityCardGrid';
-import './LandingPage.css';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -46,26 +45,44 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="landing-page">
+    <div className="min-h-screen">
 
       {/* Recently Viewed Section */}
       {filteredRecentlyViewed.length > 0 ? (
-        <section className="recently-viewed">
-          <div className="section-header">
-            <h2 className="section-title">Recently Viewed</h2>
+        <section className="max-w-[1400px] mx-auto mt-6 mb-4 md:mt-8">
+          <div className="m-0 p-0">
+            <h2 className="text-base md:text-lg font-bold text-[var(--text-primary)] m-0 mb-4 px-4 md:px-8 text-center md:text-left">
+              Recently Viewed
+            </h2>
           </div>
 
           <EntityCardGrid
             items={filteredRecentlyViewed}
-            onCollectionClick={(collection) => handleCollectionClick(collection.id)}
-            onItemClick={(item) => handleCollectionClick(item.id)}
+            onClick={{
+              collection: (collection) => handleCollectionClick(collection.id),
+              item: (item) => handleCollectionClick(item.id)
+            }}
+            ownership={{
+              owned: new Set(),
+              favorites: new Set()
+            }}
+            multiSelect={{
+              active: false,
+              selected: new Set(),
+              onToggle: null,
+              allowCollections: false
+            }}
             viewMode="grid"
           />
         </section>
       ) : (
-        <div className="empty-landing-state">
-          <h3>Search to get started</h3>
-          <p>Use the search bar above to discover collections and items</p>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
+          <h3 className="text-2xl font-semibold text-[var(--text-primary)] m-0 mb-2">
+            Search to get started
+          </h3>
+          <p className="text-base text-[var(--text-secondary)] m-0">
+            Use the search bar above to discover collections and items
+          </p>
         </div>
       )}
     </div>

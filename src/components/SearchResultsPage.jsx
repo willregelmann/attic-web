@@ -1,20 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@apollo/client/react';
-import { Grid3x3, List, Filter, Image as ImageIcon } from 'lucide-react';
+import { Grid3x3, List, Image as ImageIcon } from 'lucide-react';
 import { SEMANTIC_SEARCH_DATABASE_OF_THINGS } from '../queries';
 import { parseSearchUrlParams, buildSearchUrl, applySearchFilters } from '../utils/searchFilterUtils';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { useSearch } from '../contexts/SearchContext';
-import SearchFilterPanel from './SearchFilterPanel';
+import { useRadialMenu } from '../contexts/RadialMenuContext';
+import SearchFilterDrawer from './SearchFilterDrawer';
 import SearchResultListItem from './SearchResultListItem';
-import { EntityCard } from './EntityCard';
+import { EntityCardGrid } from './EntityCardGrid';
 import { EntityCardSkeleton } from './SkeletonLoader';
-import CircularMenu from './CircularMenu';
 import MobileSearch from './MobileSearch';
 import { ImageSearchModal } from './ImageSearchModal';
-import './CollectionFilterPanel.css';
-import './SearchResultsPage.css';
 
 function SearchResultsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,6 +34,23 @@ function SearchResultsPage() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showImageSearchModal, setShowImageSearchModal] = useState(false);
+
+  // Set RadialMenu actions via context
+  useRadialMenu([
+    {
+      id: 'search',
+      icon: 'fas fa-search',
+      label: 'Search',
+      onClick: () => setShowMobileSearch(true)
+    },
+    {
+      id: 'filters',
+      icon: 'fas fa-filter',
+      label: 'Filters',
+      onClick: () => setShowMobileFilters(true),
+      badge: types.length > 0 ? types.length : undefined
+    }
+  ], [types.length]);
 
   // GraphQL query for text search results (skip if image search)
   // Note: We don't pass type to backend - all type filtering happens client-side
@@ -123,43 +138,38 @@ function SearchResultsPage() {
     setHasMore(false);
   };
 
+  // Handle item click - navigate to item detail
+  const handleItemClick = (item) => {
+    navigate(`/item/${item.id}`);
+  };
+
   if (!query && !isImageSearch) {
     return (
-      <div className="search-results-page">
-        <div className="search-results-empty">
-          <div className="search-results-empty-icon">🔍</div>
-          <p>Enter a search query to find collections and items</p>
+      <div className="max-w-[1400px] mx-auto p-6 md:p-4 min-h-[calc(100vh-80px)]">
+        <div className="text-center py-20 px-5">
+          <div className="text-6xl md:text-5xl mb-4 opacity-30">🔍</div>
+          <p className="text-lg text-[var(--text-secondary)] my-2">Enter a search query to find collections and items</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="search-results-page">
-      <div className="search-results-layout">
-        {/* Filter Panel - Desktop Sidebar */}
-        <div className="search-filter-sidebar">
-          <SearchFilterPanel
-            results={allResults}
-            selectedTypes={types}
-            onTypesChange={handleTypesChange}
-            onClearFilters={handleClearFilters}
-          />
-        </div>
-
+    <div className="max-w-[1400px] mx-auto p-6 md:p-4 min-h-[calc(100vh-80px)]">
+      <div className="grid grid-cols-1 gap-4">
         {/* Results Area */}
-        <div className="search-results-main">
+        <div className="min-w-0">
           {/* Header */}
-          <div className="search-results-header">
-            <div className="search-results-title">
+          <div className="flex flex-col md:flex-row md:items-start justify-between mb-6 gap-3 md:gap-4">
+            <div>
               {isImageSearch ? (
                 <>
-                  <div className="image-search-header">
-                    <ImageIcon size={24} />
-                    <h1>Similar Items</h1>
+                  <div className="flex items-center gap-3 mb-2">
+                    <ImageIcon size={24} className="text-[var(--primary)]" />
+                    <h1 className="text-2xl md:text-[1.75rem] font-bold text-[var(--text-primary)] m-0">Similar Items</h1>
                   </div>
                   {!isSearching && (
-                    <p className="search-results-count">
+                    <p className="text-base text-[var(--text-secondary)] m-0">
                       {filteredResults.length === 0
                         ? 'No similar items found'
                         : `Found ${filteredResults.length} visually similar item${filteredResults.length !== 1 ? 's' : ''}`}
@@ -168,9 +178,9 @@ function SearchResultsPage() {
                 </>
               ) : (
                 <>
-                  <h1>Search results for: "{query}"</h1>
+                  <h1 className="text-2xl md:text-[1.75rem] font-bold text-[var(--text-primary)] m-0 mb-2">Search results for: "{query}"</h1>
                   {!loading && (
-                    <p className="search-results-count">
+                    <p className="text-base text-[var(--text-secondary)] m-0">
                       {filteredResults.length === 0
                         ? 'No results found'
                         : `Showing ${filteredResults.length} result${filteredResults.length !== 1 ? 's' : ''}`}
@@ -181,16 +191,24 @@ function SearchResultsPage() {
             </div>
 
             {/* View Mode Toggle */}
-            <div className="search-view-toggle">
+            <div className="flex gap-2 shrink-0 w-full md:w-auto justify-end">
               <button
-                className={`view-toggle-button ${viewMode === 'grid' ? 'active' : ''}`}
+                className={`flex items-center justify-center w-10 h-10 p-0 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  viewMode === 'grid'
+                    ? 'bg-[var(--primary)] border-[var(--primary)] text-white'
+                    : 'bg-[var(--bg-primary)] border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+                }`}
                 onClick={() => handleViewModeChange('grid')}
                 aria-label="Grid view"
               >
                 <Grid3x3 size={20} />
               </button>
               <button
-                className={`view-toggle-button ${viewMode === 'list' ? 'active' : ''}`}
+                className={`flex items-center justify-center w-10 h-10 p-0 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  viewMode === 'list'
+                    ? 'bg-[var(--primary)] border-[var(--primary)] text-white'
+                    : 'bg-[var(--bg-primary)] border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+                }`}
                 onClick={() => handleViewModeChange('list')}
                 aria-label="List view"
               >
@@ -201,7 +219,7 @@ function SearchResultsPage() {
 
           {/* Loading State */}
           {(loading || isSearching) && (
-            <div className={`search-results-${viewMode}`}>
+            <div className="grid grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3 md:gap-5">
               {Array.from({ length: 12 }).map((_, i) => (
                 <EntityCardSkeleton key={i} />
               ))}
@@ -210,28 +228,33 @@ function SearchResultsPage() {
 
           {/* Error State */}
           {error && (
-            <div className="search-results-error">
-              <div className="search-results-error-icon">⚠️</div>
-              <p>Error loading search results</p>
-              <button onClick={() => window.location.reload()}>Retry Search</button>
+            <div className="text-center py-20 md:py-[80px] px-5">
+              <div className="text-6xl md:text-5xl mb-4">⚠️</div>
+              <p className="text-lg text-[var(--text-secondary)] my-2 mb-6">Error loading search results</p>
+              <button
+                className="py-3 px-6 bg-[var(--primary)] text-white border-none rounded-lg text-base font-medium cursor-pointer transition-opacity duration-200 hover:opacity-90"
+                onClick={() => window.location.reload()}
+              >
+                Retry Search
+              </button>
             </div>
           )}
 
           {/* Empty State */}
           {!loading && !isSearching && !error && filteredResults.length === 0 && (
-            <div className="search-results-empty">
-              <div className="search-results-empty-icon">{isImageSearch ? '🖼️' : '🔍'}</div>
+            <div className="text-center py-16 md:py-20 px-5">
+              <div className="text-5xl md:text-6xl mb-4 opacity-30">{isImageSearch ? '🖼️' : '🔍'}</div>
               {isImageSearch ? (
                 <>
-                  <p>No similar items found</p>
-                  <p className="search-results-empty-hint">
+                  <p className="text-lg text-[var(--text-secondary)] my-2">No similar items found</p>
+                  <p className="text-[0.95rem] text-[var(--text-secondary)] opacity-70">
                     Try uploading a different image or adjusting the similarity threshold
                   </p>
                 </>
               ) : (
                 <>
-                  <p>No results found for "{query}"</p>
-                  <p className="search-results-empty-hint">
+                  <p className="text-lg text-[var(--text-secondary)] my-2">No results found for "{query}"</p>
+                  <p className="text-[0.95rem] text-[var(--text-secondary)] opacity-70">
                     Try adjusting your filters or search term
                   </p>
                 </>
@@ -243,13 +266,13 @@ function SearchResultsPage() {
           {!loading && !isSearching && !error && filteredResults.length > 0 && (
             <>
               {viewMode === 'grid' ? (
-                <div className="search-results-grid">
-                  {filteredResults.map(item => (
-                    <EntityCard key={item.id} item={item} />
-                  ))}
-                </div>
+                <EntityCardGrid
+                  items={filteredResults}
+                  onClick={{ item: handleItemClick, collection: handleItemClick }}
+                  viewMode="grid"
+                />
               ) : (
-                <div className="search-results-list">
+                <div className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl overflow-hidden">
                   {filteredResults.map(item => (
                     <SearchResultListItem key={item.id} item={item} />
                   ))}
@@ -258,9 +281,9 @@ function SearchResultsPage() {
 
               {/* Load More Button */}
               {hasMore && (
-                <div className="search-results-load-more">
+                <div className="flex justify-center mt-8">
                   <button
-                    className="search-load-more-button"
+                    className="py-3.5 px-8 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] rounded-lg text-[var(--text-primary)] text-base font-medium cursor-pointer transition-all duration-200 hover:bg-[var(--bg-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
                     onClick={handleLoadMore}
                   >
                     Load more results
@@ -285,51 +308,14 @@ function SearchResultsPage() {
         onClose={() => setShowImageSearchModal(false)}
       />
 
-      {/* Mobile Filter Modal */}
-      {showMobileFilters && (
-        <div className="collection-filter-overlay" onClick={() => setShowMobileFilters(false)}>
-          <div className="collection-filter-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="filter-panel-header">
-              <h3>Search Filters</h3>
-              <button
-                className="filter-close-button"
-                onClick={() => setShowMobileFilters(false)}
-                aria-label="Close filters"
-              >
-                <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </button>
-            </div>
-            <div className="filter-panel-body">
-              <SearchFilterPanel
-                results={allResults}
-                selectedTypes={types}
-                onTypesChange={handleTypesChange}
-                onClearFilters={handleClearFilters}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Circular Menu for Mobile */}
-      <CircularMenu
-        actions={[
-          {
-            id: 'search',
-            icon: 'fas fa-search',
-            label: 'Search',
-            onClick: () => setShowMobileSearch(true)
-          },
-          {
-            id: 'filters',
-            icon: 'fas fa-filter',
-            label: 'Filters',
-            onClick: () => setShowMobileFilters(true),
-            badge: types.length > 0 ? types.length : undefined
-          }
-        ]}
+      {/* Filter Drawer (Mobile & Desktop) */}
+      <SearchFilterDrawer
+        results={allResults}
+        selectedTypes={types}
+        onTypesChange={handleTypesChange}
+        onClearFilters={handleClearFilters}
+        isOpen={showMobileFilters}
+        onClose={() => setShowMobileFilters(false)}
       />
     </div>
   );

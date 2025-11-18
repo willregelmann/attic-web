@@ -6,9 +6,8 @@ import { useFilters } from '../contexts/FilterContext';
 import { useAuth } from '../contexts/AuthContext';
 import { countFilterValues, formatFilterValue, countParentCollections } from '../utils/collectionFilterUtils';
 import { FilterFieldsSkeleton } from './SkeletonLoader';
-import './CollectionFilterPanel.css';
 
-function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOpen, onClose, userOwnership }) {
+function CollectionFilterDrawer({ collectionId, items, fetchCollectionItems, isOpen, onClose, userOwnership}) {
   const { isAuthenticated } = useAuth();
   const {
     getFiltersForCollection,
@@ -197,35 +196,45 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
   if (!isOpen) return null;
 
   return (
-    <div className="collection-filter-overlay" onClick={onClose}>
-      <div className="collection-filter-panel" onClick={(e) => e.stopPropagation()}>
-        <div className="filter-panel-header">
-          <h3>Collection Filters</h3>
-          <button className="filter-close-button" onClick={onClose} aria-label="Close filters">
+    <div
+      className="fixed inset-0 bg-black/70 md:bg-black/50 z-[1500] flex items-center justify-center md:items-stretch md:justify-end animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-[90%] max-w-[500px] max-h-[90vh] md:max-h-screen md:w-full md:max-w-[400px] md:fixed md:top-0 md:right-0 md:bottom-0 bg-[var(--bg-primary)] rounded-2xl md:rounded-none shadow-[0_8px_24px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden animate-slide-up md:animate-slide-in-right"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative p-6 md:p-5 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-primary)] flex-shrink-0">
+          <h3 className="m-0 text-xl md:text-lg font-bold text-[var(--text-primary)]">Collection Filters</h3>
+          <button
+            className="absolute top-4 right-4 bg-black/10 border-none rounded-full w-10 h-10 flex items-center justify-center cursor-pointer transition-all duration-200 z-10 text-[var(--text-secondary)] hover:bg-black/20 hover:rotate-90"
+            onClick={onClose}
+            aria-label="Close filters"
+          >
             <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
               <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </button>
         </div>
 
-        <div className="filter-panel-body">
+        <div className="flex-1 overflow-y-auto p-4 md:p-3">
           {/* Text Search Filter */}
-          <div className="filter-text-search">
-            <div className="filter-text-search-input-wrapper">
-              <svg viewBox="0 0 24 24" fill="none" width="16" height="16" className="search-icon">
+          <div className="mb-4 pb-4 border-b border-[var(--border-color)]">
+            <div className="relative flex items-center">
+              <svg viewBox="0 0 24 24" fill="none" width="16" height="16" className="absolute left-3 text-[var(--text-secondary)] pointer-events-none">
                 <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
                 <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
               <input
                 type="text"
-                className="filter-text-search-input"
+                className="w-full py-3 pr-11 pl-10 border-2 border-[var(--border-color)] rounded-lg text-[15px] bg-[var(--bg-primary)] text-[var(--text-primary)] transition-all duration-200 focus:outline-none focus:border-[var(--primary)] focus:bg-[var(--bg-primary)] placeholder:text-[var(--text-secondary)]"
                 placeholder="Search items..."
                 value={textSearch}
                 onChange={handleTextSearchChange}
               />
               {textSearch && (
                 <button
-                  className="filter-text-search-clear"
+                  className="absolute right-2 bg-transparent border-none rounded-full w-7 h-7 flex items-center justify-center cursor-pointer text-[var(--text-secondary)] transition-all duration-200 hover:bg-black/10 hover:text-[var(--text-primary)]"
                   onClick={handleClearTextSearch}
                   aria-label="Clear text search"
                 >
@@ -238,23 +247,22 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
           </div>
 
           {/* Group Duplicates Filter */}
-          <div className="filter-option" style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
-            <label className="flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+          <div className="p-3 px-4 border-b border-[var(--border-color)]">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={groupDuplicates}
                 onChange={(e) => setGroupDuplicates(e.target.checked)}
-                className="filter-checkbox"
-                style={{ cursor: 'pointer' }}
+                className="w-[18px] h-[18px] cursor-pointer accent-[var(--primary)]"
               />
-              <span style={{ fontSize: '14px' }}>Group duplicates</span>
+              <span className="text-sm text-[var(--text-primary)]">Group duplicates</span>
             </label>
           </div>
 
           {(!isRootLevel && (isLoadingFilterFields || isLoadingParentCollections)) ? (
             <FilterFieldsSkeleton count={5} />
           ) : filterableFields.length === 0 ? (
-            <div className="filter-empty-state">
+            <div className="text-center py-12 px-8 text-[var(--text-secondary)]">
               <p>No filterable fields found in this collection.</p>
             </div>
           ) : (
@@ -267,9 +275,9 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
                 const valueCounts = allValueCounts[field] || {};
 
                 return (
-                  <div key={field} className="filter-field-group">
+                  <div key={field} className="mb-2 border border-[var(--border-color)] rounded-lg overflow-hidden bg-[var(--bg-primary)]">
                     <div
-                      className={`filter-field-header ${hasSelection ? 'has-selection' : ''}`}
+                      className={`w-full p-4 bg-transparent border-none flex justify-between items-center cursor-pointer transition-all duration-200 text-left hover:bg-[var(--bg-secondary)] ${hasSelection ? 'bg-[rgba(42,82,152,0.05)]' : ''}`}
                       role="button"
                       tabIndex={0}
                       onClick={() => toggleField(field)}
@@ -280,16 +288,16 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
                         }
                       }}
                     >
-                      <div className="filter-field-title">
-                        <span className="filter-field-label">{label}</span>
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className="font-semibold text-[var(--text-primary)] text-[15px]">{label}</span>
                         {hasSelection && (
-                          <span className="filter-field-count">{selectedValues.length}</span>
+                          <span className="bg-[var(--primary)] text-white py-0.5 px-2 rounded-xl text-xs font-semibold">{selectedValues.length}</span>
                         )}
                       </div>
-                      <div className="filter-field-actions">
+                      <div className="flex items-center gap-2">
                         {hasSelection && (
                           <button
-                            className="filter-clear-field-button"
+                            className="bg-transparent border-none text-[var(--primary)] cursor-pointer text-[13px] font-semibold py-1 px-2 rounded transition-all duration-200 hover:bg-[rgba(42,82,152,0.1)]"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleClearField(field);
@@ -304,7 +312,7 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
                           fill="none"
                           width="16"
                           height="16"
-                          className={`filter-expand-icon ${isExpanded ? 'expanded' : ''}`}
+                          className={`text-[var(--text-secondary)] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                         >
                           <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
@@ -312,7 +320,7 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
                     </div>
 
                     {isExpanded && (
-                      <div className="filter-field-values">
+                      <div className="py-2 px-4 pb-4 flex flex-col gap-2 bg-[var(--bg-secondary)]">
                         {values.map(value => {
                           const isSelected = selectedValues.includes(value);
                           const count = valueCounts[value] || 0;
@@ -331,16 +339,16 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
                           }
 
                           return (
-                            <label key={value} className="filter-value-option">
+                            <label key={value} className="flex items-center gap-3 cursor-pointer p-2 rounded-md transition-colors duration-200 hover:bg-[var(--bg-primary)]">
                               <input
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={() => handleValueToggle(field, value)}
-                                className="filter-checkbox"
+                                className="w-[18px] h-[18px] cursor-pointer accent-[var(--primary)]"
                               />
-                              <span className="filter-value-label">
+                              <span className="flex-1 text-[15px] text-[var(--text-primary)] flex justify-between items-center">
                                 {displayValue}
-                                <span className="filter-value-count">({count})</span>
+                                <span className="text-[var(--text-secondary)] text-[13px] ml-2">({count})</span>
                               </span>
                             </label>
                           );
@@ -355,8 +363,11 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
         </div>
 
         {hasFilters && (
-          <div className="filter-panel-footer">
-            <button className="filter-clear-all-button" onClick={handleClearAll}>
+          <div className="p-4 px-6 border-t border-[var(--border-color)] bg-[var(--bg-primary)]">
+            <button
+              className="w-full py-3 bg-transparent text-[var(--primary)] border-2 border-[var(--primary)] rounded-lg font-semibold text-[15px] cursor-pointer transition-all duration-200 hover:bg-[var(--primary)] hover:text-white"
+              onClick={handleClearAll}
+            >
               Clear All Filters
             </button>
           </div>
@@ -366,4 +377,4 @@ function CollectionFilterPanel({ collectionId, items, fetchCollectionItems, isOp
   );
 }
 
-export default CollectionFilterPanel;
+export default CollectionFilterDrawer;

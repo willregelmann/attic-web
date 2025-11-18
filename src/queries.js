@@ -187,20 +187,6 @@ export const GET_COLLECTION_PARENT_COLLECTIONS = gql`
 
 // ===== LEGACY LOCAL QUERIES (Deprecated - Use Supabase) =====
 
-export const GET_COLLECTIONS = gql`
-  query GetCollections {
-    collections {
-      id
-      name
-      type
-      primaryImage {
-        url
-        alt_text
-      }
-    }
-  }
-`;
-
 export const GET_COLLECTION_ITEMS = gql`
   query GetCollectionItems($collectionId: ID!) {
     collectionItems(collection_id: $collectionId) {

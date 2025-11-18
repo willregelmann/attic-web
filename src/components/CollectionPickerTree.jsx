@@ -48,35 +48,32 @@ const CollectionPickerNode = memo(({ collection, depth = 0, selectedId, onSelect
   };
 
   return (
-    <li className="tree-item">
+    <li className="m-0 p-0 block">
       <button
         onClick={handleClick}
-        className={`tree-collection-link ${isSelected ? 'selected' : ''}`}
+        className={`w-full flex items-center gap-2 py-1 border-none text-left cursor-pointer transition-opacity duration-200 hover:opacity-70 ${isSelected ? 'font-semibold bg-[var(--bg-tertiary)] rounded-md' : 'font-normal bg-transparent'}`}
         style={{
-          paddingLeft: `${12 + (depth * 20)}px`,
-          fontWeight: isSelected ? '600' : '400',
-          backgroundColor: isSelected ? 'var(--bg-tertiary)' : 'transparent',
-          borderRadius: isSelected ? '6px' : '0'
+          paddingLeft: `${12 + (depth * 20)}px`
         }}
         title={`Select ${collection.name}`}
       >
         {depth > 0 && (
-          <svg className="tree-branch" viewBox="0 0 16 16" width="16" height="16">
+          <svg className="flex-shrink-0 text-[var(--text-secondary)] mr-[-4px] opacity-60" viewBox="0 0 16 16" width="16" height="16">
             <path d="M8 0 L8 8 L16 8" stroke="currentColor" strokeWidth="1.5" fill="none"/>
           </svg>
         )}
-        <span className="tree-collection-name">{collection.name}</span>
+        <span className="flex-1 text-sm font-medium text-[var(--text-primary)]">{collection.name}</span>
         {subLoading ? (
-          <span className="tree-expand-indicator">⋯</span>
+          <span className="flex-shrink-0 text-[var(--text-secondary)] text-sm w-5 inline-flex items-center justify-center">⋯</span>
         ) : hasSubcollections ? (
-          <span className="tree-expand-indicator">
+          <span className="flex-shrink-0 text-[var(--text-secondary)] text-sm w-5 inline-flex items-center justify-center">
             {isExpanded ? '−' : '+'}
           </span>
         ) : null}
       </button>
 
       {isExpanded && hasSubcollections && (
-        <ul className="tree-nested-list">
+        <ul className="list-none m-0 p-0 flex flex-col gap-0.5">
           {subcollections.map((sub) => (
             <CollectionPickerNode
               key={sub.id}
@@ -131,31 +128,25 @@ export function CollectionPickerTree({
   };
 
   return (
-    <div className="detail-collections-tree">
-      <div className="collections-tree-list">
+    <div className="flex flex-col">
+      <div className="m-0 flex flex-col">
         {collectionsLoading ? (
           <CollectionTreeSkeleton count={2} />
         ) : (
-          <ul className="tree-list">
+          <ul className="list-none m-0 p-0 flex flex-col gap-0.5">
             {/* Root collection option - expandable */}
-            <li className="tree-item">
+            <li className="m-0 p-0 block">
               <button
                 onClick={handleRootClick}
-                className={`tree-collection-link ${selectedId === null ? 'selected' : ''}`}
-                style={{
-                  paddingLeft: '12px',
-                  fontWeight: selectedId === null ? '600' : '400',
-                  backgroundColor: selectedId === null ? 'var(--bg-tertiary)' : 'transparent',
-                  borderRadius: selectedId === null ? '6px' : '0'
-                }}
+                className={`w-full flex items-center gap-2 py-1 pl-3 border-none text-left cursor-pointer transition-opacity duration-200 hover:opacity-70 ${selectedId === null ? 'font-semibold bg-[var(--bg-tertiary)] rounded-md' : 'font-normal bg-transparent'}`}
                 title="Select My Collection (root)"
               >
-                <span className="tree-collection-name">My Collection</span>
+                <span className="flex-1 text-sm font-medium text-[var(--text-primary)]">My Collection</span>
               </button>
 
               {/* User collections tree - nested under root */}
               {isRootExpanded && (
-                <ul className="tree-nested-list">
+                <ul className="list-none m-0 p-0 flex flex-col gap-0.5">
                   {collectionsData?.myCollectionTree?.collections?.map((collection) => (
                     <CollectionPickerNode
                       key={collection.id}

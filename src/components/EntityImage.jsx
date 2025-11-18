@@ -5,7 +5,6 @@ import { isCollectionType } from '../utils/formatters';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getTypeIcon } from '../utils/iconUtils.jsx';
-import './EntityImage.css';
 
 /**
  * EntityImage - Universal image display component for entities (items and collections)
@@ -33,11 +32,10 @@ import './EntityImage.css';
  */
 export function EntityImage({
   item,
-  index = 0,
   isOwned = false,
   isFavorite = false,
   showBadges = true,
-  className = 'entity-image',
+  className = '',
   iconSize = 64,
   lazyLoad = true
 }) {
@@ -87,12 +85,13 @@ export function EntityImage({
     };
   }, [lazyLoad]);
 
-  // Fetch children only when visible and needed
+  // Fetch children only when visible and needed (no canonical image and no representative images)
   useEffect(() => {
-    if (isVisible && !item.image_url && !hasRepresentativeImages && isCollectionType(item.type) && item.id) {
+    const hasCanonicalImg = item.image_url || item.thumbnail_url;
+    if (isVisible && !hasCanonicalImg && !hasRepresentativeImages && isCollectionType(item.type) && item.id) {
       fetchChildren({ variables: { collectionId: item.id, first: 10 } }); // Reduced from 50 to 10
     }
-  }, [isVisible, item.image_url, hasRepresentativeImages, item.type, item.id, fetchChildren]);
+  }, [isVisible, item.image_url, item.thumbnail_url, hasRepresentativeImages, item.type, item.id, fetchChildren]);
 
   // Extract child images using breadth-first search
   useEffect(() => {
@@ -148,53 +147,54 @@ export function EntityImage({
   const iconColor = isDarkMode ? '#9ca3af' : '#6b7280';
   const userImages = item.user_images || item.images;
   const hasUserImages = isOwned && userImages && userImages.length > 0;
-  const shouldShowIcon = !hasUserImages && !item.image_url && imagesToDisplay.length === 0;
+  const hasCanonicalImage = item.image_url || item.thumbnail_url;
+  const shouldShowIcon = !hasUserImages && !hasCanonicalImage && imagesToDisplay.length === 0;
   const typeIcon = shouldShowIcon ? getTypeIcon(item.type, iconColor, iconSize) : null;
 
+  // Build base classes - minimal defaults, allow customization via className
+  // Mobile-first: base is mobile, md: is tablet/desktop
+  // Using ! prefix for important to override any conflicting CSS
+  const defaultClasses = className || '!h-[120px] md:!h-[160px] !m-2 md:!m-3';
+  const baseClasses = `relative flex items-center justify-center bg-contain bg-center bg-no-repeat ${defaultClasses}`;
+
   return (
-    <div className={className} ref={imageRef} style={{ backgroundImage: getItemImage() }}>
+    <div className={baseClasses} ref={imageRef} style={{ backgroundImage: getItemImage() }}>
       {/* Type icon for items without images */}
       {typeIcon && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '100%',
-          height: '100%'
-        }}>
+        <div className="flex items-center justify-center w-full h-full">
           {typeIcon}
         </div>
       )}
 
       {/* Representative/child images - special handling for 1 or 2 images */}
-      {!item.image_url && imagesToDisplay.length === 1 && (
+      {!hasCanonicalImage && imagesToDisplay.length === 1 && (
         <div
-          className="child-image-single"
+          className="absolute inset-2.5 bg-contain bg-center bg-no-repeat rounded-lg"
           style={{ backgroundImage: `url(${imagesToDisplay[0]})` }}
         />
       )}
 
-      {!item.image_url && imagesToDisplay.length === 2 && (
-        <div className="child-images-grid child-images-diagonal">
-          <div className="child-image" style={{ backgroundImage: `url(${imagesToDisplay[0]})` }} />
-          <div className="child-image child-image-empty" />
-          <div className="child-image child-image-empty" />
-          <div className="child-image" style={{ backgroundImage: `url(${imagesToDisplay[1]})` }} />
+      {!hasCanonicalImage && imagesToDisplay.length === 2 && (
+        <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-0.5 p-2 md:p-2.5">
+          <div className="bg-contain bg-center bg-no-repeat rounded" style={{ backgroundImage: `url(${imagesToDisplay[0]})` }} />
+          <div className="bg-transparent" />
+          <div className="bg-transparent" />
+          <div className="bg-contain bg-center bg-no-repeat rounded" style={{ backgroundImage: `url(${imagesToDisplay[1]})` }} />
         </div>
       )}
 
       {/* Standard grid for 3+ images */}
-      {!item.image_url && imagesToDisplay.length >= 3 && (
-        <div className="child-images-grid">
+      {!hasCanonicalImage && imagesToDisplay.length >= 3 && (
+        <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-0.5 p-2 md:p-2.5">
           {displayImages.map((imageUrl, idx) => (
             <div
               key={idx}
-              className={`child-image ${hasMoreImages && idx === 3 ? 'child-image-more' : ''}`}
+              className="relative bg-contain bg-center bg-no-repeat rounded"
               style={{ backgroundImage: `url(${imageUrl})` }}
             >
               {hasMoreImages && idx === 3 && (
-                <div className="more-indicator">
-                  <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                <div className="absolute bottom-1 right-1 w-7 h-7 md:w-8 md:h-8 flex items-center justify-center bg-gray-600 rounded">
+                  <svg viewBox="0 0 24 24" fill="none" width="14" height="14" className="md:w-4 md:h-4">
                     <circle cx="4" cy="12" r="2" fill="white"/>
                     <circle cx="12" cy="12" r="2" fill="white"/>
                     <circle cx="20" cy="12" r="2" fill="white"/>
@@ -208,17 +208,17 @@ export function EntityImage({
 
       {/* Badges overlay */}
       {showBadges && (
-        <div className="entity-overlay">
+        <div className="absolute inset-0 p-2 md:p-3 flex justify-between items-start">
           {isFavorite && (
-            <div className="favorite-indicator">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <div className="absolute top-1.5 left-1.5 md:top-2 md:left-2 text-yellow-400 drop-shadow-md animate-pulse">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" className="md:w-5 md:h-5">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
             </div>
           )}
           {isOwned && isAuthenticated && (
-            <div className="owned-indicator">
-              <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+            <div className="absolute top-1.5 right-1.5 md:top-2 md:right-2 w-5 h-5 md:w-6 md:h-6 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-md">
+              <svg viewBox="0 0 24 24" fill="none" width="14" height="14" className="md:w-4 md:h-4">
                 <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>

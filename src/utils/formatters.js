@@ -52,3 +52,18 @@ export const isLinkedCollection = (type) => {
   const normalizedType = type.toLowerCase().replace(/\s+/g, '_');
   return normalizedType === 'linked' || normalizedType === 'linked_collection';
 };
+
+/**
+ * Check if a collection is 100% complete (all items owned, nothing on wishlist)
+ * @param {Object} item - Item/collection object with progress data
+ * @returns {boolean} True if collection is complete
+ */
+export const isCollectionComplete = (item) => {
+  if (!isCollectionType(item?.type) || !item?.progress) {
+    return false;
+  }
+
+  return item.progress.wishlist_count === 0
+    && item.progress.owned_count === item.progress.total_count
+    && item.progress.total_count > 0;
+};

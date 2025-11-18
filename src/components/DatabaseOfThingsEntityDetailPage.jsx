@@ -4,18 +4,17 @@ import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { GET_DATABASE_OF_THINGS_ENTITY } from '../queries';
 import { isCollectionType } from '../utils/formatters';
-import ItemDetailContent from './ItemDetailContent';
-import CircularMenu from './CircularMenu';
+import { useRadialMenu, useRadialMenuMainButton } from '../contexts/RadialMenuContext';
+import EntityDetail from './EntityDetail';
 import MobileSearch from './MobileSearch';
 import { ImageSearchModal } from './ImageSearchModal';
-import './ItemDetail.css';
 
 /**
- * ItemDetailPage - Full-page view for catalog items
+ * DatabaseOfThingsEntityDetailPage - Full-page view for catalog items
  * Route: /item/:entity_id
  * Shows DBoT entity with option to add to collection
  */
-function ItemDetailPage() {
+function DatabaseOfThingsEntityDetailPage() {
   const { entity_id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,11 +22,51 @@ function ItemDetailPage() {
   const [itemAddMode, setItemAddMode] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showImageSearchModal, setShowImageSearchModal] = useState(false);
+  const [entityActions, setEntityActions] = useState([]);
   const saveItemRef = useRef(null);
 
   // Check if navigated from MyCollection (for wishlist styling and collection context)
   const fromMyCollection = location.state?.fromMyCollection || false;
   const currentCollection = location.state?.currentCollection || null;
+
+  // Set RadialMenu actions via context
+  useRadialMenu(
+    isAuthenticated
+      ? [
+          {
+            id: 'search',
+            icon: 'fas fa-search',
+            label: 'Search',
+            onClick: () => setShowMobileSearch(true)
+          },
+          // EntityDetail actions (add-to-collection)
+          ...entityActions
+        ]
+      : [
+          {
+            id: 'search',
+            icon: 'fas fa-search',
+            label: 'Search',
+            onClick: () => setShowMobileSearch(true)
+          }
+        ],
+    [isAuthenticated, entityActions]
+  );
+
+  // Set main button when in add mode
+  useRadialMenuMainButton(
+    itemAddMode ? {
+      icon: 'fas fa-save',
+      label: 'Add to collection',
+      onClick: () => {
+        if (saveItemRef.current) {
+          saveItemRef.current();
+        }
+      },
+      variant: 'save'
+    } : null,
+    [itemAddMode]
+  );
 
   const { loading, error, data } = useQuery(GET_DATABASE_OF_THINGS_ENTITY, {
     variables: { id: entity_id },
@@ -54,9 +93,9 @@ function ItemDetailPage() {
 
   if (loading) {
     return (
-      <div className="item-detail-page">
-        <div className="detail-content">
-          <div className="detail-loading">Loading...</div>
+      <div className="min-h-screen bg-[var(--bg-primary)]">
+        <div className="flex flex-col md:flex-row p-4 md:p-8 gap-4 md:gap-8">
+          <div className="text-center py-12 text-[var(--text-secondary)]">Loading...</div>
         </div>
       </div>
     );
@@ -64,9 +103,9 @@ function ItemDetailPage() {
 
   if (error) {
     return (
-      <div className="item-detail-page">
-        <div className="detail-content">
-          <div className="detail-error">Error loading item: {error.message}</div>
+      <div className="min-h-screen bg-[var(--bg-primary)]">
+        <div className="flex flex-col md:flex-row p-4 md:p-8 gap-4 md:gap-8">
+          <div className="text-center py-12 text-red-500">Error loading item: {error.message}</div>
         </div>
       </div>
     );
@@ -76,17 +115,17 @@ function ItemDetailPage() {
 
   if (!item) {
     return (
-      <div className="item-detail-page">
-        <div className="detail-content">
-          <div className="detail-error">Item not found</div>
+      <div className="min-h-screen bg-[var(--bg-primary)]">
+        <div className="flex flex-col md:flex-row p-4 md:p-8 gap-4 md:gap-8">
+          <div className="text-center py-12 text-red-500">Item not found</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="item-detail-page">
-      <ItemDetailContent
+    <div className="min-h-screen bg-[var(--bg-primary)]">
+      <EntityDetail
         item={item}
         isUserItem={false}
         showAsWishlist={fromMyCollection && !isCollectionType(item.type)}
@@ -96,55 +135,8 @@ function ItemDetailPage() {
         externalAddMode={itemAddMode}
         onAddModeChange={setItemAddMode}
         onSaveRequest={saveItemRef}
+        onActionsReady={setEntityActions}
       />
-
-      {/* CircularMenu for mobile actions */}
-      {isAuthenticated ? (
-        itemAddMode ? (
-          // Save button when in add mode
-          <CircularMenu
-            mainButtonMode="action"
-            mainButtonIcon="fas fa-save"
-            mainButtonLabel="Add to collection"
-            mainButtonOnClick={() => {
-              if (saveItemRef.current) {
-                saveItemRef.current();
-              }
-            }}
-            mainButtonVariant="save"
-          />
-        ) : (
-          // Add button when viewing
-          <CircularMenu
-            actions={[
-              {
-                id: 'search',
-                icon: 'fas fa-search',
-                label: 'Search',
-                onClick: () => setShowMobileSearch(true)
-              },
-              {
-                id: 'add-item',
-                icon: 'fas fa-plus-circle',
-                label: 'Add to collection',
-                onClick: () => setItemAddMode(true)
-              }
-            ]}
-          />
-        )
-      ) : (
-        // Just search button for non-authenticated users
-        <CircularMenu
-          actions={[
-            {
-              id: 'search',
-              icon: 'fas fa-search',
-              label: 'Search',
-              onClick: () => setShowMobileSearch(true)
-            }
-          ]}
-        />
-      )}
 
       <MobileSearch
         isOpen={showMobileSearch}
@@ -160,4 +152,4 @@ function ItemDetailPage() {
   );
 }
 
-export default ItemDetailPage;
+export default DatabaseOfThingsEntityDetailPage;

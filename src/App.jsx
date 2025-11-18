@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { ApolloProvider } from '@apollo/client/react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -8,110 +8,50 @@ import { FilterProvider } from './contexts/FilterContext';
 import { CollectionFilterProvider } from './contexts/CollectionFilterContext';
 import { BreadcrumbsProvider } from './contexts/BreadcrumbsContext';
 import { SearchProvider } from './contexts/SearchContext';
+import { RadialMenuProvider, useRadialMenuContext } from './contexts/RadialMenuContext';
 import client from './apolloClient';
 import Navigation from './components/Navigation';
-import LoginModal from './components/LoginModal';
 import MobileSearch from './components/MobileSearch';
 import { ImageSearchModal } from './components/ImageSearchModal';
 import LandingPage from './components/LandingPage';
-import CollectionView from './components/CollectionView';
-import UserProfile from './components/UserProfile';
-import WishlistView from './components/WishlistView';
-import MyCollection from './components/MyCollection';
-import ItemDetailPage from './components/ItemDetailPage';
-import MyItemDetailPage from './components/MyItemDetailPage';
+import DatabaseOfThingsCollectionPage from './components/DatabaseOfThingsCollectionPage';
+import UserCollectionPage from './components/UserCollectionPage';
+import DatabaseOfThingsEntityDetailPage from './components/DatabaseOfThingsEntityDetailPage';
+import UserEntityDetailPage from './components/UserEntityDetailPage';
 import SearchResultsPage from './components/SearchResultsPage';
-import CircularMenu from './components/CircularMenu';
-import './App.css';
+import RadialMenu from './components/RadialMenu';
 
 // Get Google Client ID from environment variable
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 // Inner component that can use auth context
 function AppContent() {
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showImageSearchModal, setShowImageSearchModal] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
   const { isAuthenticated } = useAuth();
 
-  const handleLogin = () => {
-    setShowLoginModal(true);
-  };
-
-  const handleSignup = () => {
-    // For now, signup and login use the same Google OAuth flow
-    setShowLoginModal(true);
-  };
-
-  const handleSearchFromMenu = () => {
-    setShowMobileSearch(true);
-  };
-
-  const handleAccountClick = () => {
-    if (isAuthenticated) {
-      navigate('/profile');
-    } else {
-      setShowLoginModal(true);
-    }
-  };
-
-  // Build context-aware actions for CircularMenu
-  const getCircularMenuActions = () => {
-    const actions = [];
-
-    // Context-specific actions based on route
-    const isMyCollection = location.pathname.startsWith('/my-collection');
-    const isCollectionView = location.pathname.startsWith('/collection/');
-    const isItemDetail = location.pathname.startsWith('/item/');
-    const isMyItemDetail = location.pathname.startsWith('/my-item/');
-    const isSearchResults = location.pathname.startsWith('/search');
-
-    // MyCollection, CollectionView, ItemDetail, and SearchResults pages have their own CircularMenus
-    // Only show CircularMenu on other pages
-    if (!isMyCollection && !isCollectionView && !isItemDetail && !isMyItemDetail && !isSearchResults) {
-      // Search is available on other pages
-      actions.push({
-        id: 'search',
-        icon: 'fas fa-search',
-        label: 'Search',
-        onClick: handleSearchFromMenu
-      });
-    }
-
-    return actions;
-  };
+  // Get RadialMenu state from context
+  const { actions: radialMenuActions, mainButton } = useRadialMenuContext();
 
   return (
     <BreadcrumbsProvider>
-      <div className="app">
-        <Navigation
-          onLogin={handleLogin}
-          onSignup={handleSignup}
-        />
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
 
-        <main className="app-content">
+        <main className="flex-1 w-full">
           <Routes>
             <Route
               path="/"
               element={isAuthenticated ? <Navigate to="/my-collection" replace /> : <LandingPage />}
             />
             <Route path="/search" element={<SearchResultsPage />} />
-            <Route path="/collection/:id" element={<CollectionView />} />
-            <Route path="/my-collection/:id?" element={<MyCollection />} />
-            <Route path="/item/:entity_id" element={<ItemDetailPage />} />
-            <Route path="/my-item/:user_item_id" element={<MyItemDetailPage />} />
-            <Route path="/wishlist" element={<WishlistView />} />
-            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/collection/:id" element={<DatabaseOfThingsCollectionPage />} />
+            <Route path="/my-collection/:id?" element={<UserCollectionPage />} />
+            <Route path="/item/:entity_id" element={<DatabaseOfThingsEntityDetailPage />} />
+            <Route path="/my-item/:user_item_id" element={<UserEntityDetailPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
-
-        <LoginModal
-          isOpen={showLoginModal}
-          onClose={() => setShowLoginModal(false)}
-        />
 
         <MobileSearch
           isOpen={showMobileSearch}
@@ -124,14 +64,12 @@ function AppContent() {
           onClose={() => setShowImageSearchModal(false)}
         />
 
-        {/* Mobile Circular Menu - context-aware actions */}
-        {/* Only render on pages without their own CircularMenu (MyCollection and CollectionView have their own) */}
-        {getCircularMenuActions().length > 0 && (
-          <CircularMenu
-            actions={getCircularMenuActions()}
-            onBackdropClick={() => setShowMobileSearch(false)}
-          />
-        )}
+        {/* Mobile Radial Menu - centralized, controlled via RadialMenuContext */}
+        {mainButton ? (
+          <RadialMenu mainButton={mainButton} />
+        ) : radialMenuActions.length > 0 ? (
+          <RadialMenu actions={radialMenuActions} />
+        ) : null}
       </div>
     </BreadcrumbsProvider>
   );
@@ -147,7 +85,9 @@ function App() {
           <SearchProvider>
             <CollectionFilterProvider>
               <AuthProvider>
-                <AppContent />
+                <RadialMenuProvider>
+                  <AppContent />
+                </RadialMenuProvider>
               </AuthProvider>
             </CollectionFilterProvider>
           </SearchProvider>

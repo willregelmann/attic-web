@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import ItemDetailContent from './ItemDetailContent';
-import './ItemDetail.css';
+import { Modal } from './Modal';
+import EntityDetail from './EntityDetail';
 
-function ItemDetail({
+function EntityDetailModal({
   item,
   index,
   isOwned,
@@ -31,25 +31,19 @@ function ItemDetail({
 }) {
   const [isSaving, setIsSaving] = useState(false);
 
-  // Handle modal close - reset edit/add mode
-  const handleClose = () => {
-    if (!isSaving) {
-      onClose();
-    }
-  };
-
   if (!item) return null;
 
   return (
-    <div className="item-detail-overlay" onClick={handleClose} role="dialog" aria-modal="true" aria-labelledby="item-detail-title">
-      <div className={`item-detail-modal ${isSuggestionPreview ? 'suggestion-preview' : ''} ${isSaving ? 'saving' : ''}`} onClick={(e) => e.stopPropagation()}>
-        <button className="detail-close-btn" onClick={handleClose} aria-label="Close item details" disabled={isSaving}>
-          <svg viewBox="0 0 24 24" fill="none" width="24" height="24" aria-hidden="true">
-            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
-
-        <ItemDetailContent
+    <Modal
+      isOpen={!!item}
+      onClose={isSaving ? undefined : onClose}
+      size="4xl"
+      showCloseButton={true}
+      closeOnOverlayClick={!isSaving}
+      closeOnEscape={!isSaving}
+    >
+      <div className={`${isSuggestionPreview ? 'border-2 border-blue-500 rounded-lg' : ''} ${isSaving ? 'opacity-70 pointer-events-none' : ''}`}>
+        <EntityDetail
           item={item}
           index={index}
           isOwned={isOwned}
@@ -78,8 +72,8 @@ function ItemDetail({
           onSavingChange={setIsSaving}
         />
       </div>
-    </div>
+    </Modal>
   );
 }
 
-export default ItemDetail;
+export default EntityDetailModal;

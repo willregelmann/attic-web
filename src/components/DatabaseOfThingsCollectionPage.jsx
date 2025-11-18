@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useLazyQuery, useApolloClient } from '@apollo/client/react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCollectionFilter } from '../contexts/CollectionFilterContext';
-import { useNavigate } from 'react-router-dom';
 import {
   GET_DATABASE_OF_THINGS_COLLECTION_ITEMS,
   GET_DATABASE_OF_THINGS_COLLECTIONS,
@@ -12,12 +12,14 @@ import {
   REMOVE_ITEM_FROM_MY_COLLECTION,
   GET_COLLECTION_PARENT_COLLECTIONS,
   BATCH_ADD_ITEMS_TO_MY_COLLECTION,
-  MY_COLLECTION_TREE
+  MY_COLLECTION_TREE,
+  GET_DATABASE_OF_THINGS_ENTITY
 } from '../queries';
+import { addToRecentlyViewed } from '../utils/recentlyViewed';
 import { isFormBusy } from '../utils/formUtils';
-import ItemDetail from './ItemDetail';
-import CollectionFilterPanel from './CollectionFilterPanel';
-import CircularMenu from './CircularMenu';
+import EntityDetailModal from './EntityDetailModal';
+import CollectionFilterDrawer from './CollectionFilterDrawer';
+import { useRadialMenu, useRadialMenuMainButton } from '../contexts/RadialMenuContext';
 import MobileSearch from './MobileSearch';
 import { ImageSearchModal } from './ImageSearchModal';
 import Toast from './Toast';
@@ -28,17 +30,79 @@ import { CollectionHeader } from './CollectionHeader';
 import { EntityCardGrid } from './EntityCardGrid';
 import { useBreadcrumbs } from '../contexts/BreadcrumbsContext';
 import { useMultiSelect } from '../hooks/useMultiSelect';
-import { BatchActionModal } from './BatchActionModal';
-import { BatchAddToCollectionModal } from './BatchAddToCollectionModal';
-import './ItemList.css';
-import './MultiSelectToolbar.css';
+import { ConfirmationModal } from './ConfirmationModal';
+import { BatchAddToUserCollectionModal } from './BatchAddToUserCollectionModal';
 
-function ItemList({ collection, onBack, onSelectCollection, isRootView = false, onRefresh, navigationPath = [] }) {
+function DatabaseOfThingsCollectionPage() {
+  const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const apolloClient = useApolloClient();
   const { setBreadcrumbItems, setLoading: setBreadcrumbsLoading } = useBreadcrumbs();
-  const { getFiltersForCollection, applyFilters, hasActiveFilters } = useCollectionFilter();
+  const { getFiltersForCollection, applyFilters, hasActiveFilters, setActiveCollection } = useCollectionFilter();
+
+  // If no ID, we're at the root
+  const isRootView = !id || id === 'root';
+
+  // Get navigation path from URL query params
+  // Path format: "id1:name1,id2:name2,id3:name3"
+  const pathParam = searchParams.get('path');
+  const navigationPath = useMemo(() =>
+    pathParam
+      ? pathParam.split(',').map(item => {
+          const [id, ...nameParts] = item.split(':');
+          return { id, name: decodeURIComponent(nameParts.join(':')) }; // Join back in case name contains ':'
+        })
+      : [],
+    [pathParam]
+  );
+
+  // Fetch collection data if not root
+  const { data: collectionData, loading: collectionLoading, error: collectionError, refetch: refetchCollection } = useQuery(GET_DATABASE_OF_THINGS_ENTITY, {
+    variables: { id: id },
+    skip: isRootView,
+    fetchPolicy: 'cache-and-network'
+  });
+
+  // Create virtual root collection based on auth state
+  const getRootCollection = () => {
+    if (isAuthenticated) {
+      return {
+        id: 'root',
+        name: 'My Starred Collections',
+        type: 'COLLECTION',
+        metadata: {
+          description: 'Your favorite collections'
+        }
+      };
+    } else {
+      return {
+        id: 'root',
+        name: 'Featured Collections',
+        type: 'COLLECTION',
+        metadata: {
+          description: 'Explore collectibles from various collections'
+        }
+      };
+    }
+  };
+
+  const collection = isRootView ? getRootCollection() : (collectionData?.databaseOfThingsEntity || null);
+
+  // Track collection views
+  useEffect(() => {
+    if (collection && !isRootView) {
+      addToRecentlyViewed(collection);
+    }
+  }, [collection, isRootView]);
+
+  // Set active collection
+  useEffect(() => {
+    if (!isRootView && id) {
+      setActiveCollection(id);
+    }
+  }, [id, isRootView, setActiveCollection]);
   const [filter, setFilter] = useState('all'); // all, owned, missing
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // grid, list
@@ -50,7 +114,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showImageSearchModal, setShowImageSearchModal] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
-  const saveCollectionRef = useRef(null); // Ref to trigger save from CircularMenu
+  const saveCollectionRef = useRef(null); // Ref to trigger save from RadialMenu
 
   // Multi-select state
   const {
@@ -106,26 +170,26 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   });
 
   // Use different queries for root vs nested collections
-  const isRoot = collection.id === 'root';
+  const isRoot = collection?.id === 'root';
 
-  // Determine which query to use
-  let query;
-  let variables = {};
-
-  if (isRoot) {
-    // For root: always show all collections
-    query = GET_DATABASE_OF_THINGS_COLLECTIONS;
-    variables = { first: 50 };
-  } else {
-    query = GET_DATABASE_OF_THINGS_COLLECTION_ITEMS;
-    variables = { collectionId: collection.id, first: 1000 };
-  }
-
-  const { loading, error, data, refetch } = useQuery(query, {
-    variables,
-    skip: !collection.id,
+  // Always call both queries unconditionally (Rules of Hooks), but skip the one we don't need
+  const { loading: loadingCollections, error: errorCollections, data: dataCollections, refetch: refetchCollections } = useQuery(GET_DATABASE_OF_THINGS_COLLECTIONS, {
+    variables: { first: 50 },
+    skip: !isRoot || !collection?.id,
     fetchPolicy: 'cache-and-network'
   });
+
+  const { loading: loadingItems, error: errorItems, data: dataItems, refetch: refetchItems } = useQuery(GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, {
+    variables: { collectionId: collection?.id, first: 1000 },
+    skip: isRoot || !collection?.id,
+    fetchPolicy: 'cache-and-network'
+  });
+
+  // Use the appropriate query result based on which query ran
+  const loading = isRoot ? loadingCollections : loadingItems;
+  const error = isRoot ? errorCollections : errorItems;
+  const data = isRoot ? dataCollections : dataItems;
+  const refetch = isRoot ? refetchCollections : refetchItems;
 
   // Ownership data - fetched from backend for authenticated users
   const [userOwnership, setUserOwnership] = useState(new Set());
@@ -168,7 +232,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
         // Check current level
         for (const col of collections) {
-          if (col.linked_dbot_collection_id === collection.id) {
+          if (col.linked_dbot_collection_id === collection?.id) {
             return col; // Return the full collection object
           }
         }
@@ -375,9 +439,160 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
     });
   };
 
+  // Build header actions array (used for both desktop header and mobile menu)
+  const headerActions = useMemo(() => {
+    const actions = [];
+
+    // Filter action - always available when not in root view
+    if (!isRootView) {
+      actions.push({
+        id: 'filter',
+        icon: (
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ),
+        label: 'Filter collection items',
+        onClick: (e) => {
+          e?.stopPropagation();
+          setShowCollectionFilters(true);
+        },
+        variant: hasActiveFilters(collection?.id) ? 'active' : undefined,
+        badge: hasActiveFilters(collection?.id) ? <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[var(--yellow-accent)] border-2 border-[#2C4B7B] rounded-full animate-[pulse-badge_2s_ease-in-out_infinite]"></span> : undefined
+      });
+    }
+
+    // Wishlist/heart action - available when authenticated
+    if (!isRootView && isAuthenticated) {
+      actions.push({
+        id: 'wishlist',
+        icon: (
+          <svg viewBox="0 0 24 24" width="20" height="20" fill={isCollectionLinked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ),
+        label: isCollectionLinked ? 'View in My Collection' : 'Add collection to wishlist',
+        onClick: (e) => {
+          e?.stopPropagation();
+          if (isCollectionLinked && linkedCollectionId) {
+            navigate(`/my-collection/${linkedCollectionId}`);
+          } else {
+            setSelectedItem(collection);
+            setSelectedItemIndex(null);
+            setIsWishlistMode(true);
+          }
+        },
+        className: isCollectionLinked ? 'linked-collection' : undefined
+      });
+    }
+
+    return actions;
+  }, [isRootView, isAuthenticated, isCollectionLinked, linkedCollectionId, collection, hasActiveFilters, navigate]);
+
+  // Build RadialMenu actions for normal mode
+  const radialMenuActions = useMemo(() => {
+    // Don't show menu in root view
+    if (isRoot || !collection?.id) return [];
+
+    const actions = [
+      {
+        id: 'search',
+        icon: 'fas fa-search',
+        label: 'Search',
+        onClick: () => setShowMobileSearch(true)
+      }
+    ];
+
+    // Add header actions (filter, wishlist)
+    actions.push(...headerActions);
+
+    // Add item action buttons when viewing an item in ItemDetail
+    if (isAuthenticated && selectedItem && !isCollectionType(selectedItem.type) && selectedItemIndex !== null) {
+      if (userOwnership.has(selectedItem.id)) {
+        actions.push({
+          id: 'remove-from-collection',
+          icon: 'fas fa-minus-circle',
+          label: 'Remove from collection',
+          onClick: () => {
+            if (window.confirm(`Remove "${selectedItem.name}" from your collection?`)) {
+              toggleItemOwnership(selectedItem.id);
+            }
+          },
+          disabled: isFormBusy(isAddingItem, isRemovingItem)
+        });
+      } else {
+        actions.push({
+          id: 'add-to-collection',
+          icon: 'fas fa-plus-circle',
+          label: 'Add to collection',
+          onClick: () => toggleItemOwnership(selectedItem.id),
+          disabled: isFormBusy(isAddingItem, isRemovingItem)
+        });
+      }
+    }
+
+    return actions;
+  }, [isRoot, collection?.id, headerActions, isAuthenticated, selectedItem, selectedItemIndex, userOwnership, toggleItemOwnership, isAddingItem, isRemovingItem]);
+
+  // Set RadialMenu actions via context (normal mode)
+  useRadialMenu(
+    (isMultiSelectMode || isWishlistMode) ? [] : radialMenuActions,
+    [isMultiSelectMode, isWishlistMode, radialMenuActions]
+  );
+
+  // Set main button for action modes
+  useRadialMenuMainButton(
+    isMultiSelectMode ? {
+      icon: 'fas fa-plus',
+      label: `Add ${selectedCount} items`,
+      onClick: () => setShowBatchConfirm(true),
+      variant: 'save'
+    } : isWishlistMode ? {
+      icon: 'fas fa-save',
+      label: 'Save wishlist',
+      onClick: () => {
+        if (saveCollectionRef.current) {
+          saveCollectionRef.current();
+        }
+      },
+      variant: 'save'
+    } : null,
+    [isMultiSelectMode, isWishlistMode, selectedCount]
+  );
+
+  // Handle collection loading/error first (before items)
+  if (!isRootView && collectionLoading) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] max-w-[1400px] mx-auto">
+        <CollectionHeaderSkeleton />
+        <ItemListSkeleton count={12} />
+      </div>
+    );
+  }
+
+  if (!isRootView && collectionError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-12">
+        <h3>Error loading collection</h3>
+        <p>{collectionError.message}</p>
+        <button onClick={() => navigate('/')}>Back to Collections</button>
+      </div>
+    );
+  }
+
+  if (!collection) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-12">
+        <h3>Collection not found</h3>
+        <button onClick={() => navigate('/')}>Back to Collections</button>
+      </div>
+    );
+  }
+
+  // Handle items loading/error
   if (loading) {
     return (
-      <div className="item-list">
+      <div className="min-h-[calc(100vh-64px)] max-w-[1400px] mx-auto">
         <CollectionHeaderSkeleton />
         <ItemListSkeleton count={12} />
       </div>
@@ -386,68 +601,23 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
   if (error) {
     return (
-      <div className="items-error">
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-12">
         <h3>Error loading items</h3>
         <p>{error.message}</p>
-        <button onClick={onBack}>Back to Collections</button>
+        <button onClick={() => navigate(-1)}>Back</button>
       </div>
     );
   }
 
-  // Collection header action buttons (filter only)
-  const headerActions = !isRootView && (
-    <button
-      className={`filter-toggle-button ${hasActiveFilters(collection.id) ? 'active' : ''}`}
-      onClick={(e) => {
-        e.stopPropagation();
-        setShowCollectionFilters(true);
-      }}
-      title="Filter collection items"
-    >
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-      {hasActiveFilters(collection.id) && (
-        <span className="filter-badge"></span>
-      )}
-    </button>
-  );
-
-  // Wishlist button - positioned immediately after collection name (desktop only)
-  // Hidden on mobile since it's available in the circular menu
-  const titleAction = !isRootView && isAuthenticated && (
-    <button
-      className={`wishlist-button desktop-only-actions ${isCollectionLinked ? 'linked' : ''}`}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (isCollectionLinked && linkedCollectionId) {
-          // Navigate to the linked collection in My Collection
-          navigate(`/my-collection/${linkedCollectionId}`);
-        } else {
-          // Open wishlist mode to link the collection
-          setSelectedItem(collection);
-          setSelectedItemIndex(null);
-          setIsWishlistMode(true);
-        }
-      }}
-      title={isCollectionLinked ? "View in My Collection" : "Add collection to wishlist"}
-    >
-      <svg viewBox="0 0 24 24" width="20" height="20" fill={isCollectionLinked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </button>
-  );
-
   return (
-    <div className="item-list">
+    <div className="min-h-[calc(100vh-64px)] max-w-[1400px] mx-auto">
       {/* Collection Header */}
       <CollectionHeader
         collection={collection}
-        subtitle={`${formatEntityType(collection.type)}${collection.year ? ` • ${collection.year}` : ''}`}
+        subtitle={`${formatEntityType(collection?.type)}${collection?.year ? ` • ${collection.year}` : ''}`}
         ownedCount={stats.owned}
         totalCount={stats.total}
         actions={headerActions}
-        titleAction={titleAction}
         onClick={() => {
           setSelectedItem(collection);
           setSelectedItemIndex(null);
@@ -458,15 +628,15 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
       {/* Multi-select toolbar (desktop) */}
       {isMultiSelectMode && (
-        <div className="multi-select-toolbar" data-testid="multi-select-toolbar">
-          <span className="selection-count" data-testid="selection-count">{selectedCount} items selected</span>
-          <div className="toolbar-actions">
-            <button onClick={exitMultiSelectMode} className="cancel-btn" data-testid="cancel-multi-select-btn">
+        <div className="hidden md:flex bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg py-3 px-4 my-4 items-center justify-between" data-testid="multi-select-toolbar">
+          <span className="text-sm font-medium text-[var(--text-primary)]" data-testid="selection-count">{selectedCount} items selected</span>
+          <div className="flex gap-2">
+            <button onClick={exitMultiSelectMode} className="py-2 px-4 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 bg-[var(--bg-tertiary)] text-[var(--text-primary)] border border-[var(--border-color)] hover:bg-[var(--bg-secondary)]" data-testid="cancel-multi-select-btn">
               Cancel
             </button>
             <button
               onClick={() => setShowBatchConfirm(true)}
-              className="action-btn"
+              className="py-2 px-4 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 border-none bg-[var(--primary-color)] text-white hover:bg-[var(--primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={selectedCount === 0}
               data-testid="batch-add-collection-btn"
             >
@@ -480,38 +650,57 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
       {filteredItems.length > 0 ? (
         <EntityCardGrid
           items={filteredItems}
-          onItemClick={(item, index) => {
-            // In multi-select mode, handle via ItemCard
-            if (isMultiSelectMode) {
-              return;
-            }
+          onClick={{
+            item: (item, index) => {
+              // In multi-select mode, handle via ItemCard
+              if (isMultiSelectMode) {
+                return;
+              }
 
-            // Check viewport: on mobile (<=768px), navigate to full-page view
-            const isMobile = window.innerWidth <= 768;
+              // Check viewport: on mobile (<=768px), navigate to full-page view
+              const isMobile = window.innerWidth <= 768;
 
-            if (isMobile) {
-              // Navigate to full-page view on mobile
-              navigate(`/item/${item.id}`);
-            } else {
-              // Open modal on desktop
-              setSelectedItem(item);
-              setSelectedItemIndex(index);
+              if (isMobile) {
+                // Navigate to full-page view on mobile
+                navigate(`/item/${item.id}`);
+              } else {
+                // Open modal on desktop
+                setSelectedItem(item);
+                setSelectedItemIndex(index);
+              }
+            },
+            collection: (selectedCollection) => {
+              // Build new path: ancestors + current collection
+              const newPath = isRootView
+                ? [] // From root, no ancestors
+                : [
+                    ...navigationPath.map(p => `${p.id}:${encodeURIComponent(p.name)}`),
+                    `${id}:${encodeURIComponent(collection?.name || '')}`
+                  ];
+
+              // Navigate to the collection's URL with updated path
+              const pathParam = newPath.length > 0 ? `?path=${newPath.join(',')}` : '';
+              navigate(`/collection/${selectedCollection.id}${pathParam}`);
             }
           }}
-          onCollectionClick={onSelectCollection}
-          userOwnership={userOwnership}
-          userFavorites={new Set()}
+          ownership={{
+            owned: userOwnership,
+            favorites: new Set()
+          }}
+          multiSelect={{
+            active: isMultiSelectMode,
+            selected: new Set(selectedIds),
+            onToggle: toggleItemSelection,
+            allowCollections: false
+          }}
           isRoot={isRoot}
           viewMode={viewMode}
-          isMultiSelectMode={isMultiSelectMode}
-          selectedItems={new Set(selectedIds)}
-          onItemSelectionToggle={toggleItemSelection}
         />
       ) : (
-        <div className="no-items">
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-12">
           {searchTerm || filter !== 'all' ? (
             <>
-              <svg className="empty-icon" viewBox="0 0 24 24" fill="none">
+              <svg className="w-16 h-16 text-[var(--text-secondary)] mb-4" viewBox="0 0 24 24" fill="none">
                 <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
                 <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 <path d="M8 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -521,7 +710,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
             </>
           ) : isRoot && isAuthenticated ? (
             <>
-              <svg className="empty-icon" viewBox="0 0 24 24" fill="none">
+              <svg className="w-16 h-16 text-[var(--text-secondary)] mb-4" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
                       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -530,7 +719,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
             </>
           ) : (
             <>
-              <svg className="empty-icon" viewBox="0 0 24 24" fill="none">
+              <svg className="w-16 h-16 text-[var(--text-secondary)] mb-4" viewBox="0 0 24 24" fill="none">
                 <rect x="3" y="6" width="18" height="12" stroke="currentColor" strokeWidth="2" rx="2"/>
                 <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
@@ -543,7 +732,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
 
       {/* Item Detail Modal */}
       {selectedItem && (
-        <ItemDetail
+        <EntityDetailModal
           item={selectedItem}
           index={selectedItemIndex}
           collection={collection}
@@ -585,9 +774,9 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
         />
       )}
 
-      {/* Collection Filter Panel */}
+      {/* Collection Filter Drawer */}
       {!isRoot && collection?.id && (
-        <CollectionFilterPanel
+        <CollectionFilterDrawer
           collectionId={collection.id}
           items={items}
           fetchCollectionItems={fetchCollectionItems}
@@ -596,104 +785,6 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
           userOwnership={userOwnership}
         />
       )}
-
-      {/* Collection-specific Circular Menu with Filter */}
-      {!isRoot && collection?.id && (() => {
-        // If in multi-select mode, show action button
-        if (isMultiSelectMode) {
-          return (
-            <CircularMenu
-              mainButtonMode="action"
-              mainButtonIcon="fas fa-plus"
-              mainButtonLabel={`Add ${selectedCount} items`}
-              mainButtonOnClick={() => setShowBatchConfirm(true)}
-              mainButtonVariant="save"
-            />
-          );
-        }
-
-        // If in wishlist mode, show save button
-        if (isWishlistMode) {
-          return (
-            <CircularMenu
-              mainButtonMode="action"
-              mainButtonIcon="fas fa-save"
-              mainButtonLabel="Save wishlist"
-              mainButtonOnClick={() => {
-                if (saveCollectionRef.current) {
-                  saveCollectionRef.current();
-                }
-              }}
-              mainButtonVariant="save"
-            />
-          );
-        }
-
-        const actions = [
-          {
-            id: 'search',
-            icon: 'fas fa-search',
-            label: 'Search',
-            onClick: () => setShowMobileSearch(true)
-          },
-          {
-            id: 'filter',
-            icon: 'fas fa-filter',
-            label: 'Filter collection',
-            onClick: () => setShowCollectionFilters(true)
-          }
-        ];
-
-        // Add wishlist button when no item is selected and user is authenticated
-        if (isAuthenticated && !selectedItem && !isRootView) {
-          actions.push({
-            id: 'add-to-wishlist',
-            icon: 'fas fa-heart',
-            label: isCollectionLinked ? 'View in My Collection' : 'Add collection to wishlist',
-            onClick: () => {
-              if (isCollectionLinked && linkedCollectionId) {
-                // Navigate to the linked collection in My Collection
-                navigate(`/my-collection/${linkedCollectionId}`);
-              } else {
-                // Open wishlist mode to link the collection
-                setSelectedItem(collection);
-                setSelectedItemIndex(null);
-                setIsWishlistMode(true);
-              }
-            },
-            className: isCollectionLinked ? 'linked-collection' : ''
-          });
-        }
-
-        // Add item action buttons when viewing an item (not a collection) in ItemDetail
-        if (isAuthenticated && selectedItem && !isCollectionType(selectedItem.type) && selectedItemIndex !== null) {
-          if (userOwnership.has(selectedItem.id)) {
-            // For owned items: show remove button
-            actions.push({
-              id: 'remove-from-collection',
-              icon: 'fas fa-minus-circle',
-              label: 'Remove from collection',
-              onClick: () => {
-                if (window.confirm(`Remove "${selectedItem.name}" from your collection?`)) {
-                  toggleItemOwnership(selectedItem.id);
-                }
-              },
-              disabled: isFormBusy(isAddingItem, isRemovingItem)
-            });
-          } else {
-            // For non-owned items: show add button
-            actions.push({
-              id: 'add-to-collection',
-              icon: 'fas fa-plus-circle',
-              label: 'Add to collection',
-              onClick: () => toggleItemOwnership(selectedItem.id),
-              disabled: isFormBusy(isAddingItem, isRemovingItem)
-            });
-          }
-        }
-
-        return <CircularMenu actions={actions} />;
-      })()}
 
       {/* Mobile Search Modal */}
       <MobileSearch
@@ -709,7 +800,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
       />
 
       {/* Batch Add to Collection Modal */}
-      <BatchAddToCollectionModal
+      <BatchAddToUserCollectionModal
         isOpen={showBatchConfirm}
         onClose={() => setShowBatchConfirm(false)}
         onConfirm={handleBatchAdd}
@@ -719,7 +810,7 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
       />
 
       {/* Single Item Add to Collection Modal */}
-      <BatchAddToCollectionModal
+      <BatchAddToUserCollectionModal
         isOpen={showSingleItemPicker}
         onClose={() => {
           setShowSingleItemPicker(false);
@@ -743,4 +834,4 @@ function ItemList({ collection, onBack, onSelectCollection, isRootView = false, 
   );
 }
 
-export default ItemList;
+export default DatabaseOfThingsCollectionPage;

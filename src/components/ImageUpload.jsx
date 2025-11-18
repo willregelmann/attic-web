@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { Upload, X, GripVertical, Camera } from 'lucide-react';
-import './ImageUpload.css';
 
 /**
  * ImageUpload - Dropzone for uploading and managing multiple images
@@ -152,12 +151,16 @@ export function ImageUpload({
   };
 
   return (
-    <div className="image-upload">
-      <div className="image-upload-grid">
+    <div className="m-0">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(100px,1fr))] sm:grid-cols-[repeat(auto-fit,minmax(110px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3 max-w-full overflow-hidden p-1">
         {displayImages.map((imageObj, idx) => (
           <div
             key={`${imageObj.type}-${imageObj.index}-${idx}`}
-            className={`image-upload-item ${draggedIndex === idx ? 'dragging' : ''}`}
+            className={`relative aspect-square rounded-lg overflow-hidden border-2 cursor-move transition-transform max-h-[150px] h-full ${
+              draggedIndex === idx
+                ? 'opacity-50 border-gray-300'
+                : 'border-gray-200 hover:scale-105 hover:border-blue-500'
+            }`}
             draggable
             onDragStart={(e) => handleDragStart(e, idx)}
             onDragEnd={handleDragEnd}
@@ -165,38 +168,48 @@ export function ImageUpload({
             onDrop={(e) => handleDrop(e, idx)}
             data-testid="image-preview"
           >
-            <div className="image-upload-drag-handle" data-testid="drag-handle">
+            <div
+              className="absolute top-1 left-1 bg-black/60 text-white rounded p-0.5 cursor-grab active:cursor-grabbing z-[2] select-none"
+              data-testid="drag-handle"
+            >
               <GripVertical size={16} />
             </div>
             <img
               src={getImageUrl(imageObj)}
               alt={`Upload ${idx + 1}`}
-              className="image-upload-thumbnail"
+              className="w-full h-full object-contain"
             />
             <button
               type="button"
-              className="image-upload-remove"
+              className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-500 border-none text-white rounded-full w-6 h-6 flex items-center justify-center cursor-pointer z-[2]"
               onClick={() => handleRemove(imageObj)}
               aria-label="Remove image"
               data-testid="remove-image-btn"
             >
               <X size={16} />
             </button>
-            {idx === 0 && <span className="image-upload-primary" data-testid="primary-image-badge">Primary</span>}
+            {idx === 0 && (
+              <span
+                className="absolute bottom-1 left-1 bg-blue-500/90 text-white text-[10px] px-1.5 py-0.5 rounded font-semibold"
+                data-testid="primary-image-badge"
+              >
+                Primary
+              </span>
+            )}
           </div>
         ))}
 
         {displayImages.length < maxImages && (
           <div
-            className="image-upload-dropzone"
+            className="aspect-square border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all text-slate-500 max-h-[150px] h-full hover:border-blue-500 hover:bg-slate-100 hover:text-blue-500"
             onClick={() => fileInputRef.current?.click()}
           >
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div className="flex gap-2 items-center">
               <Camera size={28} />
               <Upload size={28} />
             </div>
-            <span>Add Images</span>
-            <span className="image-upload-hint">
+            <span className="text-xs mt-1">Add Images</span>
+            <span className="text-[11px] mt-1 text-center">
               {allImages.length}/{maxImages} • 5MB max • JPEG, PNG, WebP
             </span>
           </div>

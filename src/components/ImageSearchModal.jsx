@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react';
-import { X, Camera, Upload as UploadIcon, Search, Loader } from 'lucide-react';
+import { X, Upload as UploadIcon, Search, Loader } from 'lucide-react';
 import { useMutation } from '@apollo/client/react';
 import { useNavigate } from 'react-router-dom';
 import { SEARCH_BY_IMAGE } from '../queries';
 import { useSearch } from '../contexts/SearchContext';
-import './ImageSearchModal.css';
+import { Modal, ModalButton } from './Modal';
 
 /**
  * ImageSearchModal - Upload an image to search for visually similar items
@@ -19,8 +19,6 @@ export function ImageSearchModal({ isOpen, onClose }) {
 
   const [isDragging, setIsDragging] = useState(false);
   const [searchByImage, { loading }] = useMutation(SEARCH_BY_IMAGE);
-
-  if (!isOpen) return null;
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -78,86 +76,86 @@ export function ImageSearchModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="image-search-modal-overlay" onClick={handleClose}>
-      <div className="image-search-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="image-search-close" onClick={handleClose}>
-          <X size={24} />
-        </button>
-
-        <h2>Search by Image</h2>
-        <p className="image-search-subtitle">
-          Upload a photo to find visually similar items
-        </p>
-
-        {!imagePreview ? (
-          <div
-            className={`image-search-dropzone ${isDragging ? 'dragging' : ''}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <UploadIcon size={48} className="image-search-icon" />
-            <p className="image-search-dropzone-text">
-              <span className="desktop-only">Drag and drop an image here, or click to browse</span>
-              <span className="mobile-only">Tap to select an image</span>
-            </p>
-            <p className="image-search-hint">
-              Supports JPG, PNG, and WebP (max 10MB)
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleFileSelect}
-              style={{ display: 'none' }}
-              capture="environment" // Enable camera on mobile
-            />
-          </div>
-        ) : (
-          <div className="image-search-preview">
-            <img
-              src={imagePreview}
-              alt="Selected image"
-              className="image-search-preview-img"
-            />
-            <button
-              className="image-search-remove-btn"
-              onClick={clearImage}
-              title="Remove image"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        )}
-
-        <div className="image-search-actions">
-          <button
-            className="image-search-btn secondary"
-            onClick={handleClose}
-            disabled={loading}
-          >
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Search by Image"
+      size="md"
+      showCloseButton={true}
+      footer={
+        <>
+          <ModalButton onClick={handleClose} disabled={loading}>
             Cancel
-          </button>
-          <button
-            className="image-search-btn primary"
+          </ModalButton>
+          <ModalButton
             onClick={handleSearch}
+            variant="primary"
             disabled={!imageFile || loading}
           >
             {loading ? (
               <>
-                <Loader size={16} className="spinning" />
+                <Loader size={16} className="animate-spin inline mr-2" />
                 Searching...
               </>
             ) : (
               <>
-                <Search size={16} />
+                <Search size={16} className="inline mr-2" />
                 Search
               </>
             )}
+          </ModalButton>
+        </>
+      }
+    >
+      <p className="text-[var(--text-secondary)] text-center mb-4">
+        Upload a photo to find visually similar items
+      </p>
+
+      {!imagePreview ? (
+        <div
+          className={`border-2 border-dashed rounded-lg py-12 px-8 md:px-4 text-center cursor-pointer transition-all mb-6 ${
+            isDragging
+              ? 'border-[var(--primary)] bg-[var(--bg-tertiary)]'
+              : 'border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--primary)] hover:bg-[var(--bg-tertiary)]'
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <UploadIcon size={48} className="text-[var(--text-secondary)] mb-4 mx-auto" />
+          <p className="m-0 mb-2 text-[var(--text-primary)] text-[15px]">
+            <span className="hidden md:inline">Drag and drop an image here, or click to browse</span>
+            <span className="md:hidden">Tap to select an image</span>
+          </p>
+          <p className="m-0 text-[var(--text-secondary)] text-sm">
+            Supports JPG, PNG, and WebP (max 10MB)
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleFileSelect}
+            style={{ display: 'none' }}
+            capture="environment"
+          />
+        </div>
+      ) : (
+        <div className="relative mb-6 rounded-lg overflow-hidden">
+          <img
+            src={imagePreview}
+            alt="Selected image"
+            className="w-full h-auto max-h-[400px] object-contain block bg-[var(--bg-secondary)]"
+          />
+          <button
+            className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 border-none text-white rounded-full w-8 h-8 flex items-center justify-center cursor-pointer transition-colors"
+            onClick={clearImage}
+            title="Remove image"
+          >
+            <X size={20} />
           </button>
         </div>
-      </div>
-    </div>
+      )}
+    </Modal>
   );
 }

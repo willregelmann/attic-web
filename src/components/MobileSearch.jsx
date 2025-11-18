@@ -4,7 +4,6 @@ import { useLazyQuery } from '@apollo/client/react';
 import { Camera } from 'lucide-react';
 import { SEMANTIC_SEARCH_DATABASE_OF_THINGS } from '../queries';
 import { isCollectionType, formatEntityType } from '../utils/formatters';
-import './MobileSearch.css';
 
 function MobileSearch({ isOpen, onClose, onAddToCollection, onOpenImageSearch }) {
   const navigate = useNavigate();
@@ -69,114 +68,119 @@ function MobileSearch({ isOpen, onClose, onAddToCollection, onOpenImageSearch })
   return (
     <>
       {/* Backdrop - blurs the app content */}
-      <div className="mobile-search-backdrop" onClick={handleClose} />
+      <div
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[9999]"
+        onClick={handleClose}
+      />
 
-      <div className="mobile-search-overlay">
-        <div className="mobile-search-container">
-        <div className="mobile-search-header">
-          <div className="mobile-search-input-wrapper">
-            <svg className="mobile-search-icon" viewBox="0 0 24 24" fill="none" width="20" height="20">
-              <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
-              <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-            <input
-              type="text"
-              className="mobile-search-input"
-              placeholder="Search collections and items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              autoFocus
-            />
-            {searchQuery && (
+      <div className="fixed top-5 left-4 right-4 z-[10000] flex flex-col max-h-[calc(100vh-40px)]">
+        <div className="flex flex-col bg-[var(--bg-primary)] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.15)] overflow-hidden max-h-full">
+          <div className="flex items-center gap-3 p-4 bg-[var(--bg-primary)] border-b border-[var(--border-color)]">
+            <div className="flex-1 flex items-center gap-2 rounded-lg py-2.5 px-3">
+              <svg className="text-[var(--text-secondary)] shrink-0" viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+                <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              <input
+                type="text"
+                className="flex-1 border-none bg-transparent text-base text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)]"
+                placeholder="Search collections and items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                autoFocus
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="bg-none border-none p-1 text-[var(--text-secondary)] cursor-pointer flex items-center justify-center"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              )}
               <button
                 type="button"
-                className="mobile-search-clear"
-                onClick={() => setSearchQuery('')}
+                className="bg-none border-none p-1 text-[var(--text-secondary)] cursor-pointer flex items-center justify-center transition-colors active:text-[var(--primary)]"
+                onClick={() => {
+                  onOpenImageSearch?.(); // Open image search modal
+                  onClose(); // Close mobile search when switching to image search
+                }}
+                title="Search by image"
               >
-                <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
+                <Camera size={18} />
               </button>
-            )}
-            <button
-              type="button"
-              className="mobile-search-image-toggle"
-              onClick={() => {
-                onOpenImageSearch?.(); // Open image search modal
-                onClose(); // Close mobile search when switching to image search
-              }}
-              title="Search by image"
-            >
-              <Camera size={18} />
-            </button>
+            </div>
           </div>
-        </div>
 
-        {searchQuery.length > 2 && (
-          <div className="mobile-search-results">
-            {searchLoading && (
-              <div className="mobile-search-loading">Searching...</div>
-            )}
-            {!searchLoading && searchData?.databaseOfThingsSemanticSearch && (
-              <>
-                {searchData.databaseOfThingsSemanticSearch.length === 0 ? (
-                  <div className="mobile-search-empty">No results found</div>
-                ) : (
-                  <>
-                    <div className="mobile-search-results-list">
-                      {searchData.databaseOfThingsSemanticSearch.map(item => (
+          {searchQuery.length > 2 && (
+            <div className="overflow-hidden flex flex-col bg-[var(--bg-primary)] min-h-0">
+              {searchLoading && (
+                <div className="text-center py-8 px-4 text-[var(--text-secondary)]">Searching...</div>
+              )}
+              {!searchLoading && searchData?.databaseOfThingsSemanticSearch && (
+                <>
+                  {searchData.databaseOfThingsSemanticSearch.length === 0 ? (
+                    <div className="text-center py-8 px-4 text-[var(--text-secondary)]">No results found</div>
+                  ) : (
+                    <>
+                      <div className="py-2 overflow-y-auto min-h-0 max-h-[400px]">
+                        {searchData.databaseOfThingsSemanticSearch.map(item => (
+                          <button
+                            key={item.id}
+                            className="flex items-center gap-3 py-3 px-4 bg-none border-none w-full text-left cursor-pointer transition-colors active:bg-[var(--bg-secondary)]"
+                            onClick={() => handleResultClick(item)}
+                          >
+                            <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 relative bg-[var(--bg-secondary)]">
+                              {(item.thumbnail_url || item.image_url || item.representative_image_urls?.[0]) ? (
+                                <img
+                                  src={item.thumbnail_url || item.image_url || item.representative_image_urls?.[0]}
+                                  alt={item.name}
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                className="w-full h-full flex items-center justify-center text-2xl"
+                                style={{ display: (item.thumbnail_url || item.image_url || item.representative_image_urls?.[0]) ? 'none' : 'flex' }}
+                              >
+                                {isCollectionType(item.type) ? '📦' : '🎴'}
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-base font-medium text-[var(--text-primary)] mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                                {item.name}
+                              </div>
+                              <div className="text-sm text-[var(--text-secondary)]">
+                                {formatEntityType(item.type)}
+                                {item.year && ` • ${item.year}`}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      {searchData.databaseOfThingsSemanticSearch.length === 10 && (
                         <button
-                          key={item.id}
-                          className="mobile-search-result-item"
-                          onClick={() => handleResultClick(item)}
+                          className="block w-full p-4 bg-[var(--bg-primary)] border-none border-t border-[var(--border-color)] text-[var(--primary)] text-base font-semibold cursor-pointer transition-all text-center shrink-0 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] active:bg-[var(--bg-secondary)]"
+                          onClick={handleViewAllResults}
+                          data-testid="mobile-view-all-results"
                         >
-                          <div className="mobile-search-result-image">
-                            {(item.thumbnail_url || item.image_url) ? (
-                              <img
-                                src={item.thumbnail_url || item.image_url}
-                                alt={item.name}
-                                className="mobile-search-result-thumbnail"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                  e.target.nextSibling.style.display = 'flex';
-                                }}
-                              />
-                            ) : null}
-                            <div
-                              className="mobile-search-result-emoji"
-                              style={{ display: (item.thumbnail_url || item.image_url) ? 'none' : 'flex' }}
-                            >
-                              {isCollectionType(item.type) ? '📦' : '🎴'}
-                            </div>
-                          </div>
-                          <div className="mobile-search-result-details">
-                            <div className="mobile-search-result-name">{item.name}</div>
-                            <div className="mobile-search-result-meta">
-                              {formatEntityType(item.type)}
-                              {item.year && ` • ${item.year}`}
-                            </div>
-                          </div>
+                          View all results →
                         </button>
-                      ))}
-                    </div>
-                    {searchData.databaseOfThingsSemanticSearch.length === 10 && (
-                      <button
-                        className="mobile-search-view-all-button"
-                        onClick={handleViewAllResults}
-                        data-testid="mobile-view-all-results"
-                      >
-                        View all results →
-                      </button>
-                    )}
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        )}
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
     </>
   );
 }
