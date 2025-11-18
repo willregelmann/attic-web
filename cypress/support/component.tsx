@@ -36,7 +36,10 @@ declare global {
 
 // Start MSW before all component tests
 before(() => {
-  worker.start({
+  // Expose worker on window immediately so it's available for cy.mswOverride
+  (window as any).__mswWorker = worker
+
+  return worker.start({
     onUnhandledRequest: 'warn',
     quiet: true,
   })
