@@ -104,8 +104,7 @@ describe('BatchAddToUserCollectionModal', () => {
     cy.contains('Pokemon Cards').click()
 
     // Should show selected state (font-semibold and bg-tertiary)
-    cy.contains('Pokemon Cards')
-      .parent('button')
+    cy.contains('button', 'Pokemon Cards')
       .should('have.class', 'font-semibold')
       .and('have.class', 'bg-[var(--bg-tertiary)]')
   })
@@ -177,8 +176,7 @@ describe('BatchAddToUserCollectionModal', () => {
     )
 
     // Pokemon Cards should already be selected
-    cy.contains('Pokemon Cards')
-      .parent('button')
+    cy.contains('button', 'Pokemon Cards')
       .should('have.class', 'font-semibold')
       .and('have.class', 'bg-[var(--bg-tertiary)]')
   })
@@ -221,8 +219,7 @@ describe('BatchAddToUserCollectionModal', () => {
     cy.contains('My Collection').click()
 
     // Root should now be selected
-    cy.contains('My Collection')
-      .parent('button')
+    cy.contains('button', 'My Collection')
       .should('have.class', 'font-semibold')
 
     // Click add button
@@ -286,8 +283,7 @@ describe('BatchAddToUserCollectionModal', () => {
     )
 
     // Root should be selected by default (selectedId starts as null from defaultCollectionId)
-    cy.contains('My Collection')
-      .parent('button')
+    cy.contains('button', 'My Collection')
       .should('have.class', 'font-semibold')
   })
 
