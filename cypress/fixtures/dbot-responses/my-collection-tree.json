@@ -36,7 +36,52 @@
         "created_at": "2024-01-02T10:00:00Z"
       }
     ],
-    "items": [],
+    "items": [
+      {
+        "user_item_id": "user-item-1",
+        "id": "entity-pikachu",
+        "entity_id": "entity-pikachu",
+        "name": "Pikachu #025",
+        "type": "collectible",
+        "year": 1999,
+        "image_url": "https://example.com/pikachu.jpg",
+        "thumbnail_url": "https://example.com/pikachu-thumb.jpg",
+        "user_notes": "First edition",
+        "user_metadata": null,
+        "user_images": [],
+        "variant_id": null,
+        "parent_collection_id": null,
+        "created_at": "2024-01-15T10:30:00Z",
+        "attributes": {
+          "number": "025",
+          "rarity": "Common",
+          "type": "Electric"
+        },
+        "entity_variants": []
+      },
+      {
+        "user_item_id": "user-item-2",
+        "id": "entity-charizard",
+        "entity_id": "entity-charizard",
+        "name": "Charizard #006",
+        "type": "collectible",
+        "year": 1999,
+        "image_url": "https://example.com/charizard.jpg",
+        "thumbnail_url": "https://example.com/charizard-thumb.jpg",
+        "user_notes": "Near mint condition",
+        "user_metadata": null,
+        "user_images": [],
+        "variant_id": null,
+        "parent_collection_id": null,
+        "created_at": "2024-01-16T14:20:00Z",
+        "attributes": {
+          "number": "006",
+          "rarity": "Rare Holo",
+          "type": "Fire"
+        },
+        "entity_variants": []
+      }
+    ],
     "wishlists": [],
     "current_collection": null
   }

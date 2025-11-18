@@ -190,6 +190,18 @@ export const handlers = [
     })
   }),
 
+  graphql.mutation('BatchAddItemsToMyCollection', ({ variables }) => {
+    return HttpResponse.json({
+      data: {
+        batchAddItemsToMyCollection: {
+          items_added: variables.entityIds?.length || 0,
+          items_already_owned: 0,
+          message: `Added ${variables.entityIds?.length || 0} items to collection`,
+        },
+      },
+    })
+  }),
+
   graphql.mutation('CreateUserCollection', ({ variables }) => {
     return HttpResponse.json({
       data: {
