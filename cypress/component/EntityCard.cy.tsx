@@ -64,6 +64,11 @@ describe('EntityCard', () => {
   })
 
   it('shows owned indicator when isOwned is true', () => {
+    // Set up localStorage to simulate being logged in
+    // The AuthProvider checks for these values to set isAuthenticated
+    window.localStorage.setItem('token', 'test-token')
+    window.localStorage.setItem('user_data', JSON.stringify({ id: '1', name: 'Test User', email: 'test@example.com' }))
+
     cy.mount(<EntityCard item={mockItem} onClick={cy.stub()} isOwned={true} />)
 
     // The owned indicator is a checkmark badge in EntityImage
@@ -120,7 +125,8 @@ describe('EntityCard', () => {
       />
     )
 
-    cy.get('button').contains(/\u00d7/).should('not.exist')
+    // When duplicateCount is 1 or isDuplicate is false, no badge button should exist
+    cy.contains('button', /\u00d7/).should('not.exist')
   })
 
   it('does not show duplicate badge when onExpandToggle is not provided', () => {
@@ -133,7 +139,8 @@ describe('EntityCard', () => {
       />
     )
 
-    cy.get('button').contains(/\u00d7/).should('not.exist')
+    // When onExpandToggle is not provided, no badge button should exist
+    cy.contains('button', /\u00d7/).should('not.exist')
   })
 
   it('shows selected state in multi-select mode', () => {
