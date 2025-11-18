@@ -188,22 +188,30 @@ export const handlers = [
         databaseOfThingsCollectionFilterFields: [
           {
             field: 'type',
-            values: [
-              { value: 'Fire', count: 15 },
-              { value: 'Water', count: 12 },
-              { value: 'Grass', count: 10 },
-            ],
+            label: 'Type',
+            type: 'multiselect',
+            values: ['Fire', 'Water', 'Grass', 'Electric'],
+            count: 4,
+            priority: 10
           },
           {
             field: 'rarity',
-            values: [
-              { value: 'Common', count: 20 },
-              { value: 'Uncommon', count: 10 },
-              { value: 'Rare', count: 7 },
-            ],
+            label: 'Rarity',
+            type: 'multiselect',
+            values: ['Common', 'Uncommon', 'Rare', 'Rare Holo'],
+            count: 4,
+            priority: 5
           },
         ],
       },
+    })
+  }),
+
+  graphql.query('GetCollectionParentCollections', () => {
+    return HttpResponse.json({
+      data: {
+        databaseOfThingsCollectionParentCollections: []
+      }
     })
   }),
 
