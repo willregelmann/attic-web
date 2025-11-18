@@ -76,9 +76,12 @@ describe('CollectionPickerTree', () => {
       />
     )
 
+    // Wait for collections to load first
+    cy.contains('Pokemon Cards').should('be.visible')
+
     // Pokemon Cards should have selected styling (font-semibold and bg-tertiary)
     cy.contains('Pokemon Cards')
-      .parent('button')
+      .closest('button')
       .should('have.class', 'font-semibold')
       .and('have.class', 'bg-[var(--bg-tertiary)]')
   })
@@ -91,9 +94,12 @@ describe('CollectionPickerTree', () => {
       />
     )
 
+    // Wait for component to load
+    cy.contains('My Collection').should('be.visible')
+
     // My Collection should have selected styling
     cy.contains('My Collection')
-      .parent('button')
+      .closest('button')
       .should('have.class', 'font-semibold')
       .and('have.class', 'bg-[var(--bg-tertiary)]')
   })
@@ -132,7 +138,7 @@ describe('CollectionPickerTree', () => {
 
     // The expand indicator should change from + to -
     cy.contains('Pokemon Cards')
-      .parent('button')
+      .closest('button')
       .find('span')
       .contains('−')
       .should('be.visible')
@@ -241,7 +247,7 @@ describe('CollectionPickerTree', () => {
 
     // Base Set should have an SVG tree connector
     cy.contains('Base Set')
-      .parent('button')
+      .closest('button')
       .find('svg')
       .should('exist')
   })
