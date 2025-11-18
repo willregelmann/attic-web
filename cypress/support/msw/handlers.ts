@@ -46,7 +46,71 @@ export const handlers = [
     })
   }),
 
-  graphql.query('MyCollectionTree', () => {
+  graphql.query('MyCollectionTree', ({ variables }) => {
+    const parentId = variables.parentId
+
+    // If requesting a specific collection, return that collection's context
+    if (parentId === 'user-col-1') {
+      return HttpResponse.json({
+        data: {
+          myCollectionTree: {
+            collections: [],
+            items: [],
+            wishlists: [],
+            current_collection: {
+              id: 'user-col-1',
+              name: 'Pokemon Cards',
+              parent_collection_id: null,
+              linked_dbot_collection_id: null,
+              type: 'custom',
+              description: 'My Pokemon card collection',
+              custom_image: null,
+              image_url: null,
+              progress: {
+                owned_count: 15,
+                wishlist_count: 5,
+                total_count: 25,
+                percentage: 60
+              },
+              representative_images: [],
+              created_at: '2024-01-01T10:00:00Z'
+            }
+          }
+        },
+      })
+    }
+
+    if (parentId === 'user-col-3') {
+      return HttpResponse.json({
+        data: {
+          myCollectionTree: {
+            collections: [],
+            items: [],
+            wishlists: [],
+            current_collection: {
+              id: 'user-col-3',
+              name: 'Magic Cards',
+              parent_collection_id: null,
+              linked_dbot_collection_id: null,
+              type: 'custom',
+              description: 'My MTG collection',
+              custom_image: null,
+              image_url: null,
+              progress: {
+                owned_count: 8,
+                wishlist_count: 2,
+                total_count: 10,
+                percentage: 80
+              },
+              representative_images: [],
+              created_at: '2024-01-02T10:00:00Z'
+            }
+          }
+        },
+      })
+    }
+
+    // Default: return root collection tree
     return HttpResponse.json({
       data: myCollectionTreeFixture,
     })
@@ -157,8 +221,23 @@ export const handlers = [
     return HttpResponse.json({
       data: {
         deleteUserCollection: {
-          id: variables.id,
           success: true,
+          deleted_collection_id: variables.id,
+          items_deleted: 0,
+          subcollections_deleted: 0,
+        },
+      },
+    })
+  }),
+
+  graphql.query('UserCollectionDeletionPreview', ({ variables }) => {
+    return HttpResponse.json({
+      data: {
+        userCollectionDeletionPreview: {
+          collection_id: variables.id,
+          collection_name: 'Test Collection',
+          total_items: 0,
+          total_subcollections: 0,
         },
       },
     })

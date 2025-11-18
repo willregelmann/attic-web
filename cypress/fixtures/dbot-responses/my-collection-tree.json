@@ -1,32 +1,43 @@
 {
-  "myCollectionTree": [
-    {
-      "id": "user-col-1",
-      "name": "Pokemon Cards",
-      "description": "My Pokemon card collection",
-      "parent_id": null,
-      "images": [],
-      "item_count": 25,
-      "children": [
-        {
-          "id": "user-col-2",
-          "name": "Base Set",
-          "description": "Original base set cards",
-          "parent_id": "user-col-1",
-          "images": [],
-          "item_count": 15,
-          "children": []
-        }
-      ]
-    },
-    {
-      "id": "user-col-3",
-      "name": "Magic Cards",
-      "description": "My MTG collection",
-      "parent_id": null,
-      "images": [],
-      "item_count": 10,
-      "children": []
-    }
-  ]
+  "myCollectionTree": {
+    "collections": [
+      {
+        "id": "user-col-1",
+        "name": "Pokemon Cards",
+        "type": "custom",
+        "description": "My Pokemon card collection",
+        "custom_image": null,
+        "linked_dbot_collection_id": null,
+        "image_url": null,
+        "progress": {
+          "owned_count": 15,
+          "wishlist_count": 5,
+          "total_count": 25,
+          "percentage": 60
+        },
+        "representative_images": [],
+        "created_at": "2024-01-01T10:00:00Z"
+      },
+      {
+        "id": "user-col-3",
+        "name": "Magic Cards",
+        "type": "custom",
+        "description": "My MTG collection",
+        "custom_image": null,
+        "linked_dbot_collection_id": null,
+        "image_url": null,
+        "progress": {
+          "owned_count": 8,
+          "wishlist_count": 2,
+          "total_count": 10,
+          "percentage": 80
+        },
+        "representative_images": [],
+        "created_at": "2024-01-02T10:00:00Z"
+      }
+    ],
+    "items": [],
+    "wishlists": [],
+    "current_collection": null
+  }
 }
