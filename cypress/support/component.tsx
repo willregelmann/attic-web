@@ -1,6 +1,7 @@
 import './commands'
 import { mount } from 'cypress/react18'
-import { ApolloClient, InMemoryCache, ApolloProvider } from '@apollo/client'
+import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client'
+import { ApolloProvider } from '@apollo/client/react'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from '../../src/contexts/AuthContext'
 import { ThemeProvider } from '../../src/contexts/ThemeContext'
@@ -14,7 +15,7 @@ import '../../src/index.css'
 // Create a mock Apollo client for component tests
 const createMockClient = () => {
   return new ApolloClient({
-    uri: '/graphql',
+    link: new HttpLink({ uri: '/graphql' }),
     cache: new InMemoryCache(),
     defaultOptions: {
       watchQuery: {
