@@ -141,6 +141,41 @@ export const handlers = [
     })
   }),
 
+  // Semantic search (used by Navigation.jsx and SearchResultsPage.jsx)
+  graphql.query('SemanticSearchDatabaseOfThings', ({ variables }) => {
+    return HttpResponse.json({
+      data: {
+        databaseOfThingsSemanticSearch: [
+          {
+            id: 'entity-pikachu',
+            name: 'Pikachu #025',
+            type: 'collectible',
+            image_url: 'https://example.com/pikachu.jpg',
+            thumbnail_url: 'https://example.com/pikachu-thumb.jpg',
+            year: 1999,
+            attributes: {
+              number: '025',
+              rarity: 'Common',
+              type: 'Electric'
+            }
+          },
+          {
+            id: 'entity-pikachu-promo',
+            name: 'Pikachu Promo',
+            type: 'collectible',
+            image_url: 'https://example.com/pikachu-promo.jpg',
+            thumbnail_url: 'https://example.com/pikachu-promo-thumb.jpg',
+            year: 2000,
+            attributes: {
+              number: '001',
+              rarity: 'Promo'
+            }
+          }
+        ]
+      },
+    })
+  }),
+
   graphql.query('GetDatabaseOfThingsEntity', ({ variables }) => {
     return HttpResponse.json({
       data: entityDetailFixture,
