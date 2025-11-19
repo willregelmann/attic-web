@@ -657,17 +657,9 @@ function DatabaseOfThingsCollectionPage() {
                 return;
               }
 
-              // Check viewport: on mobile (<=768px), navigate to full-page view
-              const isMobile = window.innerWidth <= 768;
-
-              if (isMobile) {
-                // Navigate to full-page view on mobile
-                navigate(`/item/${item.id}`);
-              } else {
-                // Open modal on desktop
-                setSelectedItem(item);
-                setSelectedItemIndex(index);
-              }
+              // Open modal for both mobile and desktop
+              setSelectedItem(item);
+              setSelectedItemIndex(index);
             },
             collection: (selectedCollection) => {
               // Build new path: ancestors + current collection

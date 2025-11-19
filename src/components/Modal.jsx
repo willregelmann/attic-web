@@ -79,7 +79,7 @@ export function Modal({
         data-testid={testId}
       >
         {(title || showCloseButton) && (
-          <div className="relative pt-6 px-6 pb-4 border-b border-[var(--border-color)] shrink-0">
+          <div className="relative py-5 px-6 border-b border-[var(--border-color)] shrink-0">
             {title && (
               <h3 id="modal-title" className="m-0 text-xl font-semibold text-[var(--text-primary)] pr-8">
                 {title}
@@ -87,7 +87,7 @@ export function Modal({
             )}
             {showCloseButton && (
               <button
-                className="absolute top-4 right-4 bg-transparent border-none text-[var(--text-secondary)] cursor-pointer p-1 flex items-center justify-center transition-colors duration-200 hover:text-[var(--text-primary)]"
+                className="absolute top-1/2 -translate-y-1/2 right-4 bg-transparent border-none text-[var(--text-secondary)] cursor-pointer p-1 flex items-center justify-center transition-colors duration-200 hover:text-[var(--text-primary)]"
                 onClick={onClose}
                 aria-label="Close modal"
               >

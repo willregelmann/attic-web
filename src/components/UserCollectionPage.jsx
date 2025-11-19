@@ -187,32 +187,13 @@ function UserCollectionPage() {
   };
 
   const handleItemClick = (item, index) => {
-    // Check viewport: on mobile (<=768px), navigate to full-page view
-    const isMobile = window.innerWidth <= 768;
-
-    if (isMobile) {
-      // Navigate to appropriate full-page view on mobile
-      if (item.user_item_id) {
-        // Owned item - go to my-item page
-        navigate(`/my-item/${item.user_item_id}`);
-      } else {
-        // Unowned item - go to catalog item page with MyCollection context
-        navigate(`/item/${item.id}`, {
-          state: {
-            fromMyCollection: true,
-            currentCollection: current_collection
-          }
-        });
-      }
-    } else {
-      // Open modal on desktop
-      // Reset modes when opening a new item (not in edit/add/create mode by default)
-      setItemEditMode(false);
-      setItemAddMode(false);
-      setCollectionCreateMode(false);
-      setSelectedItem(item);
-      setSelectedItemIndex(index);
-    }
+    // Open modal for both mobile and desktop
+    // Reset modes when opening a new item (not in edit/add/create mode by default)
+    setItemEditMode(false);
+    setItemAddMode(false);
+    setCollectionCreateMode(false);
+    setSelectedItem(item);
+    setSelectedItemIndex(index);
   };
 
   const handleCloseDetail = () => {

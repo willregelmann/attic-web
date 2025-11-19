@@ -6,6 +6,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFilters } from '../contexts/FilterContext';
 import { filterEntities } from '../utils/filterUtils';
 import { EntityCardGrid } from './EntityCardGrid';
+import { useRadialMenu } from '../contexts/RadialMenuContext';
+import MobileSearch from './MobileSearch';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -13,6 +15,19 @@ const LandingPage = () => {
   const { filters } = useFilters();
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   const { setBreadcrumbItems, setLoading: setBreadcrumbsLoading } = useBreadcrumbs();
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
+
+  // Set RadialMenu actions for mobile
+  const radialMenuActions = useMemo(() => [
+    {
+      id: 'search',
+      icon: 'fas fa-search',
+      label: 'Search',
+      onClick: () => setShowMobileSearch(true)
+    }
+  ], []);
+
+  useRadialMenu(radialMenuActions, [radialMenuActions]);
 
   const filteredRecentlyViewed = useMemo(() => {
     return filterEntities(recentlyViewed, filters);
@@ -85,6 +100,11 @@ const LandingPage = () => {
           </p>
         </div>
       )}
+
+      <MobileSearch
+        isOpen={showMobileSearch}
+        onClose={() => setShowMobileSearch(false)}
+      />
     </div>
   );
 };
