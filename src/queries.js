@@ -111,43 +111,110 @@ export const GET_DATABASE_OF_THINGS_COLLECTION_ITEMS = gql`
 `;
 
 export const SEARCH_DATABASE_OF_THINGS_ENTITIES = gql`
-  query SearchDatabaseOfThingsEntities($query: String!, $type: String, $first: Int) {
-    databaseOfThingsSearch(query: $query, type: $type, first: $first) {
-      id
-      name
-      type
-      year
-      country
-      attributes
-      image_url
-      thumbnail_url
-      representative_image_urls
-      external_ids
-      entity_variants {
-        id
-        name
-        attributes
-        image_url
-        thumbnail_url
+  query SearchDatabaseOfThingsEntities($query: String!, $type: EntityType, $category: CategoryType, $first: Int, $after: String) {
+    databaseOfThingsSearch(query: $query, type: $type, category: $category, first: $first, after: $after) {
+      edges {
+        node {
+          id
+          name
+          type
+          category
+          year
+          country
+          language
+          attributes
+          image_url
+          thumbnail_url
+          additional_images {
+            id
+            image_url
+            thumbnail_url
+          }
+          external_ids
+          source_url
+          entity_variants {
+            id
+            name
+            attributes
+            image_url
+            thumbnail_url
+          }
+          entity_components {
+            id
+            name
+            quantity
+            order
+            attributes
+            image_url
+            thumbnail_url
+          }
+          representative_image_urls
+          created_at
+          updated_at
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
       }
     }
   }
 `;
 
 export const SEMANTIC_SEARCH_DATABASE_OF_THINGS = gql`
-  query SemanticSearchDatabaseOfThings($query: String!, $type: String, $first: Int) {
-    databaseOfThingsSemanticSearch(query: $query, type: $type, first: $first) {
-      id
-      name
-      type
-      year
-      country
-      attributes
-      image_url
-      thumbnail_url
-      representative_image_urls
-      external_ids
-      similarity
+  query SemanticSearchDatabaseOfThings($query: String!, $type: EntityType, $category: CategoryType, $first: Int, $after: String) {
+    databaseOfThingsSemanticSearch(query: $query, type: $type, category: $category, first: $first, after: $after) {
+      edges {
+        node {
+          id
+          name
+          type
+          category
+          year
+          country
+          language
+          attributes
+          image_url
+          thumbnail_url
+          additional_images {
+            id
+            image_url
+            thumbnail_url
+          }
+          external_ids
+          source_url
+          entity_variants {
+            id
+            name
+            attributes
+            image_url
+            thumbnail_url
+          }
+          entity_components {
+            id
+            name
+            quantity
+            order
+            attributes
+            image_url
+            thumbnail_url
+          }
+          representative_image_urls
+          similarity
+          created_at
+          updated_at
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
     }
   }
 `;
