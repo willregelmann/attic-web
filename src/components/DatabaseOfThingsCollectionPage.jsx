@@ -320,9 +320,9 @@ function DatabaseOfThingsCollectionPage() {
   // Get items from the appropriate query result
   const items = useMemo(() => {
     if (isRoot) {
-      return data?.databaseOfThingsCollections || [];
+      return data?.databaseOfThingsCollections?.edges?.map(e => e.node) || [];
     }
-    return data?.databaseOfThingsCollectionItems || [];
+    return data?.databaseOfThingsCollectionItems?.edges?.map(e => e.node) || [];
   }, [data, isRoot]);
 
 
