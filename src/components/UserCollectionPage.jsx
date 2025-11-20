@@ -379,7 +379,7 @@ function UserCollectionPage() {
   // For linked collections, maintain DBoT ordering instead of frontloading owned items
   // Use the DBoT collection items as the canonical order
   const isLinkedCollectionForSorting = isLinkedCollection(current_collection?.type);
-  const dbotItems = dbotCollectionItemsData?.databaseOfThingsCollectionItems || [];
+  const dbotItems = dbotCollectionItemsData?.databaseOfThingsCollectionItems?.edges?.map(e => e.node) || [];
   const allItems = isLinkedCollectionForSorting && dbotItems.length > 0
     ? (() => {
         // Create a map of owned items by their entity ID
