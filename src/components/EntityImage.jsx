@@ -95,7 +95,7 @@ export function EntityImage({
 
   // Extract child images using breadth-first search
   useEffect(() => {
-    if (!childrenData?.databaseOfThingsCollectionItems) return;
+    if (!childrenData?.databaseOfThingsCollectionItems?.edges) return;
 
     const findChildImages = (items) => {
       const images = [];
@@ -112,7 +112,9 @@ export function EntityImage({
       return images;
     };
 
-    const images = findChildImages(childrenData.databaseOfThingsCollectionItems);
+    // Extract nodes from edges
+    const items = childrenData.databaseOfThingsCollectionItems.edges.map(e => e.node);
+    const images = findChildImages(items);
     setChildImages(images);
   }, [childrenData]);
 
