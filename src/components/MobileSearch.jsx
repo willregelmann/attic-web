@@ -120,14 +120,16 @@ function MobileSearch({ isOpen, onClose, onAddToCollection, onOpenImageSearch })
               {searchLoading && (
                 <div className="text-center py-8 px-4 text-[var(--text-secondary)]">Searching...</div>
               )}
-              {!searchLoading && searchData?.databaseOfThingsSemanticSearch && (
+              {!searchLoading && searchData?.databaseOfThingsSemanticSearch && (() => {
+                const searchResults = searchData.databaseOfThingsSemanticSearch?.edges?.map(e => e.node) || [];
+                return (
                 <>
-                  {searchData.databaseOfThingsSemanticSearch.length === 0 ? (
+                  {searchResults.length === 0 ? (
                     <div className="text-center py-8 px-4 text-[var(--text-secondary)]">No results found</div>
                   ) : (
                     <>
                       <div className="py-2 overflow-y-auto min-h-0 max-h-[400px]">
-                        {searchData.databaseOfThingsSemanticSearch.map(item => (
+                        {searchResults.map(item => (
                           <button
                             key={item.id}
                             className="flex items-center gap-3 py-3 px-4 bg-none border-none w-full text-left cursor-pointer transition-colors active:bg-[var(--bg-secondary)]"
@@ -164,7 +166,7 @@ function MobileSearch({ isOpen, onClose, onAddToCollection, onOpenImageSearch })
                           </button>
                         ))}
                       </div>
-                      {searchData.databaseOfThingsSemanticSearch.length === 10 && (
+                      {searchResults.length === 10 && (
                         <button
                           className="block w-full p-4 bg-[var(--bg-primary)] border-none border-t border-[var(--border-color)] text-[var(--primary)] text-base font-semibold cursor-pointer transition-all text-center shrink-0 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] active:bg-[var(--bg-secondary)]"
                           onClick={handleViewAllResults}
@@ -176,7 +178,8 @@ function MobileSearch({ isOpen, onClose, onAddToCollection, onOpenImageSearch })
                     </>
                   )}
                 </>
-              )}
+                );
+              })()}
             </div>
           )}
         </div>
