@@ -205,63 +205,66 @@ function Navigation() {
                 {searchLoading && (
                   <div className="p-4 text-center text-[var(--text-secondary)] text-sm" role="status" aria-live="polite">Searching...</div>
                 )}
-                {!searchLoading && searchData?.databaseOfThingsSemanticSearch && (
-                  <>
-                    {searchData.databaseOfThingsSemanticSearch.length === 0 ? (
-                      <div className="p-4 text-center text-[var(--text-secondary)] text-sm">No results found</div>
-                    ) : (
-                      <>
-                        <div className="py-2 overflow-y-auto flex-1 min-h-0" role="group">
-                          {searchData.databaseOfThingsSemanticSearch.map(item => (
+                {!searchLoading && searchData?.databaseOfThingsSemanticSearch && (() => {
+                  const searchResults = searchData.databaseOfThingsSemanticSearch?.edges?.map(e => e.node) || [];
+                  return (
+                    <>
+                      {searchResults.length === 0 ? (
+                        <div className="p-4 text-center text-[var(--text-secondary)] text-sm">No results found</div>
+                      ) : (
+                        <>
+                          <div className="py-2 overflow-y-auto flex-1 min-h-0" role="group">
+                            {searchResults.map(item => (
+                              <button
+                                key={item.id}
+                                className="flex items-center gap-3 w-full py-2.5 px-4 bg-transparent border-none cursor-pointer transition-all text-left hover:bg-[var(--bg-secondary)]"
+                                onClick={() => handleResultClick(item)}
+                                role="option"
+                                aria-label={`${item.name} - ${item.type}`}
+                              >
+                                <div className="w-10 h-10 shrink-0 relative rounded-md overflow-hidden bg-[var(--bg-secondary)] flex items-center justify-center">
+                                  {(item.thumbnail_url || item.image_url || item.representative_image_urls?.[0]) ? (
+                                    <img
+                                      src={item.thumbnail_url || item.image_url || item.representative_image_urls?.[0]}
+                                      alt={item.name}
+                                      className="w-full h-full object-contain block"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div
+                                    className="w-full h-full text-xl leading-none flex items-center justify-center"
+                                    style={{ display: (item.thumbnail_url || item.image_url || item.representative_image_urls?.[0]) ? 'none' : 'flex' }}
+                                  >
+                                    {isCollectionType(item.type) ? '📦' : '🎴'}
+                                  </div>
+                                </div>
+                                <div className="flex-1">
+                                  <div className="text-[var(--text-primary)] text-[0.95rem] font-medium mb-0.5">{item.name}</div>
+                                  <div className="text-[var(--text-secondary)] text-[0.8rem]">
+                                    {formatEntityType(item.type)}
+                                    {item.year && ` • ${item.year}`}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                          {searchResults.length === 10 && (
                             <button
-                              key={item.id}
-                              className="flex items-center gap-3 w-full py-2.5 px-4 bg-transparent border-none cursor-pointer transition-all text-left hover:bg-[var(--bg-secondary)]"
-                              onClick={() => handleResultClick(item)}
-                              role="option"
-                              aria-label={`${item.name} - ${item.type}`}
+                              className="block w-full py-3 px-4 bg-[var(--bg-primary)] border-none border-t border-[var(--border-color)] text-[var(--primary)] text-sm font-semibold cursor-pointer transition-all text-center shrink-0 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] hover:bg-[var(--bg-secondary)]"
+                              onClick={handleViewAllResults}
+                              data-testid="view-all-results"
                             >
-                              <div className="w-10 h-10 shrink-0 relative rounded-md overflow-hidden bg-[var(--bg-secondary)] flex items-center justify-center">
-                                {(item.thumbnail_url || item.image_url || item.representative_image_urls?.[0]) ? (
-                                  <img
-                                    src={item.thumbnail_url || item.image_url || item.representative_image_urls?.[0]}
-                                    alt={item.name}
-                                    className="w-full h-full object-contain block"
-                                    onError={(e) => {
-                                      e.target.style.display = 'none';
-                                      e.target.nextSibling.style.display = 'flex';
-                                    }}
-                                  />
-                                ) : null}
-                                <div
-                                  className="w-full h-full text-xl leading-none flex items-center justify-center"
-                                  style={{ display: (item.thumbnail_url || item.image_url || item.representative_image_urls?.[0]) ? 'none' : 'flex' }}
-                                >
-                                  {isCollectionType(item.type) ? '📦' : '🎴'}
-                                </div>
-                              </div>
-                              <div className="flex-1">
-                                <div className="text-[var(--text-primary)] text-[0.95rem] font-medium mb-0.5">{item.name}</div>
-                                <div className="text-[var(--text-secondary)] text-[0.8rem]">
-                                  {formatEntityType(item.type)}
-                                  {item.year && ` • ${item.year}`}
-                                </div>
-                              </div>
+                              View all results →
                             </button>
-                          ))}
-                        </div>
-                        {searchData.databaseOfThingsSemanticSearch.length === 10 && (
-                          <button
-                            className="block w-full py-3 px-4 bg-[var(--bg-primary)] border-none border-t border-[var(--border-color)] text-[var(--primary)] text-sm font-semibold cursor-pointer transition-all text-center shrink-0 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] hover:bg-[var(--bg-secondary)]"
-                            onClick={handleViewAllResults}
-                            data-testid="view-all-results"
-                          >
-                            View all results →
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
+                          )}
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>
