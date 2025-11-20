@@ -90,9 +90,11 @@ function SearchResultsPage() {
       setAllResults(transformedResults);
       setHasMore(false); // No pagination for image search results
     } else if (data?.databaseOfThingsSemanticSearch) {
-      setAllResults(data.databaseOfThingsSemanticSearch);
+      // Extract nodes from EntityConnection edges
+      const results = data.databaseOfThingsSemanticSearch?.edges?.map(e => e.node) || [];
+      setAllResults(results);
       // If we got 30 results, there might be more
-      setHasMore(data.databaseOfThingsSemanticSearch.length === 30);
+      setHasMore(results.length === 30);
     }
   }, [data, isImageSearch, imageSearchResults]);
 
