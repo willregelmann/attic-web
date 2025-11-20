@@ -225,13 +225,20 @@ export const GET_DATABASE_OF_THINGS_ENTITY = gql`
       id
       name
       type
+      category
       year
       country
+      language
       attributes
       image_url
       thumbnail_url
-      representative_image_urls
+      additional_images {
+        id
+        image_url
+        thumbnail_url
+      }
       external_ids
+      source_url
       entity_variants {
         id
         name
@@ -239,6 +246,23 @@ export const GET_DATABASE_OF_THINGS_ENTITY = gql`
         image_url
         thumbnail_url
       }
+      entity_components {
+        id
+        name
+        quantity
+        order
+        attributes
+        image_url
+        thumbnail_url
+      }
+      representative_image_urls
+      parents {
+        id
+        name
+        type
+      }
+      created_at
+      updated_at
     }
   }
 `;
@@ -249,34 +273,187 @@ export const GET_DATABASE_OF_THINGS_ITEM_PARENTS = gql`
       id
       name
       type
+      category
       year
+      country
+      language
+      attributes
       image_url
       thumbnail_url
+      additional_images {
+        id
+        image_url
+        thumbnail_url
+      }
+      external_ids
+      source_url
+      entity_variants {
+        id
+        name
+        attributes
+        image_url
+        thumbnail_url
+      }
+      entity_components {
+        id
+        name
+        quantity
+        order
+        attributes
+        image_url
+        thumbnail_url
+      }
+      representative_image_urls
+      created_at
+      updated_at
       parents {
         id
         name
         type
+        category
         year
+        country
+        language
+        attributes
         image_url
+        thumbnail_url
+        additional_images {
+          id
+          image_url
+          thumbnail_url
+        }
+        external_ids
+        source_url
+        entity_variants {
+          id
+          name
+          attributes
+          image_url
+          thumbnail_url
+        }
+        entity_components {
+          id
+          name
+          quantity
+          order
+          attributes
+          image_url
+          thumbnail_url
+        }
+        representative_image_urls
+        created_at
+        updated_at
         parents {
           id
           name
           type
+          category
           year
+          country
+          language
+          attributes
           image_url
+          thumbnail_url
+          additional_images {
+            id
+            image_url
+            thumbnail_url
+          }
+          external_ids
+          source_url
+          entity_variants {
+            id
+            name
+            attributes
+            image_url
+            thumbnail_url
+          }
+          entity_components {
+            id
+            name
+            quantity
+            order
+            attributes
+            image_url
+            thumbnail_url
+          }
+          representative_image_urls
+          created_at
+          updated_at
           parents {
             id
             name
             type
+            category
             year
+            country
+            language
+            attributes
             image_url
+            thumbnail_url
+            additional_images {
+              id
+              image_url
+              thumbnail_url
+            }
+            external_ids
+            source_url
+            entity_variants {
+              id
+              name
+              attributes
+              image_url
+              thumbnail_url
+            }
+            entity_components {
+              id
+              name
+              quantity
+              order
+              attributes
+              image_url
+              thumbnail_url
+            }
+            representative_image_urls
+            created_at
+            updated_at
             parents {
               id
               name
               type
+              category
               year
+              country
+              language
+              attributes
               image_url
               thumbnail_url
+              additional_images {
+                id
+                image_url
+                thumbnail_url
+              }
+              external_ids
+              source_url
+              entity_variants {
+                id
+                name
+                attributes
+                image_url
+                thumbnail_url
+              }
+              entity_components {
+                id
+                name
+                quantity
+                order
+                attributes
+                image_url
+                thumbnail_url
+              }
+              representative_image_urls
+              created_at
+              updated_at
             }
           }
         }
@@ -304,10 +481,39 @@ export const GET_COLLECTION_PARENT_COLLECTIONS = gql`
       id
       name
       type
+      category
       year
+      country
+      language
+      attributes
       image_url
       thumbnail_url
-      attributes
+      additional_images {
+        id
+        image_url
+        thumbnail_url
+      }
+      external_ids
+      source_url
+      entity_variants {
+        id
+        name
+        attributes
+        image_url
+        thumbnail_url
+      }
+      entity_components {
+        id
+        name
+        quantity
+        order
+        attributes
+        image_url
+        thumbnail_url
+      }
+      representative_image_urls
+      created_at
+      updated_at
     }
   }
 `;
