@@ -3,24 +3,54 @@ import { gql } from '@apollo/client';
 // ===== DATABASE OF THINGS QUERIES (Canonical Data) =====
 
 export const GET_DATABASE_OF_THINGS_COLLECTIONS = gql`
-  query GetDatabaseOfThingsCollections($first: Int, $after: String) {
-    databaseOfThingsCollections(first: $first, after: $after) {
-      id
-      name
-      type
-      year
-      country
-      attributes
-      image_url
-      thumbnail_url
-      representative_image_urls
-      external_ids
-      entity_variants {
-        id
-        name
-        attributes
-        image_url
-        thumbnail_url
+  query GetDatabaseOfThingsCollections($first: Int, $after: String, $category: CategoryType) {
+    databaseOfThingsCollections(first: $first, after: $after, category: $category) {
+      edges {
+        node {
+          id
+          name
+          type
+          category
+          year
+          country
+          language
+          attributes
+          image_url
+          thumbnail_url
+          additional_images {
+            id
+            image_url
+            thumbnail_url
+          }
+          external_ids
+          source_url
+          entity_variants {
+            id
+            name
+            attributes
+            image_url
+            thumbnail_url
+          }
+          entity_components {
+            id
+            name
+            quantity
+            order
+            attributes
+            image_url
+            thumbnail_url
+          }
+          representative_image_urls
+          created_at
+          updated_at
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
       }
     }
   }
@@ -29,22 +59,52 @@ export const GET_DATABASE_OF_THINGS_COLLECTIONS = gql`
 export const GET_DATABASE_OF_THINGS_COLLECTION_ITEMS = gql`
   query GetDatabaseOfThingsCollectionItems($collectionId: ID!, $first: Int, $after: String) {
     databaseOfThingsCollectionItems(collection_id: $collectionId, first: $first, after: $after) {
-      id
-      name
-      type
-      year
-      country
-      attributes
-      image_url
-      thumbnail_url
-      representative_image_urls
-      external_ids
-      entity_variants {
-        id
-        name
-        attributes
-        image_url
-        thumbnail_url
+      edges {
+        node {
+          id
+          name
+          type
+          category
+          year
+          country
+          language
+          attributes
+          image_url
+          thumbnail_url
+          additional_images {
+            id
+            image_url
+            thumbnail_url
+          }
+          external_ids
+          source_url
+          entity_variants {
+            id
+            name
+            attributes
+            image_url
+            thumbnail_url
+          }
+          entity_components {
+            id
+            name
+            quantity
+            order
+            attributes
+            image_url
+            thumbnail_url
+          }
+          representative_image_urls
+          created_at
+          updated_at
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
       }
     }
   }
