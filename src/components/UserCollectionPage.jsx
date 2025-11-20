@@ -613,6 +613,22 @@ function UserCollectionPage() {
       });
     }
 
+    // Quick Add Custom Item button
+    actions.push({
+      id: 'quick-add-custom-item',
+      icon: (
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 5v14m-7-7h14" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      label: 'Quick Add Custom Item',
+      onClick: (e) => {
+        e?.stopPropagation();
+        setSelectedItem({ name: '', type: 'custom_item' });
+        setItemAddMode(true);
+      }
+    });
+
     return actions;
   }, [linkedDbotCollectionId, supportsFiltering, hasActiveFilters, filterCollectionId, currentParentId, navigate]);
 
@@ -630,15 +646,6 @@ function UserCollectionPage() {
     // Add header actions when no item is selected
     if (!selectedItem) {
       actions.push(...headerActions);
-      actions.push({
-        id: 'quick-add-custom-item',
-        icon: 'fas fa-plus',
-        label: 'Quick Add Custom Item',
-        onClick: () => {
-          setSelectedItem({ name: '', type: 'custom_item' });
-          setItemAddMode(true);
-        }
-      });
     } else if (isCustomCollection(selectedItem.type) || isLinkedCollection(selectedItem.type)) {
       // Edit/delete buttons for custom and linked collections
       actions.push({

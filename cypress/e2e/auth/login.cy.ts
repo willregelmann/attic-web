@@ -25,26 +25,26 @@ describe('Authentication', () => {
   it('persists auth state across page reloads', () => {
     cy.login()
     cy.visit('/my-collection')
-    // Should see "My Collection" in breadcrumbs
-    cy.contains('My Collection').should('be.visible')
+    // Should see "My Collection" as page title (h1)
+    cy.get('h1').contains('My Collection').should('be.visible')
 
     cy.reload()
     // Should still see My Collection after reload
-    cy.contains('My Collection').should('be.visible')
+    cy.get('h1').contains('My Collection').should('be.visible')
     cy.url().should('include', '/my-collection')
   })
 
   it('authenticated user can access my-collection page', () => {
     cy.login()
     cy.visit('/my-collection')
-    // Should display the collection content without error
-    cy.contains('My Collection').should('be.visible')
+    // Should display the collection content without error (check h1 title)
+    cy.get('h1').contains('My Collection').should('be.visible')
   })
 
   it('logs out and redirects to landing page', () => {
     cy.login()
     cy.visit('/my-collection')
-    cy.contains('My Collection').should('be.visible')
+    cy.get('h1').contains('My Collection').should('be.visible')
 
     // Open user menu (desktop)
     cy.get('button[aria-label="User menu"]').click()

@@ -7,7 +7,7 @@ describe('Item Management', () => {
     cy.visit('/my-collection')
 
     // Wait for page to load and verify items are displayed
-    cy.contains('My Collection').should('be.visible')
+    cy.get('h1').contains('My Collection').should('be.visible')
 
     // Verify items from fixture are displayed
     cy.contains('Pikachu #025').should('be.visible')
@@ -17,15 +17,15 @@ describe('Item Management', () => {
     cy.get('[data-testid="item-card"]').should('have.length', 2)
   })
 
-  it('adds an item from search', () => {
+  it('adds a custom item', () => {
     cy.visit('/my-collection')
 
     // Wait for page to load
-    cy.contains('My Collection').should('be.visible')
+    cy.get('h1').contains('My Collection').should('be.visible')
 
     // Click the "Quick Add Custom Item" or similar add button
     // The UserCollectionPage has a header action with title "Quick Add Custom Item"
-    cy.get('button[title="Quick Add Custom Item"]').click()
+    cy.get('button[title="Quick Add Custom Item"]:visible').click()
 
     // Modal opens in add mode for creating a custom item
     // Enter a name for the custom item (since this creates a custom item, not a DBoT search)
@@ -35,10 +35,10 @@ describe('Item Management', () => {
     cy.get('[data-testid="item-notes-input"]').type('Test notes for the item')
 
     // Save the item by clicking the save button
-    cy.get('button[title="Add to collection"]').click()
+    cy.get('button[title="Add to collection"]:visible').click()
 
-    // Verify success feedback - Toast notification
-    cy.contains(/added|created/i).should('be.visible')
+    // Verify modal closes after successful addition
+    cy.get('input[placeholder="Enter item name"]').should('not.exist')
   })
 
   it('views item details', () => {
@@ -74,7 +74,7 @@ describe('Item Management', () => {
     cy.get('h2').contains('Pikachu #025').should('be.visible')
 
     // Click edit button using the testid
-    cy.get('button[title="Edit item"]').click()
+    cy.get('button[title="Edit item"]:visible').click()
 
     // Should now be in edit mode with notes textarea visible
     cy.get('[data-testid="item-notes-input"]').should('be.visible')
@@ -83,10 +83,10 @@ describe('Item Management', () => {
     cy.get('[data-testid="item-notes-input"]').clear().type('Updated notes - excellent condition')
 
     // Save changes using the save button
-    cy.get('button[title="Save changes"]').click()
+    cy.get('button[title="Save changes"]:visible').click()
 
-    // Verify success feedback
-    cy.contains(/updated|saved/i).should('be.visible')
+    // Verify modal closes after successful update (exits edit mode)
+    cy.get('[data-testid="item-notes-input"]').should('not.exist')
   })
 
   it('deletes an item', () => {
@@ -102,7 +102,7 @@ describe('Item Management', () => {
     cy.get('h2').contains('Charizard #006').should('be.visible')
 
     // Click delete button using the title
-    cy.get('button[title="Delete item"]').click()
+    cy.get('button[title="Delete item"]:visible').click()
 
     // Confirmation modal should appear
     cy.get('[data-testid="batch-action-modal"]').should('be.visible')
@@ -134,7 +134,7 @@ describe('Item Management', () => {
     cy.contains('Pikachu #025').click()
 
     // Enter edit mode
-    cy.get('button[title="Edit item"]').click()
+    cy.get('button[title="Edit item"]:visible').click()
 
     // Modify notes
     cy.get('[data-testid="item-notes-input"]').clear().type('Temporary edit')

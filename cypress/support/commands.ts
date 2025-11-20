@@ -1,4 +1,5 @@
 import { RequestHandler } from 'msw'
+import { worker } from './msw/browser'
 
 declare global {
   namespace Cypress {
@@ -25,12 +26,10 @@ Cypress.Commands.add('login', (email = 'test@example.com') => {
 })
 
 // Override MSW handlers for specific test scenarios
+// Uses the imported worker directly instead of window property
+// because cy.visit() creates new windows that don't have __mswWorker
 Cypress.Commands.add('mswOverride', (...handlers: RequestHandler[]) => {
-  cy.window().then((win) => {
-    if (win.__mswWorker) {
-      win.__mswWorker.use(...handlers)
-    }
-  })
+  worker.use(...handlers)
 })
 
 export {}

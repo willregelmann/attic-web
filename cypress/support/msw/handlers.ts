@@ -408,4 +408,21 @@ export const handlers = [
       },
     })
   }),
+
+  // Add custom item to collection
+  graphql.mutation('AddCustomItemToMyCollection', ({ variables }) => {
+    return HttpResponse.json({
+      data: {
+        addCustomItemToMyCollection: {
+          id: 'custom-item-' + Date.now(),
+          name: variables.name,
+          entity_id: null,
+          user_id: 'user-123',
+          notes: variables.notes || null,
+          images: [],
+          created_at: new Date().toISOString(),
+        },
+      },
+    })
+  }),
 ]

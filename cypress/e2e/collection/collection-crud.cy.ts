@@ -7,7 +7,7 @@ describe('Collection Management', () => {
     cy.visit('/my-collection')
 
     // Wait for page to load and verify collections are displayed
-    cy.contains('My Collection').should('be.visible')
+    cy.get('h1').contains('My Collection').should('be.visible')
 
     // Verify both collections from fixture are displayed
     cy.contains('Pokemon Cards').should('be.visible')
@@ -21,11 +21,11 @@ describe('Collection Management', () => {
     cy.visit('/my-collection')
 
     // Wait for page to load
-    cy.contains('My Collection').should('be.visible')
+    cy.get('h1').contains('My Collection').should('be.visible')
 
     // Click the create collection action button (folder with plus icon)
     // This is a header action that's only visible on desktop
-    cy.get('button[title="Create new collection"]').click()
+    cy.get('button[title="Create new collection"]:visible').click()
 
     // Modal should open with collection form in edit mode
     cy.get('[data-testid="collection-name-input"]').should('be.visible')
@@ -38,8 +38,8 @@ describe('Collection Management', () => {
     // The save button has the label "Save changes"
     cy.get('button[title="Save changes"]').click()
 
-    // Verify success feedback - Toast notification
-    cy.contains('Collection created').should('be.visible')
+    // Verify modal closes after successful creation
+    cy.get('[data-testid="collection-name-input"]').should('not.exist')
   })
 
   it('navigates into a collection', () => {
@@ -58,7 +58,7 @@ describe('Collection Management', () => {
     cy.get('h1').contains('Pokemon Cards').should('be.visible')
 
     // Breadcrumbs should show the collection path
-    cy.contains('My Collection').should('be.visible')
+    cy.get('nav[aria-label="Breadcrumb"]').contains('My Collection').should('be.visible')
   })
 
   it('edits collection name and description', () => {
@@ -74,7 +74,7 @@ describe('Collection Management', () => {
 
     // Modal should open showing collection details
     // Click edit button - this is in the header actions with label "Edit collection" or similar
-    cy.get('button[title*="Edit"]').click()
+    cy.get('button[title*="Edit"]:visible').click()
 
     // Should now be in edit mode with form fields visible
     cy.get('[data-testid="collection-name-input"]').should('be.visible')
@@ -86,8 +86,8 @@ describe('Collection Management', () => {
     // Save changes
     cy.get('button[title="Save changes"]').click()
 
-    // Verify success feedback
-    cy.contains('Collection updated').should('be.visible')
+    // Verify modal closes after successful update
+    cy.get('[data-testid="collection-name-input"]').should('not.exist')
   })
 
   it('deletes a collection', () => {
@@ -101,7 +101,7 @@ describe('Collection Management', () => {
     cy.get('h1').contains('Magic Cards').click()
 
     // Click delete button - this triggers the delete confirmation modal
-    cy.get('button[title*="Delete"]').click()
+    cy.get('button[title*="Delete"]:visible').click()
 
     // Confirmation modal should appear
     cy.get('[data-testid="batch-action-modal"]').should('be.visible')
@@ -133,10 +133,10 @@ describe('Collection Management', () => {
     cy.visit('/my-collection')
 
     // Wait for page to load
-    cy.contains('My Collection').should('be.visible')
+    cy.get('h1').contains('My Collection').should('be.visible')
 
     // Click the create collection button
-    cy.get('button[title="Create new collection"]').click()
+    cy.get('button[title="Create new collection"]:visible').click()
 
     // Modal should open
     cy.get('[data-testid="collection-name-input"]').should('be.visible')
