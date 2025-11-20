@@ -161,35 +161,60 @@ export const handlers = [
 
   // Semantic search (used by Navigation.jsx and SearchResultsPage.jsx)
   graphql.query('SemanticSearchDatabaseOfThings', ({ variables }) => {
+    // Generate 10 results so "View all results" button appears
+    const baseResults = [
+      { id: 'entity-pikachu', name: 'Pikachu #025', number: '025', rarity: 'Common' },
+      { id: 'entity-pikachu-promo', name: 'Pikachu Promo', number: '001', rarity: 'Promo' },
+      { id: 'entity-pikachu-v', name: 'Pikachu V', number: '043', rarity: 'Ultra Rare' },
+      { id: 'entity-pikachu-vmax', name: 'Pikachu VMAX', number: '044', rarity: 'Ultra Rare' },
+      { id: 'entity-pikachu-ex', name: 'Pikachu EX', number: '051', rarity: 'Rare' },
+      { id: 'entity-pikachu-gx', name: 'Pikachu GX', number: '066', rarity: 'Rare' },
+      { id: 'entity-pikachu-star', name: 'Pikachu Star', number: '104', rarity: 'Secret Rare' },
+      { id: 'entity-pikachu-delta', name: 'Pikachu Delta', number: '035', rarity: 'Rare' },
+      { id: 'entity-pikachu-lv-x', name: 'Pikachu Lv.X', number: '099', rarity: 'Lv.X' },
+      { id: 'entity-pikachu-legend', name: 'Pikachu Legend', number: '111', rarity: 'Legend' },
+    ];
+
+    const edges = baseResults.map((item, index) => ({
+      node: {
+        id: item.id,
+        name: item.name,
+        type: 'collectible',
+        category: 'trading_card_games',
+        year: 1999 + index,
+        country: 'Japan',
+        language: 'en',
+        attributes: {
+          number: item.number,
+          rarity: item.rarity,
+          type: 'Electric'
+        },
+        image_url: `https://example.com/${item.id}.jpg`,
+        thumbnail_url: `https://example.com/${item.id}-thumb.jpg`,
+        additional_images: [],
+        external_ids: {},
+        source_url: null,
+        entity_variants: [],
+        entity_components: [],
+        representative_image_urls: [`https://example.com/${item.id}.jpg`],
+        similarity: 0.95 - (index * 0.05),
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+      },
+      cursor: `cursor-${index + 1}`
+    }));
+
     return HttpResponse.json({
       data: {
-        databaseOfThingsSemanticSearch: [
-          {
-            id: 'entity-pikachu',
-            name: 'Pikachu #025',
-            type: 'collectible',
-            image_url: 'https://example.com/pikachu.jpg',
-            thumbnail_url: 'https://example.com/pikachu-thumb.jpg',
-            year: 1999,
-            attributes: {
-              number: '025',
-              rarity: 'Common',
-              type: 'Electric'
-            }
-          },
-          {
-            id: 'entity-pikachu-promo',
-            name: 'Pikachu Promo',
-            type: 'collectible',
-            image_url: 'https://example.com/pikachu-promo.jpg',
-            thumbnail_url: 'https://example.com/pikachu-promo-thumb.jpg',
-            year: 2000,
-            attributes: {
-              number: '001',
-              rarity: 'Promo'
-            }
+        databaseOfThingsSemanticSearch: {
+          edges,
+          pageInfo: {
+            hasNextPage: true,
+            hasPreviousPage: false,
+            startCursor: 'cursor-1',
+            endCursor: 'cursor-10'
           }
-        ]
+        }
       },
     })
   }),

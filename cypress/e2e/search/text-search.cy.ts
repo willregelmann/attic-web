@@ -13,7 +13,9 @@ describe('Search', () => {
 
     // Dropdown should appear with results
     cy.get('[data-testid="search-results"]').should('be.visible')
-    cy.contains('Pikachu #025').should('be.visible')
+    // Wait for search results to load (not "Searching...")
+    cy.get('[data-testid="search-results"]').should('not.contain', 'Searching...')
+    cy.get('[data-testid="search-results"]').contains('Pikachu #025').should('be.visible')
   })
 
   it('navigates to search results page on enter', () => {
@@ -53,7 +55,15 @@ describe('Search', () => {
       graphql.query('SemanticSearchDatabaseOfThings', () => {
         return HttpResponse.json({
           data: {
-            databaseOfThingsSemanticSearch: []
+            databaseOfThingsSemanticSearch: {
+              edges: [],
+              pageInfo: {
+                hasNextPage: false,
+                hasPreviousPage: false,
+                startCursor: null,
+                endCursor: null
+              }
+            }
           }
         })
       })
@@ -64,8 +74,8 @@ describe('Search', () => {
     // Navigate to search results page
     cy.url().should('include', '/search')
 
-    // Should show empty state
-    cy.contains(/no results found/i).should('be.visible')
+    // Should show empty state (SearchResultsPage shows "No results found for "query"")
+    cy.contains('No results found for').should('be.visible')
   })
 
   it('shows view all results button when dropdown has results', () => {

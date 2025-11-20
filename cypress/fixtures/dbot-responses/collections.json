@@ -6,29 +6,57 @@
           "id": "col-pokemon-base",
           "name": "Pokemon Base Set",
           "type": "collection",
-          "images": ["https://example.com/pokemon-base.jpg"],
+          "category": "trading_card_games",
+          "year": 1999,
+          "country": "Japan",
+          "language": "en",
           "attributes": {
-            "year": "1999",
-            "country": "Japan"
-          }
-        }
+            "set_number": "1"
+          },
+          "image_url": "https://example.com/pokemon-base.jpg",
+          "thumbnail_url": "https://example.com/pokemon-base-thumb.jpg",
+          "additional_images": [],
+          "external_ids": {},
+          "source_url": null,
+          "entity_variants": [],
+          "entity_components": [],
+          "representative_image_urls": ["https://example.com/pokemon-base.jpg"],
+          "created_at": "2024-01-01T00:00:00Z",
+          "updated_at": "2024-01-01T00:00:00Z"
+        },
+        "cursor": "cursor-1"
       },
       {
         "node": {
           "id": "col-pokemon-jungle",
           "name": "Pokemon Jungle",
           "type": "collection",
-          "images": ["https://example.com/pokemon-jungle.jpg"],
+          "category": "trading_card_games",
+          "year": 1999,
+          "country": "Japan",
+          "language": "en",
           "attributes": {
-            "year": "1999",
-            "country": "Japan"
-          }
-        }
+            "set_number": "2"
+          },
+          "image_url": "https://example.com/pokemon-jungle.jpg",
+          "thumbnail_url": "https://example.com/pokemon-jungle-thumb.jpg",
+          "additional_images": [],
+          "external_ids": {},
+          "source_url": null,
+          "entity_variants": [],
+          "entity_components": [],
+          "representative_image_urls": ["https://example.com/pokemon-jungle.jpg"],
+          "created_at": "2024-01-01T00:00:00Z",
+          "updated_at": "2024-01-01T00:00:00Z"
+        },
+        "cursor": "cursor-2"
       }
     ],
     "pageInfo": {
       "hasNextPage": false,
-      "endCursor": null
+      "hasPreviousPage": false,
+      "startCursor": "cursor-1",
+      "endCursor": "cursor-2"
     }
   }
 }

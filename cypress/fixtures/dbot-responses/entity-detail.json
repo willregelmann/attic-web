@@ -3,7 +3,10 @@
     "id": "entity-pikachu",
     "name": "Pikachu #025",
     "type": "collectible",
-    "images": ["https://example.com/pikachu.jpg", "https://example.com/pikachu-back.jpg"],
+    "category": "trading_card_games",
+    "year": 1999,
+    "country": "Japan",
+    "language": "en",
     "attributes": {
       "number": "025",
       "rarity": "Common",
@@ -11,8 +14,30 @@
       "hp": "40",
       "artist": "Mitsuhiro Arita"
     },
+    "image_url": "https://example.com/pikachu.jpg",
+    "thumbnail_url": "https://example.com/pikachu-thumb.jpg",
+    "additional_images": [
+      {
+        "id": "img-1",
+        "image_url": "https://example.com/pikachu-back.jpg",
+        "thumbnail_url": "https://example.com/pikachu-back-thumb.jpg"
+      }
+    ],
     "external_ids": {
       "tcgp": "base1-25"
-    }
+    },
+    "source_url": null,
+    "entity_variants": [],
+    "entity_components": [],
+    "parents": [
+      {
+        "id": "col-pokemon-base",
+        "name": "Pokemon Base Set",
+        "type": "collection"
+      }
+    ],
+    "representative_image_urls": ["https://example.com/pikachu.jpg"],
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
   }
 }
