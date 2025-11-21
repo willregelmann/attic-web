@@ -932,7 +932,6 @@ export const MY_COLLECTION_TREE = gql`
           total_count
           percentage
         }
-        representative_images
         created_at
       }
       items {
