@@ -70,6 +70,11 @@ function UserCollectionPage() {
       fetchPolicy: 'network-only',
       onCompleted: (data) => {
         setDeletionPreview(data?.userCollectionDeletionPreview);
+      },
+      onError: (error) => {
+        console.error('Failed to load deletion preview:', error);
+        // Still allow deletion even if preview fails
+        setDeletionPreview({ total_items: 0, total_subcollections: 0 });
       }
     }
   );
@@ -245,7 +250,11 @@ function UserCollectionPage() {
 
   // Handler to execute collection deletion
   const handleDeleteCollection = async () => {
-    if (!collectionToDelete?.id) return;
+    if (!collectionToDelete?.id) {
+      console.error('handleDeleteCollection: No collection ID available', collectionToDelete);
+      setToastMessage({ text: 'Error: No collection selected', type: 'error' });
+      return;
+    }
 
     setIsDeletingCollection(true);
     try {
@@ -265,8 +274,12 @@ function UserCollectionPage() {
         } else {
           navigate('/my-collection');
         }
+      } else {
+        // Handle case where mutation returned but success is false
+        setToastMessage({ text: 'Failed to delete collection', type: 'error' });
       }
     } catch (error) {
+      console.error('handleDeleteCollection error:', error);
       setToastMessage({ text: `Error deleting collection: ${error.message}`, type: 'error' });
     } finally {
       setIsDeletingCollection(false);
