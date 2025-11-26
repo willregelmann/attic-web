@@ -659,8 +659,9 @@ function UserCollectionPage() {
     // Add header actions when no item is selected
     if (!selectedItem) {
       actions.push(...headerActions);
-    } else if (isCustomCollection(selectedItem.type) || isLinkedCollection(selectedItem.type)) {
-      // Edit/delete buttons for custom and linked collections
+    } else if ((isCustomCollection(selectedItem.type) || isLinkedCollection(selectedItem.type)) && !selectedItem.user_item_id) {
+      // Edit/delete buttons for custom and linked collections (not items)
+      // Custom items have type 'custom' but also have user_item_id - they're items, not collections
       actions.push({
         id: 'edit-collection',
         icon: 'fas fa-edit',
