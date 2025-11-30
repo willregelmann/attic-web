@@ -1,0 +1,16 @@
+{
+  "name": "attic-perf-tests",
+  "version": "1.0.0",
+  "description": "Performance profiling tests for Will's Attic",
+  "scripts": {
+    "perf": "playwright test",
+    "perf:ui": "playwright test --ui",
+    "perf:interactive": "playwright test --headed --timeout=0",
+    "perf:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  }
+}
