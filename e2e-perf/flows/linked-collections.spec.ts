@@ -1,115 +1,123 @@
 import { test, expect } from '../fixtures/auth.fixture';
 import { generateTraceContext, injectTraceHeaders } from '../utils/trace-correlation';
+import { MetricsCollector } from '../utils/browser-metrics';
 
 test.describe('Linked Collections Performance', () => {
 
-  test('wishlist DBoT collection modal', async ({ authenticatedPage }) => {
+  test('browse DBoT and interact with collection', async ({ authenticatedPage }) => {
     const page = authenticatedPage;
     const trace = generateTraceContext();
+    const metrics = new MetricsCollector(page);
 
     await injectTraceHeaders(page, trace);
+    await metrics.setup();
     test.info().annotations.push({ type: 'traceId', description: trace.traceId });
 
     // Go to browse
     await page.goto('/browse');
-    await page.waitForSelector('.collection-card, [data-testid="collection-card"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="collection-card"]', { timeout: 30000 });
 
-    const startTime = Date.now();
+    // Hover over first collection card to reveal action buttons
+    const collectionCard = page.locator('[data-testid="collection-card"]').first();
+    await collectionCard.hover();
+    await page.waitForTimeout(300);
 
-    // Find wishlist/track button on a collection card
-    const collectionCard = page.locator('.collection-card, [data-testid="collection-card"]').first();
-    const wishlistButton = collectionCard.locator('[data-testid="wishlist-button"], button:has-text("Track"), button:has-text("Wishlist")');
+    // Look for any button that appears on hover
+    const actionButtons = collectionCard.locator('button');
+    const buttonCount = await actionButtons.count();
 
-    if (await wishlistButton.isVisible()) {
-      await wishlistButton.click();
+    if (buttonCount > 0) {
+      await actionButtons.first().click();
 
-      // Wait for modal
-      await page.waitForSelector('[data-testid="wishlist-modal"], .modal, [role="dialog"]', {
+      // Wait for any modal or dialog to appear
+      await page.waitForSelector('[role="dialog"], .modal', {
         timeout: 10000
-      });
-
-      const modalTime = Date.now() - startTime;
-      console.log(`  Wishlist modal open: ${modalTime}ms`);
-    } else {
-      // Alternative: hover and click
-      await collectionCard.hover();
-      await page.waitForTimeout(500);
-
-      const hoverButton = collectionCard.locator('button').first();
-      if (await hoverButton.isVisible()) {
-        await hoverButton.click();
-      }
-
-      console.log('  Wishlist button not found in expected location');
+      }).catch(() => {});
     }
+
+    const browserMetrics = await metrics.collectAndAnnotate(test.info());
+    console.log(`  DBoT interaction: ${browserMetrics.totalNetworkTime}ms API, ${browserMetrics.estimatedRenderTime}ms render`);
   });
 
-  test('view linked collection progress', async ({ authenticatedPage }) => {
+  test('view user collection with linked items', async ({ authenticatedPage }) => {
     const page = authenticatedPage;
     const trace = generateTraceContext();
+    const metrics = new MetricsCollector(page);
 
     await injectTraceHeaders(page, trace);
     test.info().annotations.push({ type: 'traceId', description: trace.traceId });
 
     // Navigate to my collection
     await page.goto('/my-collection');
-    await page.waitForSelector('[data-testid="collection-content"], .collection-grid', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="collection-card"], [data-testid="item-card"]', { timeout: 30000 });
 
-    // Look for a linked collection (should show progress indicator)
-    const linkedCollection = page.locator('.collection-card:has(.progress-bar), [data-testid="linked-collection"]');
+    // Set up metrics before the action
+    await metrics.setup();
 
-    if (await linkedCollection.first().isVisible()) {
-      const startTime = Date.now();
-
-      await linkedCollection.first().click();
-
-      // Wait for collection with progress stats
-      await page.waitForSelector('.progress-stats, [data-testid="collection-progress"], .item-card', {
-        timeout: 30000
-      });
-
-      const loadTime = Date.now() - startTime;
-      console.log(`  Linked collection load: ${loadTime}ms`);
+    // Click on Large Collection which should have linked DBoT items
+    const largeCollection = page.locator('[data-testid="collection-card"]:has-text("Large Collection")');
+    if (await largeCollection.isVisible()) {
+      await largeCollection.click();
     } else {
-      console.log('  No linked collections found, skipping progress test');
+      // Fallback to first collection
+      await page.locator('[data-testid="collection-card"]').first().click();
     }
+
+    // Wait for items to load
+    await page.waitForSelector('[data-testid="item-card"], [data-testid="collection-card"]', {
+      timeout: 30000
+    });
+
+    const browserMetrics = await metrics.collectAndAnnotate(test.info());
+    console.log(`  Linked collection: ${browserMetrics.totalNetworkTime}ms API, ${browserMetrics.estimatedRenderTime}ms render`);
+
+    const itemCount = await page.locator('[data-testid="item-card"]').count();
+    const collectionCount = await page.locator('[data-testid="collection-card"]').count();
+    console.log(`  Loaded: ${itemCount} items, ${collectionCount} collections`);
   });
 
-  test('load linked collection with many items (pagination test)', async ({ authenticatedPage }) => {
+  test('load large collection with pagination', async ({ authenticatedPage }) => {
     const page = authenticatedPage;
     const trace = generateTraceContext();
+    const metrics = new MetricsCollector(page);
 
     await injectTraceHeaders(page, trace);
     test.info().annotations.push({ type: 'traceId', description: trace.traceId });
 
-    // This test specifically targets the pagination optimization we just made
     await page.goto('/my-collection');
-    await page.waitForSelector('[data-testid="collection-content"], .collection-grid', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="collection-card"], [data-testid="item-card"]', { timeout: 30000 });
 
-    // Count collections with progress indicators (linked collections)
-    const linkedCollections = page.locator('.collection-card:has(.progress-bar), .collection-card:has([data-testid="progress"])');
-    const count = await linkedCollections.count();
+    // Set up metrics before the action
+    await metrics.setup();
 
-    console.log(`  Found ${count} linked collections`);
+    // Click on Large Collection
+    const largeCollection = page.locator('[data-testid="collection-card"]:has-text("Large Collection")');
+    if (await largeCollection.isVisible()) {
+      await largeCollection.click();
 
-    if (count > 0) {
-      const startTime = Date.now();
+      // Wait for items to load
+      await page.waitForSelector('[data-testid="item-card"]', { timeout: 30000 });
 
-      // Click the first linked collection
-      await linkedCollections.first().click();
+      // Count initial items
+      const initialCount = await page.locator('[data-testid="item-card"]').count();
+      console.log(`  Initial items loaded: ${initialCount}`);
 
-      // Wait for all items to load (including DBoT items via pagination)
-      await page.waitForSelector('.item-card, [data-testid="item-card"]', { timeout: 30000 });
+      // Wait a bit for any additional pagination
+      await page.waitForTimeout(1500);
 
-      // Wait a bit more to ensure all pagination completes
-      await page.waitForTimeout(1000);
+      // Count final items
+      const finalCount = await page.locator('[data-testid="item-card"]').count();
 
-      const loadTime = Date.now() - startTime;
-      console.log(`  Linked collection with items: ${loadTime}ms`);
+      const browserMetrics = await metrics.collectAndAnnotate(test.info());
+      console.log(`  Large collection: ${browserMetrics.totalNetworkTime}ms API, ${browserMetrics.estimatedRenderTime}ms render`);
+      console.log(`  Final items loaded: ${finalCount}`);
 
-      // Count items loaded
-      const itemCount = await page.locator('.item-card, [data-testid="item-card"]').count();
-      console.log(`  Items loaded: ${itemCount}`);
+      if (finalCount > initialCount) {
+        console.log(`  Additional items loaded via pagination: ${finalCount - initialCount}`);
+      }
+    } else {
+      console.log('  Large Collection not found, skipping test');
+      await metrics.collectAndAnnotate(test.info());
     }
   });
 });

@@ -24,7 +24,7 @@ const CollectionTreeNode = memo(({ collection, depth = 0, onNavigateToCollection
         onClick={(e) => {
           e.stopPropagation();
           onNavigateToCollection?.(collection);
-          // Don't call onClose() - navigation handles leaving current view
+          onClose?.();
         }}
         title={`View ${collection.name}`}
       >
@@ -1216,7 +1216,7 @@ function EntityDetail({
           ) : (
             // Show existing image display in view mode
             <div
-              className={`w-full md:w-[280px] h-[240px] md:h-[360px] rounded-xl relative flex items-center justify-center p-4 bg-contain bg-center bg-no-repeat ${showAsWishlist ? 'opacity-50 grayscale-[50%]' : ''}`}
+              className={`w-full md:w-[280px] h-[240px] md:h-[360px] rounded-xl relative flex items-center justify-center p-4 bg-contain bg-center bg-no-repeat overflow-hidden ${showAsWishlist ? 'opacity-50 grayscale-[50%]' : ''}`}
               style={{
                 backgroundImage: getItemImage()
               }}>
@@ -1230,7 +1230,7 @@ function EntityDetail({
               {/* Representative/child images - special handling for 1 or 2 images */}
               {!item.image_url && imagesToDisplay.length === 1 && (
                 <div
-                  className="absolute inset-1 bg-cover bg-center rounded-lg"
+                  className="absolute inset-1 bg-contain bg-center bg-no-repeat rounded-lg"
                   style={{ backgroundImage: `url(${imagesToDisplay[0]})` }}
                 />
               )}

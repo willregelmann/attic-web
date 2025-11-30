@@ -1,92 +1,70 @@
-import { test as base, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/auth.fixture';
 import { generateTraceContext, injectTraceHeaders } from '../utils/trace-correlation';
-import { PERF_TEST_USER } from '../fixtures/auth.fixture';
+import { MetricsCollector } from '../utils/browser-metrics';
 
-// Use base test without auth fixture for login tests
-const test = base;
+// Note: App uses Google OAuth only, so we use token-based authentication via the auth fixture
+// These tests measure authenticated page load performance, not login form performance
 
 test.describe('Authentication Performance', () => {
 
-  test('login flow', async ({ page }) => {
+  test('initial authenticated page load', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
     const trace = generateTraceContext();
+    const metrics = new MetricsCollector(page);
 
     await injectTraceHeaders(page, trace);
+    await metrics.setup();
     test.info().annotations.push({ type: 'traceId', description: trace.traceId });
 
-    const startTime = Date.now();
-
-    await page.goto('/login');
-
-    // Wait for login form
-    await page.waitForSelector('input[type="email"], [data-testid="email-input"]', { timeout: 10000 });
-
-    const pageLoadTime = Date.now() - startTime;
-    console.log(`  Login page load: ${pageLoadTime}ms`);
-
-    // Fill and submit
-    const submitStart = Date.now();
-
-    await page.fill('input[type="email"], [data-testid="email-input"]', PERF_TEST_USER.email);
-    await page.fill('input[type="password"], [data-testid="password-input"]', PERF_TEST_USER.password);
-    await page.click('button[type="submit"], [data-testid="login-button"]');
-
-    // Wait for redirect to home
-    await page.waitForURL('/', { timeout: 10000 });
-
-    const loginTime = Date.now() - submitStart;
-    console.log(`  Login submission: ${loginTime}ms`);
-  });
-
-  test('logout flow', async ({ page }) => {
-    const trace = generateTraceContext();
-
-    await injectTraceHeaders(page, trace);
-    test.info().annotations.push({ type: 'traceId', description: trace.traceId });
-
-    // First login
-    await page.goto('/login');
-    await page.fill('input[type="email"], [data-testid="email-input"]', PERF_TEST_USER.email);
-    await page.fill('input[type="password"], [data-testid="password-input"]', PERF_TEST_USER.password);
-    await page.click('button[type="submit"], [data-testid="login-button"]');
-    await page.waitForURL('/', { timeout: 10000 });
-
-    const startTime = Date.now();
-
-    // Find and click logout
-    const userMenu = page.locator('[data-testid="user-menu"], .user-dropdown, .avatar');
-    if (await userMenu.isVisible()) {
-      await userMenu.click();
-    }
-
-    await page.click('[data-testid="logout-button"], button:has-text("Logout"), a:has-text("Logout")');
-
-    // Wait for redirect to login
-    await page.waitForURL('**/login**', { timeout: 10000 });
-
-    const logoutTime = Date.now() - startTime;
-    console.log(`  Logout flow: ${logoutTime}ms`);
-  });
-
-  test('authenticated page load (with existing session)', async ({ page }) => {
-    const trace = generateTraceContext();
-
-    await injectTraceHeaders(page, trace);
-    test.info().annotations.push({ type: 'traceId', description: trace.traceId });
-
-    // Login first
-    await page.goto('/login');
-    await page.fill('input[type="email"], [data-testid="email-input"]', PERF_TEST_USER.email);
-    await page.fill('input[type="password"], [data-testid="password-input"]', PERF_TEST_USER.password);
-    await page.click('button[type="submit"], [data-testid="login-button"]');
-    await page.waitForURL('/', { timeout: 10000 });
-
-    // Now measure subsequent navigation
-    const startTime = Date.now();
-
+    // Auth fixture already loaded the page, measure a navigation
     await page.goto('/my-collection');
-    await page.waitForSelector('[data-testid="collection-content"], .collection-grid', { timeout: 30000 });
+    // Wait for collection cards or items to load
+    await page.waitForSelector('[data-testid="collection-card"], [data-testid="item-card"]', { timeout: 30000 });
 
-    const loadTime = Date.now() - startTime;
-    console.log(`  Authenticated page load: ${loadTime}ms`);
+    const browserMetrics = await metrics.collectAndAnnotate(test.info());
+    console.log(`  Authenticated page load: ${browserMetrics.totalNetworkTime}ms API, ${browserMetrics.estimatedRenderTime}ms render`);
+  });
+
+  test('navigation between pages (authenticated)', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
+    const trace = generateTraceContext();
+    const metrics = new MetricsCollector(page);
+
+    await injectTraceHeaders(page, trace);
+    await metrics.setup();
+    test.info().annotations.push({ type: 'traceId', description: trace.traceId });
+
+    // Start on my-collection (from fixture), navigate to browse
+    await page.goto('/browse');
+    await page.waitForSelector('[data-testid="collection-card"]', { timeout: 30000 });
+
+    // Navigate back to my-collection
+    await page.goto('/my-collection');
+    await page.waitForSelector('[data-testid="collection-card"], [data-testid="item-card"]', { timeout: 30000 });
+
+    const browserMetrics = await metrics.collectAndAnnotate(test.info());
+    console.log(`  Navigation total: ${browserMetrics.totalNetworkTime}ms API, ${browserMetrics.estimatedRenderTime}ms render`);
+  });
+
+  test('authenticated API request (token validation)', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
+    const trace = generateTraceContext();
+    const metrics = new MetricsCollector(page);
+
+    await injectTraceHeaders(page, trace);
+    await metrics.setup();
+    test.info().annotations.push({ type: 'traceId', description: trace.traceId });
+
+    // This test measures the GraphQL request with token validation
+    // Navigate to a page that requires authentication
+    await page.goto('/my-collection');
+    await page.waitForSelector('[data-testid="collection-card"], [data-testid="item-card"]', { timeout: 30000 });
+
+    const browserMetrics = await metrics.collectAndAnnotate(test.info());
+    console.log(`  Authenticated API: ${browserMetrics.totalNetworkTime}ms API, ${browserMetrics.estimatedRenderTime}ms render`);
+
+    // Verify we're authenticated by checking for user-specific content
+    const collectionCount = await page.locator('[data-testid="collection-card"]').count();
+    expect(collectionCount).toBeGreaterThan(0);
   });
 });

@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { EntityCard } from './EntityCard';
 import { isCollectionType, isCollectionComplete } from '../utils/formatters';
 
+// Progressive rendering configuration
+const INITIAL_BATCH_SIZE = 18; // First render: ~2-3 rows depending on viewport
+const BATCH_SIZE = 24; // Subsequent batches
+const BATCH_DELAY_MS = 16; // ~1 frame at 60fps
+
 /**
  * EntityCardGrid - Reusable grid wrapper for rendering entity cards (items and collections)
+ * Optimized with:
+ * - Memoized callbacks for better re-render performance
+ * - Progressive rendering for large lists (renders in batches for better perceived performance)
  *
  * @param {Array} items - Array of items/collections to render
  * @param {Object} onClick - Click handlers { item, collection }
@@ -27,14 +35,35 @@ export function EntityCardGrid({
   const { active: isMultiSelectMode, selected: selectedItems, onToggle: onItemSelectionToggle, allowCollections: allowCollectionSelection } = multiSelect;
   const [expandedGroups, setExpandedGroups] = useState(new Set());
 
-  // Tailwind grid classes - mobile-first responsive
-  // Using ! prefix for important to override any conflicting CSS
-  const gridClass = viewMode === 'grid'
-    ? '!grid !grid-cols-3 sm:!grid-cols-3 md:!grid-cols-4 lg:!grid-cols-5 xl:!grid-cols-6 !gap-4 md:!gap-5 !px-4 md:!px-8 !pt-8 md:!pt-10 !pb-4'
-    : '!flex !flex-col !gap-4 !px-4 md:!px-8 !pt-8 md:!pt-10 !pb-4';
+  // Progressive rendering state
+  const [renderedCount, setRenderedCount] = useState(INITIAL_BATCH_SIZE);
+  const itemsRef = useRef(items);
 
-  // Toggle expansion state for a duplicate group
-  const toggleExpansion = (itemId) => {
+  // Reset rendered count when items change (new data loaded)
+  useEffect(() => {
+    if (items !== itemsRef.current) {
+      itemsRef.current = items;
+      setRenderedCount(Math.min(INITIAL_BATCH_SIZE, items.length));
+    }
+  }, [items]);
+
+  // Progressive rendering: render more items in batches
+  useEffect(() => {
+    if (renderedCount >= items.length) return;
+
+    // Use requestIdleCallback if available, otherwise setTimeout
+    const scheduleNextBatch = window.requestIdleCallback || ((cb) => setTimeout(cb, BATCH_DELAY_MS));
+    const cancelSchedule = window.cancelIdleCallback || clearTimeout;
+
+    const handle = scheduleNextBatch(() => {
+      setRenderedCount(prev => Math.min(prev + BATCH_SIZE, items.length));
+    }, { timeout: 100 }); // Max 100ms wait for idle
+
+    return () => cancelSchedule(handle);
+  }, [renderedCount, items.length]);
+
+  // Memoize toggle expansion handler
+  const toggleExpansion = useCallback((itemId) => {
     setExpandedGroups(prev => {
       const next = new Set(prev);
       if (next.has(itemId)) {
@@ -44,11 +73,20 @@ export function EntityCardGrid({
       }
       return next;
     });
-  };
+  }, []);
+
+  // Tailwind grid classes - mobile-first responsive
+  // Using ! prefix for important to override any conflicting CSS
+  const gridClass = viewMode === 'grid'
+    ? '!grid !grid-cols-3 sm:!grid-cols-3 md:!grid-cols-4 lg:!grid-cols-5 xl:!grid-cols-6 !gap-4 md:!gap-5 !px-4 md:!px-8 !pt-8 md:!pt-10 !pb-4'
+    : '!flex !flex-col !gap-4 !px-4 md:!px-8 !pt-8 md:!pt-10 !pb-4';
+
+  // Only render up to renderedCount items (progressive rendering)
+  const itemsToRender = items.slice(0, renderedCount);
 
   return (
     <div className={gridClass}>
-      {items.map((item, index) => {
+      {itemsToRender.map((item, index) => {
         const isOwned = userOwnership.has(item.id);
         const isFavorite = isRoot && userFavorites.has(item.id);
         // Collections have type='collection', items have type='item'

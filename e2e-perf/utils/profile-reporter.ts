@@ -2,6 +2,21 @@ import { Reporter, TestCase, TestResult, FullResult } from '@playwright/test/rep
 import * as fs from 'fs';
 import * as path from 'path';
 
+interface NetworkTiming {
+  url: string;
+  method: string;
+  duration: number;
+  timestamp: number;
+}
+
+interface BrowserMetrics {
+  networkRequests: NetworkTiming[];
+  totalNetworkTime: number;
+  firstContentfulPaint: number | null;
+  largestContentfulPaint: number | null;
+  estimatedRenderTime: number;
+}
+
 interface ProfileResult {
   testName: string;
   flow: string;
@@ -11,6 +26,10 @@ interface ProfileResult {
   timestamp: string;
   status: string;
   tempoUrl: string | null;
+  // New browser metrics
+  browserMetrics?: BrowserMetrics;
+  apiTimeMs?: number;
+  renderTimeMs?: number;
 }
 
 class ProfileReporter implements Reporter {
@@ -24,6 +43,7 @@ class ProfileReporter implements Reporter {
   onTestEnd(test: TestCase, result: TestResult) {
     // Extract trace ID from test annotations or attachments
     const traceId = this.extractTraceId(test, result);
+    const browserMetrics = this.extractBrowserMetrics(test, result);
 
     // Parse flow and scenario from test title path
     const [flow, scenario] = this.parseTestPath(test.titlePath());
@@ -37,6 +57,9 @@ class ProfileReporter implements Reporter {
       timestamp: new Date().toISOString(),
       status: result.status,
       tempoUrl: traceId ? `http://localhost:3001/explore?orgId=1&left=%5B%22now-1h%22,%22now%22,%22Tempo%22,%7B%22query%22:%22${traceId}%22%7D%5D` : null,
+      browserMetrics: browserMetrics || undefined,
+      apiTimeMs: browserMetrics?.totalNetworkTime,
+      renderTimeMs: browserMetrics?.estimatedRenderTime,
     };
 
     this.results.push(profileResult);
@@ -46,6 +69,12 @@ class ProfileReporter implements Reporter {
     console.log(`\n${statusIcon} ${flow}/${scenario}: ${result.duration}ms`);
     if (traceId) {
       console.log(`  Trace: ${traceId}`);
+    }
+    if (browserMetrics) {
+      console.log(`  API: ${browserMetrics.totalNetworkTime}ms | Render: ${browserMetrics.estimatedRenderTime}ms`);
+      if (browserMetrics.firstContentfulPaint) {
+        console.log(`  FCP: ${Math.round(browserMetrics.firstContentfulPaint)}ms`);
+      }
     }
   }
 
@@ -80,6 +109,20 @@ class ProfileReporter implements Reporter {
     for (const annotation of result.annotations) {
       if (annotation.type === 'traceId') {
         return annotation.description || null;
+      }
+    }
+    return null;
+  }
+
+  private extractBrowserMetrics(test: TestCase, result: TestResult): BrowserMetrics | null {
+    // Check for browser metrics in test annotations
+    for (const annotation of result.annotations) {
+      if (annotation.type === 'browserMetrics' && annotation.description) {
+        try {
+          return JSON.parse(annotation.description);
+        } catch {
+          return null;
+        }
       }
     }
     return null;

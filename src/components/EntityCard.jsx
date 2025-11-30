@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo, useCallback, useMemo } from 'react';
 import { formatEntityType, isCollectionType } from '../utils/formatters';
 import { EntityImage } from './EntityImage';
 
 /**
  * EntityCard - Universal card component for entities (items and collections)
+ * Memoized to prevent unnecessary re-renders in large lists.
  *
  * @param {Object} item - Item or collection data
  * @param {Number} index - Index in the list (for key generation)
@@ -23,7 +24,7 @@ import { EntityImage } from './EntityImage';
  * @param {Number} duplicateCount - Number of duplicate copies (1 if not duplicated)
  * @param {Function} onExpandToggle - Callback when duplicate expand/collapse badge is clicked (receives itemId)
  */
-export function EntityCard({
+function EntityCardInner({
   item,
   index = 0,
   onClick,
@@ -229,3 +230,39 @@ export function EntityCard({
     </div>
   );
 }
+
+// Memoize EntityCard to prevent re-renders when props haven't changed
+// Custom comparison function for better performance with complex objects
+function arePropsEqual(prevProps, nextProps) {
+  // Fast path: check primitive props first
+  if (
+    prevProps.isOwned !== nextProps.isOwned ||
+    prevProps.isFavorite !== nextProps.isFavorite ||
+    prevProps.isSelected !== nextProps.isSelected ||
+    prevProps.isDisabled !== nextProps.isDisabled ||
+    prevProps.isMultiSelectMode !== nextProps.isMultiSelectMode ||
+    prevProps.showCompletion !== nextProps.showCompletion ||
+    prevProps.showAsWishlist !== nextProps.showAsWishlist ||
+    prevProps.isDuplicate !== nextProps.isDuplicate ||
+    prevProps.duplicateCount !== nextProps.duplicateCount ||
+    prevProps.index !== nextProps.index ||
+    prevProps.itemType !== nextProps.itemType
+  ) {
+    return false;
+  }
+
+  // Check item identity (by id, not deep equality)
+  if (prevProps.item?.id !== nextProps.item?.id) {
+    return false;
+  }
+
+  // Check progress object (shallow)
+  if (prevProps.progress?.percentage !== nextProps.progress?.percentage) {
+    return false;
+  }
+
+  // Functions are assumed stable (callbacks should be memoized by parent)
+  return true;
+}
+
+export const EntityCard = memo(EntityCardInner, arePropsEqual);
