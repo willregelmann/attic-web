@@ -2,6 +2,17 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { EntityCard } from './EntityCard';
 import { isCollectionType, isCollectionComplete } from '../utils/formatters';
 
+/**
+ * Get a unique key for an item.
+ * Items have: user_item_id (unique), id (entity UUID - can have duplicates)
+ * Wishlists have: wishlist_id (unique), id (entity UUID)
+ * Collections have: id (unique)
+ * DBoT items have: id (entity UUID - unique within DBoT)
+ */
+function getUniqueItemKey(item) {
+  return item.user_item_id || item.wishlist_id || item.id;
+}
+
 // Progressive rendering configuration
 const INITIAL_BATCH_SIZE = 18; // First render: ~2-3 rows depending on viewport
 const BATCH_SIZE = 24; // Subsequent batches
@@ -101,7 +112,8 @@ export function EntityCardGrid({
 
         // Check if this is a duplicate group that's expanded
         const isDuplicateGroup = item.isDuplicate && item.duplicateGroup && item.duplicateGroup.length > 0;
-        const isExpanded = expandedGroups.has(item.id);
+        const itemKey = getUniqueItemKey(item);
+        const isExpanded = expandedGroups.has(itemKey);
 
         // Compute item type for multi-select type locking
         const computeItemType = () => {
@@ -116,13 +128,13 @@ export function EntityCardGrid({
         if (isDuplicateGroup && isExpanded) {
 
           return (
-            <div key={item.id} className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div key={itemKey} className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
                 All {item.duplicateCount} copies:
               </div>
 
               {item.duplicateGroup.map((duplicateItem) => (
-                <div key={duplicateItem.id} className="pl-4 border-l-2 border-gray-300 dark:border-gray-600">
+                <div key={getUniqueItemKey(duplicateItem)} className="pl-4 border-l-2 border-gray-300 dark:border-gray-600">
                   <EntityCard
                     item={duplicateItem}
                     index={index}
@@ -145,7 +157,7 @@ export function EntityCardGrid({
 
               <button
                 className="w-full mt-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-                onClick={() => toggleExpansion(item.id)}
+                onClick={() => toggleExpansion(itemKey)}
               >
                 Collapse
               </button>
@@ -156,7 +168,7 @@ export function EntityCardGrid({
         // Otherwise, render a single card (possibly with duplicate count badge)
         return (
           <EntityCard
-            key={item.id}
+            key={itemKey}
             item={item}
             index={index}
             onClick={() => isCollection ? onCollectionClick?.(item) : onItemClick?.(item, index)}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useQuery, useApolloClient, useMutation, useLazyQuery } from '@apollo/client/react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MY_COLLECTION_TREE, GET_DATABASE_OF_THINGS_ENTITY, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, GET_COLLECTION_PARENT_COLLECTIONS, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, BATCH_ADD_ITEMS_TO_WISHLIST, BATCH_ADD_ITEMS_TO_MY_COLLECTION, DELETE_USER_COLLECTION, USER_COLLECTION_DELETION_PREVIEW, REMOVE_ITEM_FROM_MY_COLLECTION } from '../queries';
@@ -460,21 +460,21 @@ function UserCollectionPage() {
     return groupDuplicateItems(filteredItems, groupDuplicates);
   }, [filteredItems, groupDuplicates]);
 
-  // Batch action handlers
-  const handleBatchDelete = () => {
+  // Batch action handlers - wrapped in useCallback to prevent infinite re-renders
+  const handleBatchDelete = useCallback(() => {
     setBatchAction('delete');
     setShowBatchConfirm(true);
-  };
+  }, []);
 
-  const handleBatchWishlist = () => {
+  const handleBatchWishlist = useCallback(() => {
     setBatchAction('wishlist');
     setShowBatchConfirm(true);
-  };
+  }, []);
 
-  const handleBatchAdd = () => {
+  const handleBatchAdd = useCallback(() => {
     setBatchAction('add');
     setShowBatchConfirm(true);
-  };
+  }, []);
 
   const executeBatchAction = async (parentCollectionId = null) => {
     if (batchAction === 'delete') {

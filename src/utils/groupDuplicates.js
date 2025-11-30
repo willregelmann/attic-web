@@ -1,5 +1,5 @@
 /**
- * Groups items by entity_id when groupDuplicates is enabled
+ * Groups items by entity ID when groupDuplicates is enabled
  * @param {Array} items - Array of UserItem objects
  * @param {Boolean} shouldGroup - Whether to group duplicates
  * @returns {Array} - Array of items or grouped items
@@ -12,14 +12,18 @@ export function groupDuplicateItems(items, shouldGroup) {
   const grouped = {};
 
   items.forEach(item => {
-    // Treat items without entity_id as unique (cannot be duplicated)
-    if (!item.entity_id) {
-      const uniqueKey = `_no_entity_${item.id || Math.random()}`;
+    // Get the entity ID - items from MY_COLLECTION_TREE use 'id' for entity UUID
+    // Items have: id (entity UUID), user_item_id (unique item ID)
+    // Wishlists have: id (entity UUID), wishlist_id (unique wishlist ID)
+    // Custom items may not have an entity reference
+    const entityId = item.entity_id || item.id;
+
+    // Treat items without any ID as unique (edge case)
+    if (!entityId) {
+      const uniqueKey = `_no_entity_${Math.random()}`;
       grouped[uniqueKey] = [item];
       return;
     }
-
-    const entityId = item.entity_id;
 
     if (!grouped[entityId]) {
       grouped[entityId] = [];

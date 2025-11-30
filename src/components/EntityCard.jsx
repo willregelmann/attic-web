@@ -219,7 +219,9 @@ function EntityCardInner({
           className="absolute top-2 right-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full cursor-pointer hover:bg-blue-700 transition-colors z-10 border-0"
           onClick={(e) => {
             e.stopPropagation();
-            onExpandToggle(item.id);
+            // Use unique ID: user_item_id for owned items, wishlist_id for wishlisted, id for DBoT
+            const uniqueKey = item.user_item_id || item.wishlist_id || item.id;
+            onExpandToggle(uniqueKey);
           }}
           aria-label={`${duplicateCount} duplicates`}
           type="button"

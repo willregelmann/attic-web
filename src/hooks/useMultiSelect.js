@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 
 /**
  * Custom hook for managing multi-select state
@@ -95,12 +95,18 @@ export function useMultiSelect({ onSelectionComplete } = {}) {
     }
   }, [multiSelectMode.selectedIds, exitMultiSelectMode, onSelectionComplete]);
 
+  // Memoize selectedIds array to prevent infinite re-renders when used in dependency arrays
+  const selectedIdsArray = useMemo(
+    () => Array.from(multiSelectMode.selectedIds),
+    [multiSelectMode.selectedIds]
+  );
+
   return {
     // State
     isMultiSelectMode: multiSelectMode.active,
     selectedType: multiSelectMode.selectedType,
     selectedCount: multiSelectMode.selectedIds.size,
-    selectedIds: Array.from(multiSelectMode.selectedIds),
+    selectedIds: selectedIdsArray,
 
     // Actions
     enterMultiSelectMode,
