@@ -1,0 +1,10 @@
+# Generated test artifacts
+playwright-report/
+test-results/
+
+# Keep the results directory structure but ignore JSON results
+results/*.json
+!results/.gitkeep
+
+# Node modules (if installed locally)
+node_modules/

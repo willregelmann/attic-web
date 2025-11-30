@@ -17,8 +17,8 @@ test.describe('Collection Tree Performance', () => {
     const startTime = Date.now();
     await page.goto('/my-collection');
 
-    // Wait for collection content to load
-    await page.waitForSelector('[data-testid="collection-content"], .collection-grid, .item-card', {
+    // Wait for collection cards to load
+    await page.waitForSelector('[data-testid="collection-card"], [data-testid="item-card"]', {
       timeout: 30000
     });
 
@@ -38,20 +38,20 @@ test.describe('Collection Tree Performance', () => {
 
     // Navigate to root first
     await page.goto('/my-collection');
-    await page.waitForSelector('[data-testid="collection-content"], .collection-grid', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="collection-card"]', { timeout: 30000 });
 
     // Click on Large Collection (triggers pagination)
     const startTime = Date.now();
-    await page.click('text=Large Collection');
+    await page.click('[data-testid="collection-card"]:has-text("Large Collection")');
 
     // Wait for items to load
-    await page.waitForSelector('.item-card, [data-testid="item-card"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="item-card"]', { timeout: 30000 });
 
     const loadTime = Date.now() - startTime;
     console.log(`  Large Collection load: ${loadTime}ms`);
 
     // Verify items loaded (should have 100)
-    const itemCount = await page.locator('.item-card, [data-testid="item-card"]').count();
+    const itemCount = await page.locator('[data-testid="item-card"]').count();
     expect(itemCount).toBeGreaterThan(0);
   });
 
@@ -64,19 +64,19 @@ test.describe('Collection Tree Performance', () => {
 
     // Navigate to root
     await page.goto('/my-collection');
-    await page.waitForSelector('[data-testid="collection-content"], .collection-grid', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="collection-card"]', { timeout: 30000 });
 
     // Navigate through hierarchy
     const startTime = Date.now();
 
-    await page.click('text=Nested Hierarchy');
-    await page.waitForSelector('text=Level 2', { timeout: 10000 });
+    await page.click('[data-testid="collection-card"]:has-text("Nested Hierarchy")');
+    await page.waitForSelector('[data-testid="collection-card"]:has-text("Level 2")', { timeout: 10000 });
 
-    await page.click('text=Level 2');
-    await page.waitForSelector('text=Level 3', { timeout: 10000 });
+    await page.click('[data-testid="collection-card"]:has-text("Level 2")');
+    await page.waitForSelector('[data-testid="collection-card"]:has-text("Level 3")', { timeout: 10000 });
 
-    await page.click('text=Level 3');
-    await page.waitForSelector('.item-card, [data-testid="item-card"]', { timeout: 10000 });
+    await page.click('[data-testid="collection-card"]:has-text("Level 3")');
+    await page.waitForSelector('[data-testid="item-card"]', { timeout: 10000 });
 
     const totalNavTime = Date.now() - startTime;
     console.log(`  Deep navigation (3 levels): ${totalNavTime}ms`);
@@ -90,13 +90,13 @@ test.describe('Collection Tree Performance', () => {
     test.info().annotations.push({ type: 'traceId', description: trace.traceId });
 
     await page.goto('/my-collection');
-    await page.waitForSelector('[data-testid="collection-content"], .collection-grid', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="collection-card"]', { timeout: 30000 });
 
     const startTime = Date.now();
-    await page.click('text=Mixed Collection');
+    await page.click('[data-testid="collection-card"]:has-text("Mixed Collection")');
 
-    // Wait for both owned and wishlisted items
-    await page.waitForSelector('.item-card, [data-testid="item-card"]', { timeout: 30000 });
+    // Wait for items to load
+    await page.waitForSelector('[data-testid="item-card"]', { timeout: 30000 });
 
     const loadTime = Date.now() - startTime;
     console.log(`  Mixed Collection load: ${loadTime}ms`);
