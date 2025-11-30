@@ -34,13 +34,13 @@ export async function injectTraceHeaders(page: Page, traceContext: TraceContext)
 /**
  * Build Tempo query URL for a trace
  */
-export function getTempoUrl(traceId: string, grafanaBaseUrl = 'http://localhost:3000'): string {
+export function getTempoUrl(traceId: string, grafanaBaseUrl = 'http://localhost:3001'): string {
   return `${grafanaBaseUrl}/explore?orgId=1&left=%5B%22now-1h%22,%22now%22,%22Tempo%22,%7B%22query%22:%22${traceId}%22%7D%5D`;
 }
 
 /**
  * Build Tempo API URL for fetching trace data
  */
-export function getTempoApiUrl(traceId: string, tempoBaseUrl = 'http://localhost:3201'): string {
+export function getTempoApiUrl(traceId: string, tempoBaseUrl = 'http://localhost:3001'): string {
   return `${tempoBaseUrl}/api/traces/${traceId}`;
 }

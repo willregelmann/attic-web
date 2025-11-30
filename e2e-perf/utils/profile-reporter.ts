@@ -36,7 +36,7 @@ class ProfileReporter implements Reporter {
       traceId,
       timestamp: new Date().toISOString(),
       status: result.status,
-      tempoUrl: traceId ? `http://localhost:3000/explore?orgId=1&left=%5B%22now-1h%22,%22now%22,%22Tempo%22,%7B%22query%22:%22${traceId}%22%7D%5D` : null,
+      tempoUrl: traceId ? `http://localhost:3001/explore?orgId=1&left=%5B%22now-1h%22,%22now%22,%22Tempo%22,%7B%22query%22:%22${traceId}%22%7D%5D` : null,
     };
 
     this.results.push(profileResult);
