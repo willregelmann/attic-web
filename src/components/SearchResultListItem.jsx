@@ -9,7 +9,7 @@ function SearchResultListItem({ item, onItemClick }) {
       onItemClick(item);
     } else {
       // Default behavior
-      if (isCollectionType(item.type)) {
+      if (isCollectionType(item)) {
         navigate(`/collection/${item.id}`);
       } else {
         navigate(`/item/${item.id}`);
@@ -39,7 +39,7 @@ function SearchResultListItem({ item, onItemClick }) {
           className="text-2xl md:text-[2rem] leading-none"
           style={{ display: (item.thumbnail_url || item.image_url) ? 'none' : 'flex' }}
         >
-          {isCollectionType(item.type) ? '📦' : '🎴'}
+          {isCollectionType(item) ? '📦' : '🎴'}
         </div>
       </div>
 

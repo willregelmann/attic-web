@@ -15,10 +15,11 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     // Apply theme to document
+    // Add both 'dark-mode' (for CSS custom properties) and 'dark' (for Tailwind dark: prefix)
     if (isDarkMode) {
-      document.documentElement.classList.add('dark-mode');
+      document.documentElement.classList.add('dark-mode', 'dark');
     } else {
-      document.documentElement.classList.remove('dark-mode');
+      document.documentElement.classList.remove('dark-mode', 'dark');
     }
     // Save to localStorage
     localStorage.setItem('darkMode', isDarkMode);

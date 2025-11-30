@@ -190,7 +190,7 @@ function EntityDetail({
     }
 
     // Initialize collection edit state
-    if (item && isCustomCollection(item.type)) {
+    if (item && isCustomCollection(item)) {
       setEditCollectionName(item.name || '');
       setEditCollectionDescription(item.description || '');
       // Set selected collection to the parent of this collection
@@ -198,14 +198,13 @@ function EntityDetail({
       setOriginalParentCollectionId(item.parent_collection_id || null);
 
       // Auto-enter edit mode if creating a new collection (no ID)
-      // But not for custom items which have user_item_id
-      if (!item.id && !item.user_item_id) {
+      if (!item.id) {
         handleSetEditMode(true);
       }
     }
 
     // Initialize linked collection edit state
-    if (item && isLinkedCollection(item.type)) {
+    if (item && isLinkedCollection(item)) {
       // Set selected collection to the parent of this linked collection
       setSelectedCollection(item.parent_collection_id || null);
       setOriginalParentCollectionId(item.parent_collection_id || null);
@@ -274,7 +273,7 @@ function EntityDetail({
   useEffect(() => {
     const buildCollectionPath = async () => {
       // Build path for user items, linked collections, or custom collections that have a parent_collection_id
-      if ((isUserItem || isLinkedCollection(item.type) || isCustomCollection(item.type)) && item.parent_collection_id && !collectionsLoading) {
+      if ((isUserItem || isLinkedCollection(item) || isCustomCollection(item)) && item.parent_collection_id && !collectionsLoading) {
         // Build path from parent_collection_id upward through user collections
         const path = [];
         let currentId = item.parent_collection_id;
@@ -492,7 +491,7 @@ function EntityDetail({
   const handleSave = async () => {
     try {
       // Check if we're in wishlist mode - always creates linked collection
-      if (isWishlistMode && isCollectionType(item.type)) {
+      if (isWishlistMode && isCollectionType(item)) {
         // Validate collection name
         if (!wishlistCollectionName.trim()) {
           alert('Collection name cannot be empty');
@@ -519,7 +518,7 @@ function EntityDetail({
       }
 
       // Check if we're creating a new collection
-      if (isEditMode && isCustomCollection(item.type) && !item.id) {
+      if (isEditMode && isCustomCollection(item) && !item.id) {
         // Validate collection name
         if (!editCollectionName.trim()) {
           alert('Collection name cannot be empty');
@@ -544,7 +543,7 @@ function EntityDetail({
       }
 
       // Check if we're editing an existing collection
-      if (isEditMode && isCustomCollection(item.type)) {
+      if (isEditMode && isCustomCollection(item)) {
         // Validate collection name
         if (!editCollectionName.trim()) {
           alert('Collection name cannot be empty');
@@ -566,7 +565,7 @@ function EntityDetail({
       }
 
       // Check if we're editing a linked collection
-      if (isEditMode && isLinkedCollection(item.type)) {
+      if (isEditMode && isLinkedCollection(item)) {
         // Only update parent collection for linked collections
         await moveUserCollection({
           variables: {
@@ -866,7 +865,7 @@ function EntityDetail({
   }, [item.id]);
 
   // Determine if this is a user collection (custom or linked)
-  const isUserCollection = isCustomCollection(item.type) || isLinkedCollection(item.type) ||
+  const isUserCollection = isCustomCollection(item) || isLinkedCollection(item) ||
     (item.parent_collection_id !== undefined && item.parent_collection_id !== null);
 
   // Query for DBoT collections
@@ -891,7 +890,7 @@ function EntityDetail({
 
   // Fetch children if item has no image and no representative images and is a collection type
   useEffect(() => {
-    if (!item.image_url && !hasRepresentativeImages && isCollectionType(item.type) && item.id) {
+    if (!item.image_url && !hasRepresentativeImages && isCollectionType(item) && item.id) {
       if (isUserCollection) {
         // Fetch user collection items
         fetchUserChildren({ variables: { parentId: item.id } });
@@ -904,7 +903,7 @@ function EntityDetail({
 
   // Extract child images from DBoT collections using breadth-first search
   useEffect(() => {
-    if (!childrenData?.databaseOfThingsCollectionItems) return;
+    if (!childrenData?.databaseOfThingsCollectionItems?.edges) return;
 
     const findChildImages = (items) => {
       const images = [];
@@ -921,7 +920,9 @@ function EntityDetail({
       return images;
     };
 
-    const images = findChildImages(childrenData.databaseOfThingsCollectionItems);
+    // Extract nodes from edges
+    const items = childrenData.databaseOfThingsCollectionItems.edges.map(e => e.node);
+    const images = findChildImages(items);
     setChildImages(images);
   }, [childrenData]);
 
@@ -1022,7 +1023,7 @@ function EntityDetail({
     );
 
     // Custom collections
-    if (!isSuggestionPreview && isAuthenticated && isCustomCollection(item.type)) {
+    if (!isSuggestionPreview && isAuthenticated && isCustomCollection(item)) {
       if (isEditMode) {
         actions.push({
           id: 'save-collection',
@@ -1054,7 +1055,7 @@ function EntityDetail({
     }
 
     // Linked collections
-    if (!isSuggestionPreview && isAuthenticated && isLinkedCollection(item.type)) {
+    if (!isSuggestionPreview && isAuthenticated && isLinkedCollection(item)) {
       if (isEditMode) {
         actions.push({
           id: 'save-linked',
@@ -1084,7 +1085,7 @@ function EntityDetail({
     }
 
     // User items (owned)
-    if (!isSuggestionPreview && isAuthenticated && !isCollectionType(item.type) && isUserItem) {
+    if (!isSuggestionPreview && isAuthenticated && !isCollectionType(item) && isUserItem) {
       if (isEditMode) {
         actions.push({
           id: 'save-item',
@@ -1117,7 +1118,7 @@ function EntityDetail({
     }
 
     // Add mode (saving new item)
-    if (!isSuggestionPreview && isAuthenticated && !isCollectionType(item.type) && isAddMode) {
+    if (!isSuggestionPreview && isAuthenticated && !isCollectionType(item) && isAddMode) {
       actions.push({
         id: 'save-add',
         icon: 'fas fa-save',
@@ -1129,7 +1130,7 @@ function EntityDetail({
     }
 
     // Add to collection for DBoT items
-    if (!isSuggestionPreview && isAuthenticated && !isCollectionType(item.type) && !isUserItem && !isAddMode) {
+    if (!isSuggestionPreview && isAuthenticated && !isCollectionType(item) && !isUserItem && !isAddMode) {
       actions.push({
         id: 'add-to-collection',
         icon: addIcon,
@@ -1139,7 +1140,7 @@ function EntityDetail({
     }
 
     // Wishlist mode (linking DBoT collection)
-    if (!isSuggestionPreview && isAuthenticated && isCollectionType(item.type) && isWishlistMode) {
+    if (!isSuggestionPreview && isAuthenticated && isCollectionType(item) && isWishlistMode) {
       actions.push({
         id: 'save-wishlist',
         icon: 'fas fa-save',
@@ -1288,7 +1289,7 @@ function EntityDetail({
           <div className="flex flex-col" style={{ gap: (!isEditMode && !isAddMode && isUserItem) ? '0' : undefined }}>
             <div className="flex items-center gap-3">
               {/* Editable collection name */}
-              {isEditMode && isCustomCollection(item.type) ? (
+              {isEditMode && isCustomCollection(item) ? (
                 <input
                   type="text"
                   value={editCollectionName}
@@ -1367,7 +1368,7 @@ function EntityDetail({
             })()}
 
             <p className="text-sm md:text-base text-[var(--text-secondary)] mt-1 mb-0 font-medium">
-              {isLinkedCollection(item.type) ? 'LINKED' : formatEntityType(item.type)}
+              {isLinkedCollection(item) ? 'LINKED' : formatEntityType(item.type)}
               {(() => {
                 // Show variant year if viewing a variant, otherwise base item year
                 if (viewVariant && item.entity_variants && item.entity_variants.length > 0) {
@@ -1381,7 +1382,7 @@ function EntityDetail({
           </div>
 
           {/* Collection Description - Editable for custom collections (not custom items) */}
-          {isCustomCollection(item.type) && !item.user_item_id && (
+          {isCustomCollection(item) && !item.user_item_id && (
             <div>
               <label className="block mb-1.5 text-xs uppercase text-[var(--text-secondary)] font-medium tracking-wide">Description:</label>
               {isEditMode ? (
@@ -1402,7 +1403,7 @@ function EntityDetail({
           )}
 
           {/* Wishlist Mode UI - Creates linked collection */}
-          {isWishlistMode && isCollectionType(item.type) && (
+          {isWishlistMode && isCollectionType(item) && (
             <div style={{ marginTop: '16px' }}>
               <div style={{ marginBottom: '16px' }}>
                 <label className="block mb-1.5 text-xs uppercase text-[var(--text-secondary)] font-medium tracking-wide">
@@ -1501,7 +1502,7 @@ function EntityDetail({
                 selectedId={isWishlistMode ? wishlistTargetCollectionId : selectedCollection}
                 onSelect={isWishlistMode ? setWishlistTargetCollectionId : setSelectedCollection}
                 expandedIds={expandedIds}
-                excludeCollectionId={isCustomCollection(item.type) || isLinkedCollection(item.type) ? item.id : null}
+                excludeCollectionId={isCustomCollection(item) || isLinkedCollection(item) ? item.id : null}
                 isAuthenticated={isAuthenticated}
               />
             </div>
@@ -1511,7 +1512,7 @@ function EntityDetail({
           {!isSuggestionPreview && !isEditMode && !isAddMode && !isWishlistMode && (
             <>
               {/* Show user collection hierarchy for owned items, linked collections, and custom collections */}
-              {(isUserItem || isLinkedCollection(item.type) || isCustomCollection(item.type)) && (
+              {(isUserItem || isLinkedCollection(item) || isCustomCollection(item)) && (
                 <div className="flex flex-col">
                   <h5 className="text-xs uppercase text-[var(--text-secondary)] font-medium tracking-wide m-0 mb-2">Collections</h5>
                   <div className="m-0 flex flex-col">
@@ -1582,7 +1583,7 @@ function EntityDetail({
               )}
 
               {/* Show DBoT parent collections for non-owned items (excluding linked and custom collections) */}
-              {!isUserItem && !isLinkedCollection(item.type) && !isCustomCollection(item.type) && (
+              {!isUserItem && !isLinkedCollection(item) && !isCustomCollection(item) && (
                 <div className="flex flex-col">
                   <h5 className="text-xs uppercase text-[var(--text-secondary)] font-medium tracking-wide m-0 mb-2">Collections</h5>
                   <div className="m-0 flex flex-col">

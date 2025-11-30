@@ -36,6 +36,7 @@ function Navigation() {
   const [searchItems, { data: searchData, loading: searchLoading }] = useLazyQuery(
     SEMANTIC_SEARCH_DATABASE_OF_THINGS,
     {
+      fetchPolicy: 'network-only',
       onCompleted: () => {
         setShowSearchResults(true);
       },
@@ -123,7 +124,7 @@ function Navigation() {
     setShowSearchResults(false);
     setSearchQuery('');
 
-    if (isCollectionType(item.type)) {
+    if (isCollectionType(item)) {
       navigate(`/collection/${item.id}`);
     } else {
       // For individual items, check viewport
@@ -238,7 +239,7 @@ function Navigation() {
                                     className="w-full h-full text-xl leading-none flex items-center justify-center"
                                     style={{ display: (item.thumbnail_url || item.image_url || item.representative_image_urls?.[0]) ? 'none' : 'flex' }}
                                   >
-                                    {isCollectionType(item.type) ? '📦' : '🎴'}
+                                    {isCollectionType(item) ? '📦' : '🎴'}
                                   </div>
                                 </div>
                                 <div className="flex-1">

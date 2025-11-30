@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useApolloClient, useMutation, useLazyQuery } from '@apollo/client/react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MY_COLLECTION_TREE, GET_DATABASE_OF_THINGS_ENTITY, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, GET_COLLECTION_PARENT_COLLECTIONS, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, BATCH_ADD_ITEMS_TO_WISHLIST, BATCH_ADD_ITEMS_TO_MY_COLLECTION, DELETE_USER_COLLECTION, USER_COLLECTION_DELETION_PREVIEW } from '../queries';
+import { MY_COLLECTION_TREE, GET_DATABASE_OF_THINGS_ENTITY, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, GET_COLLECTION_PARENT_COLLECTIONS, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, BATCH_ADD_ITEMS_TO_WISHLIST, BATCH_ADD_ITEMS_TO_MY_COLLECTION, DELETE_USER_COLLECTION, USER_COLLECTION_DELETION_PREVIEW, REMOVE_ITEM_FROM_MY_COLLECTION } from '../queries';
 import { CollectionHeader } from './CollectionHeader';
 import { EntityCardGrid } from './EntityCardGrid';
 import EntityDetailModal from './EntityDetailModal';
@@ -119,6 +119,15 @@ function UserCollectionPage() {
     awaitRefetchQueries: true
   });
 
+  // Single item delete mutation (uses user_item_id)
+  const [deleteItemMutation, { loading: isDeletingItem }] = useMutation(
+    REMOVE_ITEM_FROM_MY_COLLECTION,
+    {
+      refetchQueries: [{ query: MY_COLLECTION_TREE, variables: { parentId: currentParentId } }],
+      awaitRefetchQueries: true
+    }
+  );
+
   const [batchAddMutation, { loading: isBatchAdding }] = useMutation(
     BATCH_ADD_ITEMS_TO_MY_COLLECTION,
     {
@@ -222,9 +231,9 @@ function UserCollectionPage() {
     if (!selectedItem?.user_item_id) return;
 
     try {
-      await batchRemoveMutation({
+      await deleteItemMutation({
         variables: {
-          entityIds: [selectedItem.id]
+          userItemId: selectedItem.user_item_id
         }
       });
 
@@ -298,12 +307,12 @@ function UserCollectionPage() {
     // Apply filters if collection supports filtering
     let navigableItems = rawAllItems;
     const currentSupportsFiltering = currentParentId && (
-      isLinkedCollection(data.myCollectionTree.current_collection?.type) ||
-      isCustomCollection(data.myCollectionTree.current_collection?.type)
+      isLinkedCollection(data.myCollectionTree.current_collection) ||
+      isCustomCollection(data.myCollectionTree.current_collection)
     );
 
     if (currentSupportsFiltering && rawAllItems.length > 0) {
-      const currentFilterCollectionId = isLinkedCollection(data.myCollectionTree.current_collection?.type)
+      const currentFilterCollectionId = isLinkedCollection(data.myCollectionTree.current_collection)
         ? data.myCollectionTree.current_collection?.linked_dbot_collection_id
         : currentParentId;
       const collectionFilters = getFiltersForCollection(currentFilterCollectionId);
@@ -386,12 +395,12 @@ function UserCollectionPage() {
   // Determine if current collection supports filtering
   // Root level (currentParentId === null) always supports filtering
   // Nested levels support filtering for linked and custom collections
-  const supportsFiltering = !currentParentId || isLinkedCollection(current_collection?.type) || isCustomCollection(current_collection?.type);
-  const filterCollectionId = isLinkedCollection(current_collection?.type) ? linkedDbotCollectionId : (currentParentId || 'root');
+  const supportsFiltering = !currentParentId || isLinkedCollection(current_collection) || isCustomCollection(current_collection);
+  const filterCollectionId = isLinkedCollection(current_collection) ? linkedDbotCollectionId : (currentParentId || 'root');
 
   // For linked collections, maintain DBoT ordering instead of frontloading owned items
   // Use the DBoT collection items as the canonical order
-  const isLinkedCollectionForSorting = isLinkedCollection(current_collection?.type);
+  const isLinkedCollectionForSorting = isLinkedCollection(current_collection);
   const dbotItems = dbotCollectionItemsData?.databaseOfThingsCollectionItems?.edges?.map(e => e.node) || [];
   const allItems = isLinkedCollectionForSorting && dbotItems.length > 0
     ? (() => {
@@ -419,12 +428,13 @@ function UserCollectionPage() {
     : [...items, ...wishlists];
 
   // For linked collections, merge user collection data with DBoT collection data
-  const isLinkedCollectionForHeader = isLinkedCollection(current_collection?.type);
+  const isLinkedCollectionForHeader = isLinkedCollection(current_collection);
   const dbotCollection = dbotCollectionData?.databaseOfThingsEntity;
   const displayCollection = isLinkedCollectionForHeader && dbotCollection
     ? {
         ...dbotCollection, // Use DBoT's image, attributes, year, etc.
-        type: 'linked', // Override type to 'linked'
+        type: 'collection', // Type is always 'collection' for collections
+        category: 'linked', // Category indicates it's a linked collection
         parent_collection_id: current_collection.parent_collection_id, // Preserve user collection hierarchy
         id: current_collection.id, // Use user collection ID for navigation
       }
@@ -615,7 +625,7 @@ function UserCollectionPage() {
         onClick: (e) => {
           e?.stopPropagation();
           setSelectedItem({
-            type: 'custom',
+            type: 'collection',
             name: '',
             description: '',
             parent_collection_id: currentParentId
@@ -659,13 +669,13 @@ function UserCollectionPage() {
     // Add header actions when no item is selected
     if (!selectedItem) {
       actions.push(...headerActions);
-    } else if ((isCustomCollection(selectedItem.type) || isLinkedCollection(selectedItem.type)) && !selectedItem.user_item_id) {
-      // Edit/delete buttons for custom and linked collections (not items)
-      // Custom items have type 'custom' but also have user_item_id - they're items, not collections
+    } else if (isCustomCollection(selectedItem) || isLinkedCollection(selectedItem)) {
+      // Edit/delete buttons for custom and linked collections
+      // Collections have type='collection', items have type='item'
       actions.push({
         id: 'edit-collection',
         icon: 'fas fa-edit',
-        label: isLinkedCollection(selectedItem.type) ? 'Move collection' : 'Edit collection',
+        label: isLinkedCollection(selectedItem) ? 'Move collection' : 'Edit collection',
         onClick: () => setItemEditMode(true),
         testid: 'edit-collection-action'
       });
@@ -871,7 +881,7 @@ function UserCollectionPage() {
         />
       ) : (
         <div className="col-span-full text-center py-16 px-8 md:py-12 md:px-6 sm:py-10 sm:px-4 text-gray-500">
-          <h3 className="my-4 text-gray-800 text-2xl md:text-xl sm:text-lg">No items yet</h3>
+          <h3 className="my-4 text-[var(--text-primary)] text-2xl md:text-xl sm:text-lg">No items yet</h3>
           <p className="m-0 mb-6 text-base md:text-[15px] sm:text-sm">Start building your collection by browsing and adding items</p>
         </div>
       )}
@@ -887,8 +897,8 @@ function UserCollectionPage() {
           hasNext={selectedItemIndex < filteredItems.length - 1}
           hasPrevious={selectedItemIndex > 0}
           onNavigateToCollection={(collection) => {
-            // Check if it's a user collection or DBoT collection
-            if (collection.type === 'user_collection' || isCustomCollection(collection.type) || isLinkedCollection(collection.type)) {
+            // Check if it's a user collection (type='collection') or DBoT collection
+            if (collection.type === 'collection') {
               // Navigate to My Collection view (root if id is null)
               if (collection.id) {
                 navigate(`/my-collection/${collection.id}`);
@@ -902,7 +912,7 @@ function UserCollectionPage() {
           }}
           currentCollection={current_collection}
           isUserItem={selectedItem.user_item_id ? true : false}
-          showAsWishlist={!selectedItem.user_item_id && !isCustomCollection(selectedItem.type) && !isLinkedCollection(selectedItem.type)}
+          showAsWishlist={!selectedItem.user_item_id && selectedItem.type !== 'collection'}
           externalEditMode={itemEditMode || collectionCreateMode}
           onEditModeChange={setItemEditMode}
           externalAddMode={itemAddMode}
@@ -976,7 +986,7 @@ function UserCollectionPage() {
           message={`Delete "${selectedItem.name}" from your collection?`}
           confirmText="Delete"
           confirmVariant="danger"
-          loading={isBatchRemoving}
+          loading={isDeletingItem}
         />
       )}
 

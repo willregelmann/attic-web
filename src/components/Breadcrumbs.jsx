@@ -11,7 +11,7 @@ function Breadcrumbs({ items = [], loading = false }) {
   // Loading state
   if (loading) {
     return (
-      <nav className="!py-3 !px-8 bg-[var(--bg-primary)] border-b border-[var(--border-color)] sticky top-20 z-[100] hidden md:block" aria-label="Breadcrumb">
+      <nav className="!py-3 !px-8 bg-[var(--bg-primary)] border-b border-[var(--border-color)] sticky top-16 z-[100] hidden md:block" aria-label="Breadcrumb">
         <ol className="flex items-center list-none max-w-[1400px] m-0 p-0 gap-2">
           <li className="flex items-center gap-2">
             <span className="inline-block w-20 h-4 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 bg-[length:200%_100%] motion-safe:animate-shimmer motion-reduce:bg-gray-100 motion-reduce:dark:bg-gray-700 rounded"></span>
@@ -38,7 +38,7 @@ function Breadcrumbs({ items = [], loading = false }) {
   };
 
   return (
-    <nav className="!py-3 !px-8 bg-[var(--bg-primary)] border-b border-[var(--border-color)] sticky top-20 z-[100] hidden md:block" aria-label="Breadcrumb">
+    <nav className="!py-3 !px-8 bg-[var(--bg-primary)] border-b border-[var(--border-color)] sticky top-16 z-[100] hidden md:block" aria-label="Breadcrumb">
       <ol className="flex items-center list-none max-w-[1400px] m-0 p-0 gap-2">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;

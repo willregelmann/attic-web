@@ -13,6 +13,8 @@ import { EntityCardGrid } from './EntityCardGrid';
 import { EntityCardSkeleton } from './SkeletonLoader';
 import MobileSearch from './MobileSearch';
 import { ImageSearchModal } from './ImageSearchModal';
+import EntityDetailModal from './EntityDetailModal';
+import { isCollectionType } from '../utils/formatters';
 
 function SearchResultsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -34,6 +36,7 @@ function SearchResultsPage() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showImageSearchModal, setShowImageSearchModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
 
   // Set RadialMenu actions via context
   useRadialMenu([
@@ -63,7 +66,8 @@ function SearchResultsPage() {
         type: null,
         first: 30
       },
-      skip: !query || isImageSearch
+      skip: !query || isImageSearch,
+      fetchPolicy: 'network-only'
     }
   );
 
@@ -140,9 +144,13 @@ function SearchResultsPage() {
     setHasMore(false);
   };
 
-  // Handle item click - navigate to item detail
+  // Handle item click - show modal for items, navigate for collections
   const handleItemClick = (item) => {
-    navigate(`/item/${item.id}`);
+    if (isCollectionType(item)) {
+      navigate(`/collection/${item.id}`);
+    } else {
+      setSelectedItem(item);
+    }
   };
 
   if (!query && !isImageSearch) {
@@ -319,6 +327,18 @@ function SearchResultsPage() {
         isOpen={showMobileFilters}
         onClose={() => setShowMobileFilters(false)}
       />
+
+      {/* Entity Detail Modal */}
+      {selectedItem && (
+        <EntityDetailModal
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+          onNavigateToCollection={(collection) => {
+            setSelectedItem(null);
+            navigate(`/collection/${collection.id}`);
+          }}
+        />
+      )}
     </div>
   );
 }

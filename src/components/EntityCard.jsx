@@ -116,7 +116,8 @@ export function EntityCard({
     // Base card styles - recreated from visual appearance
     'relative overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
     'bg-white dark:bg-[#1A1A1A]',
-    'border border-[#DEE2E6] dark:border-[#3A3A3A]',
+    // Default border - only when not selected or favorited (they have their own borders)
+    !isSelected && !isFavorite && 'border border-[#DEE2E6] dark:border-[#3A3A3A]',
     'shadow-[0_2px_8px_rgba(0,0,0,0.1)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)]',
     '', // Border radius applied via inline style
 
@@ -130,8 +131,8 @@ export function EntityCard({
     isFavorite && !isSelected && 'border-2 border-[#F5C842] dark:border-[#FFD966] shadow-[0_4px_12px_rgba(245,200,66,0.15)]',
     isFavorite && !isSelected && 'hover:shadow-[0_8px_24px_rgba(245,200,66,0.25)]',
 
-    // Wishlist styles
-    showAsWishlist && 'opacity-50 grayscale-[50%] hover:opacity-75 hover:grayscale-[20%]',
+    // Wishlist styles - don't apply when selected (selection border should be full contrast)
+    showAsWishlist && !isSelected && 'opacity-50 grayscale-[50%] hover:opacity-75 hover:grayscale-[20%]',
 
     // Multi-select mode
     isMultiSelectMode && 'cursor-pointer select-none [-webkit-touch-callout:none] [-webkit-user-select:none]',
@@ -153,7 +154,7 @@ export function EntityCard({
       onTouchMove={handleTouchMove}
       onContextMenu={handleContextMenu}
       title={isMultiSelectMode ? (isDisabled ? 'Cannot select this type' : 'Click to select') : 'Click to view details'}
-      data-testid={isCollectionType(item.type) ? "collection-card" : "item-card"}
+      data-testid={isCollectionType(item) ? "collection-card" : "item-card"}
     >
       {/* Favorite gradient overlay */}
       {isFavorite && !isSelected && (

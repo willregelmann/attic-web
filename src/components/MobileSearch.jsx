@@ -37,7 +37,7 @@ function MobileSearch({ isOpen, onClose, onAddToCollection, onOpenImageSearch })
     setSearchQuery('');
     onClose();
 
-    if (isCollectionType(item.type)) {
+    if (isCollectionType(item)) {
       navigate(`/collection/${item.id}`);
     } else {
       // For individual items, navigate to full-page view
@@ -151,7 +151,7 @@ function MobileSearch({ isOpen, onClose, onAddToCollection, onOpenImageSearch })
                                 className="w-full h-full flex items-center justify-center text-2xl"
                                 style={{ display: (item.thumbnail_url || item.image_url || item.representative_image_urls?.[0]) ? 'none' : 'flex' }}
                               >
-                                {isCollectionType(item.type) ? '📦' : '🎴'}
+                                {isCollectionType(item) ? '📦' : '🎴'}
                               </div>
                             </div>
                             <div className="flex-1 min-w-0">

@@ -128,7 +128,7 @@ function DatabaseOfThingsEntityDetailPage() {
       <EntityDetail
         item={item}
         isUserItem={false}
-        showAsWishlist={fromMyCollection && !isCollectionType(item.type)}
+        showAsWishlist={fromMyCollection && !isCollectionType(item)}
         currentCollection={currentCollection}
         onClose={handleClose}
         onNavigateToCollection={handleNavigateToCollection}

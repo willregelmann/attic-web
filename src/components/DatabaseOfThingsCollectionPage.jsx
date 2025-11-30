@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useLazyQuery, useApolloClient } from '@apollo/client/react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,7 +9,6 @@ import {
   GET_MY_COLLECTION,
   GET_MY_ITEMS,
   ADD_ITEM_TO_MY_COLLECTION,
-  REMOVE_ITEM_FROM_MY_COLLECTION,
   GET_COLLECTION_PARENT_COLLECTIONS,
   BATCH_ADD_ITEMS_TO_MY_COLLECTION,
   MY_COLLECTION_TREE,
@@ -157,10 +156,6 @@ function DatabaseOfThingsCollectionPage() {
     refetchQueries: [{ query: GET_MY_ITEMS }],
     awaitRefetchQueries: true
   });
-  const [removeItemMutation, { loading: isRemovingItem }] = useMutation(REMOVE_ITEM_FROM_MY_COLLECTION, {
-    refetchQueries: [{ query: GET_MY_ITEMS }],
-    awaitRefetchQueries: true
-  });
 
   // Fetch parent collections for filtering
   const { data: parentCollectionsData } = useQuery(GET_COLLECTION_PARENT_COLLECTIONS, {
@@ -225,7 +220,7 @@ function DatabaseOfThingsCollectionPage() {
         const { data } = await apolloClient.query({
           query: MY_COLLECTION_TREE,
           variables: { parentId },
-          fetchPolicy: 'cache-first'
+          fetchPolicy: 'network-only'  // Always fetch fresh data to detect linked collections
         });
 
         const collections = data?.myCollectionTree?.collections || [];
@@ -276,32 +271,6 @@ function DatabaseOfThingsCollectionPage() {
       setUserOwnership(new Set());
     }
   }, [myItemsData, isAuthenticated]);
-
-  // Toggle item ownership (add or remove from collection)
-  const toggleItemOwnership = async (itemId) => {
-    if (!isAuthenticated) {
-      return; // Silently return, the UI will show the auth prompt
-    }
-
-    const isOwned = userOwnership.has(itemId);
-
-    try {
-      if (isOwned) {
-        // Remove from collection
-        await removeItemMutation({
-          variables: { itemId }
-        });
-      } else {
-        // Show collection picker for adding item
-        const item = filteredItems.find(i => i.id === itemId);
-        setSingleItemToAdd(item);
-        setShowSingleItemPicker(true);
-      }
-      // No manual refetch needed - refetchQueries handles it automatically
-    } catch (error) {
-      console.error('Error toggling ownership:', error);
-    }
-  };
 
   // Handle single item addition through collection picker
   const handleSingleItemAdd = async (parentCollectionId) => {
@@ -412,6 +381,26 @@ function DatabaseOfThingsCollectionPage() {
     return filtered;
   }, [items, isRoot, filter, searchTerm, userOwnership, sortBy, collection?.id, getFiltersForCollection, applyFilters, parentCollectionsData]);
 
+  // Add item to collection (from DBoT browsing)
+  // Wrapped in useCallback to prevent infinite re-renders via radialMenuActions -> useRadialMenu
+  const handleAddItem = useCallback((itemId) => {
+    if (!isAuthenticated) {
+      return; // Silently return, the UI will show the auth prompt
+    }
+
+    const isOwned = userOwnership.has(itemId);
+
+    if (isOwned) {
+      // Already owned - do nothing (removal only available from My Collection page)
+      return;
+    }
+
+    // Show collection picker for adding item
+    const item = filteredItems.find(i => i.id === itemId);
+    setSingleItemToAdd(item);
+    setShowSingleItemPicker(true);
+  }, [isAuthenticated, userOwnership, filteredItems]);
+
   // Calculate stats based on filtered items
   const stats = useMemo(() => {
     if (!filteredItems.length) return { total: 0, owned: 0, percentage: 0 };
@@ -506,33 +495,22 @@ function DatabaseOfThingsCollectionPage() {
     // Add header actions (filter, wishlist)
     actions.push(...headerActions);
 
-    // Add item action buttons when viewing an item in ItemDetail
-    if (isAuthenticated && selectedItem && !isCollectionType(selectedItem.type) && selectedItemIndex !== null) {
-      if (userOwnership.has(selectedItem.id)) {
-        actions.push({
-          id: 'remove-from-collection',
-          icon: 'fas fa-minus-circle',
-          label: 'Remove from collection',
-          onClick: () => {
-            if (window.confirm(`Remove "${selectedItem.name}" from your collection?`)) {
-              toggleItemOwnership(selectedItem.id);
-            }
-          },
-          disabled: isFormBusy(isAddingItem, isRemovingItem)
-        });
-      } else {
+    // Add item action button when viewing an unowned item in ItemDetail
+    // (removal only available from My Collection page)
+    if (isAuthenticated && selectedItem && !isCollectionType(selectedItem) && selectedItemIndex !== null) {
+      if (!userOwnership.has(selectedItem.id)) {
         actions.push({
           id: 'add-to-collection',
           icon: 'fas fa-plus-circle',
           label: 'Add to collection',
-          onClick: () => toggleItemOwnership(selectedItem.id),
-          disabled: isFormBusy(isAddingItem, isRemovingItem)
+          onClick: () => handleAddItem(selectedItem.id),
+          disabled: isFormBusy(isAddingItem)
         });
       }
     }
 
     return actions;
-  }, [isRoot, collection?.id, headerActions, isAuthenticated, selectedItem, selectedItemIndex, userOwnership, toggleItemOwnership, isAddingItem, isRemovingItem]);
+  }, [isRoot, collection?.id, headerActions, isAuthenticated, selectedItem, selectedItemIndex, userOwnership, handleAddItem, isAddingItem]);
 
   // Set RadialMenu actions via context (normal mode)
   useRadialMenu(
@@ -689,33 +667,33 @@ function DatabaseOfThingsCollectionPage() {
           viewMode={viewMode}
         />
       ) : (
-        <div className="flex flex-col items-center justify-center min-h-[400px] p-12">
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-12 text-[var(--text-secondary)]">
           {searchTerm || filter !== 'all' ? (
             <>
-              <svg className="w-16 h-16 text-[var(--text-secondary)] mb-4" viewBox="0 0 24 24" fill="none">
+              <svg className="w-16 h-16 mb-4" viewBox="0 0 24 24" fill="none">
                 <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
                 <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 <path d="M8 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
-              <h3>No items found</h3>
+              <h3 className="text-[var(--text-primary)] text-xl mb-2">No items found</h3>
               <p>Try adjusting your filters or search term</p>
             </>
           ) : isRoot && isAuthenticated ? (
             <>
-              <svg className="w-16 h-16 text-[var(--text-secondary)] mb-4" viewBox="0 0 24 24" fill="none">
+              <svg className="w-16 h-16 mb-4" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
                       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <h3>No starred collections yet</h3>
+              <h3 className="text-[var(--text-primary)] text-xl mb-2">No starred collections yet</h3>
               <p>Star your favorite collections to see them here</p>
             </>
           ) : (
             <>
-              <svg className="w-16 h-16 text-[var(--text-secondary)] mb-4" viewBox="0 0 24 24" fill="none">
+              <svg className="w-16 h-16 mb-4" viewBox="0 0 24 24" fill="none">
                 <rect x="3" y="6" width="18" height="12" stroke="currentColor" strokeWidth="2" rx="2"/>
                 <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
-              <h3>No items yet</h3>
+              <h3 className="text-[var(--text-primary)] text-xl mb-2">No items yet</h3>
               <p>Check back soon for new items in this collection</p>
             </>
           )}
@@ -732,7 +710,7 @@ function DatabaseOfThingsCollectionPage() {
           isOwned={userOwnership.has(selectedItem.id)}
           isUserItem={false}  // ItemList shows DBoT collections, not user items
           onToggleOwnership={() => {
-            toggleItemOwnership(selectedItem.id);
+            handleAddItem(selectedItem.id);
           }}
           onNavigateToCollection={(collection) => {
             // Navigate directly without appending to current path

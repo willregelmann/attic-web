@@ -88,7 +88,7 @@ export function EntityImage({
   // Fetch children only when visible and needed (no canonical image and no representative images)
   useEffect(() => {
     const hasCanonicalImg = item.image_url || item.thumbnail_url;
-    if (isVisible && !hasCanonicalImg && !hasRepresentativeImages && isCollectionType(item.type) && item.id) {
+    if (isVisible && !hasCanonicalImg && !hasRepresentativeImages && isCollectionType(item) && item.id) {
       fetchChildren({ variables: { collectionId: item.id, first: 10 } }); // Reduced from 50 to 10
     }
   }, [isVisible, item.image_url, item.thumbnail_url, hasRepresentativeImages, item.type, item.id, fetchChildren]);
@@ -191,11 +191,11 @@ export function EntityImage({
           {displayImages.map((imageUrl, idx) => (
             <div
               key={idx}
-              className="relative bg-contain bg-center bg-no-repeat rounded"
+              className={`relative bg-contain bg-center bg-no-repeat rounded ${hasMoreImages && idx === 3 ? 'after:absolute after:inset-0 after:bg-black/40 after:rounded' : ''}`}
               style={{ backgroundImage: `url(${imageUrl})` }}
             >
               {hasMoreImages && idx === 3 && (
-                <div className="absolute bottom-1 right-1 w-7 h-7 md:w-8 md:h-8 flex items-center justify-center bg-gray-600 rounded">
+                <div className="absolute inset-0 flex items-center justify-center z-10">
                   <svg viewBox="0 0 24 24" fill="none" width="14" height="14" className="md:w-4 md:h-4">
                     <circle cx="4" cy="12" r="2" fill="white"/>
                     <circle cx="12" cy="12" r="2" fill="white"/>
@@ -219,7 +219,7 @@ export function EntityImage({
             </div>
           )}
           {isOwned && isAuthenticated && (
-            <div className="absolute top-1.5 right-1.5 md:top-2 md:right-2 w-5 h-5 md:w-6 md:h-6 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-md">
+            <div className="absolute top-1.5 right-1.5 md:top-2 md:right-2 w-5 h-5 md:w-6 md:h-6 bg-emerald-600 rounded-full flex items-center justify-center text-white border-2 border-white shadow-md">
               <svg viewBox="0 0 24 24" fill="none" width="14" height="14" className="md:w-4 md:h-4">
                 <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>

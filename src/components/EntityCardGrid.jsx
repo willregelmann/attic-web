@@ -51,8 +51,8 @@ export function EntityCardGrid({
       {items.map((item, index) => {
         const isOwned = userOwnership.has(item.id);
         const isFavorite = isRoot && userFavorites.has(item.id);
-        // Custom items have type 'custom' but also have user_item_id - they're items, not collections
-        const isCollection = isCollectionType(item.type) && !item.user_item_id;
+        // Collections have type='collection', items have type='item'
+        const isCollection = isCollectionType(item);
 
         // Collections are selectable in MyCollection context (allowCollectionSelection)
         const isCollectionSelectable = isCollection && allowCollectionSelection;

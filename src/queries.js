@@ -647,8 +647,8 @@ export const UPDATE_MY_ITEM = gql`
 `;
 
 export const REMOVE_ITEM_FROM_MY_COLLECTION = gql`
-  mutation RemoveItemFromMyCollection($itemId: ID!) {
-    removeItemFromMyCollection(entity_id: $itemId)
+  mutation RemoveItemFromMyCollection($userItemId: ID!) {
+    removeItemFromMyCollection(user_item_id: $userItemId)
   }
 `;
 
@@ -922,6 +922,7 @@ export const MY_COLLECTION_TREE = gql`
         id
         name
         type
+        category
         description
         custom_image
         linked_dbot_collection_id
@@ -947,6 +948,7 @@ export const MY_COLLECTION_TREE = gql`
         parent_collection_id
         id
         type
+        category
         name
         year
         attributes
@@ -966,6 +968,7 @@ export const MY_COLLECTION_TREE = gql`
         wishlist_created_at
         id
         type
+        category
         name
         year
         attributes
@@ -986,6 +989,7 @@ export const MY_COLLECTION_TREE = gql`
         parent_collection_id
         linked_dbot_collection_id
         type
+        category
         description
         custom_image
         image_url
