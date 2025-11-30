@@ -18,7 +18,10 @@
     "cy:component": "cypress open --component",
     "cy:e2e": "cypress open --e2e",
     "cy:run:component": "cypress run --component",
-    "cy:run:e2e": "cypress run --e2e"
+    "cy:run:e2e": "cypress run --e2e",
+    "perf": "cd e2e-perf && npm run perf",
+    "perf:ui": "cd e2e-perf && npm run perf:ui",
+    "perf:interactive": "cd e2e-perf && npm run perf:interactive"
   },
   "dependencies": {
     "@apollo/client": "^4.0.5",
