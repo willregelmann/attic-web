@@ -926,6 +926,7 @@ export const MY_COLLECTION_TREE = gql`
         description
         custom_image
         linked_dbot_collection_id
+        parent_collection_id
         image_url
         created_at
       }
