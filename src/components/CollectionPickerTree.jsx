@@ -22,7 +22,9 @@ const CollectionPickerNode = memo(({ collection, depth = 0, selectedId, onSelect
 
   // Auto-expand when this collection is in the expandedIds set (but only if not manually interacted)
   useEffect(() => {
-    if (!hasManuallyInteracted && expandedIds.has(collection.id) && !isExpanded) {
+    const shouldExpand = expandedIds.has(collection.id);
+
+    if (!hasManuallyInteracted && shouldExpand && !isExpanded) {
       setIsExpanded(true);
       if (!subData) {
         fetchSubcollections({ variables: { parentId: collection.id } });
@@ -107,6 +109,7 @@ export function CollectionPickerTree({
   excludeCollectionId = null,
   isAuthenticated = true
 }) {
+  console.log('[CollectionPickerTree] Render with selectedId:', selectedId, 'expandedIds size:', expandedIds.size, 'expandedIds:', [...expandedIds]);
   const [isRootExpanded, setIsRootExpanded] = useState(true);
 
   // Fetch user's collections for tree

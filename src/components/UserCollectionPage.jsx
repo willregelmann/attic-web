@@ -197,7 +197,16 @@ function UserCollectionPage() {
   }, [selectedItem]);
 
   const handleCollectionClick = (collection) => {
-    navigate(`/my-collection/${collection.id}`);
+    // Check if this is a user collection (has parent_collection_id) or a DBoT collection
+    // User collections have parent_collection_id field from our database
+    // DBoT collections from the external API won't have this field
+    if ('parent_collection_id' in collection) {
+      // User collection - navigate within my-collection
+      navigate(`/my-collection/${collection.id}`);
+    } else {
+      // DBoT collection - navigate to DBoT browse view
+      navigate(`/collection/${collection.id}`);
+    }
   };
 
   const handleItemClick = (item, index) => {

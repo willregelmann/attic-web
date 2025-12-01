@@ -3,6 +3,7 @@ import { useApolloClient } from '@apollo/client/react';
 import { MY_COLLECTION_TREE } from '../queries';
 import { Modal, ModalButton } from './Modal';
 import { CollectionPickerTree } from './CollectionPickerTree';
+import { CollectionTreeSkeleton } from './SkeletonLoader';
 
 /**
  * BatchAddToUserCollectionModal - Modal for selecting user collection to add items to
@@ -26,13 +27,18 @@ export function BatchAddToUserCollectionModal({
   const apolloClient = useApolloClient();
   const [selectedCollectionId, setSelectedCollectionId] = useState(defaultCollectionId);
   const [expandedIds, setExpandedIds] = useState(new Set());
+  // Start in loading state if we need to find path to a nested collection
+  const [isPathFinding, setIsPathFinding] = useState(!!defaultCollectionId);
 
   // Find path to selected collection and expand parent collections
   useEffect(() => {
     if (!isOpen || !defaultCollectionId || !apolloClient) {
       setExpandedIds(new Set());
+      setIsPathFinding(false);
       return;
     }
+
+    setIsPathFinding(true);
 
     const findPathToCollection = async (targetId, parentId = null, path = []) => {
       try {
@@ -73,13 +79,18 @@ export function BatchAddToUserCollectionModal({
         // Not found or at root, just expand root
         setExpandedIds(new Set());
       }
+      setIsPathFinding(false);
     });
   }, [isOpen, defaultCollectionId, apolloClient]);
 
-  // Reset selection when modal opens/closes or default changes
+  // Reset selection and path finding state when modal opens/closes or default changes
   useEffect(() => {
     if (isOpen) {
       setSelectedCollectionId(defaultCollectionId);
+      // Reset to loading state if we need to find a path
+      if (defaultCollectionId) {
+        setIsPathFinding(true);
+      }
     }
   }, [isOpen, defaultCollectionId]);
 
@@ -117,12 +128,17 @@ export function BatchAddToUserCollectionModal({
         Select which collection to add these items to:
       </p>
 
-      <CollectionPickerTree
-        selectedId={selectedCollectionId}
-        onSelect={setSelectedCollectionId}
-        expandedIds={expandedIds}
-        isAuthenticated={true}
-      />
+      {/* Wait for path finding to complete before rendering tree to ensure proper initial expansion */}
+      {isPathFinding ? (
+        <CollectionTreeSkeleton count={3} />
+      ) : (
+        <CollectionPickerTree
+          selectedId={selectedCollectionId}
+          onSelect={setSelectedCollectionId}
+          expandedIds={expandedIds}
+          isAuthenticated={true}
+        />
+      )}
     </Modal>
   );
 }
