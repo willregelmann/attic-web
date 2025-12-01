@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useQuery, useApolloClient, useMutation, useLazyQuery } from '@apollo/client/react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MY_COLLECTION_TREE, GET_DATABASE_OF_THINGS_ENTITY, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, GET_COLLECTION_PARENT_COLLECTIONS, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, BATCH_ADD_ITEMS_TO_WISHLIST, BATCH_ADD_ITEMS_TO_MY_COLLECTION, DELETE_USER_COLLECTION, USER_COLLECTION_DELETION_PREVIEW, REMOVE_ITEM_FROM_MY_COLLECTION } from '../queries';
+import { MY_COLLECTION_TREE, MY_COLLECTION_PROGRESS, GET_DATABASE_OF_THINGS_ENTITY, GET_DATABASE_OF_THINGS_COLLECTION_ITEMS, GET_COLLECTION_PARENT_COLLECTIONS, BATCH_REMOVE_ITEMS_FROM_MY_COLLECTION, BATCH_ADD_ITEMS_TO_WISHLIST, BATCH_ADD_ITEMS_TO_MY_COLLECTION, DELETE_USER_COLLECTION, USER_COLLECTION_DELETION_PREVIEW, REMOVE_ITEM_FROM_MY_COLLECTION } from '../queries';
 import { CollectionHeader } from './CollectionHeader';
 import { EntityCardGrid } from './EntityCardGrid';
 import EntityDetailModal from './EntityDetailModal';
@@ -78,6 +78,21 @@ function UserCollectionPage() {
       }
     }
   );
+
+  // Progress data fetched separately (async loading for better perceived performance)
+  const [progressData, setProgressData] = useState({});
+  const [getCollectionProgress] = useLazyQuery(MY_COLLECTION_PROGRESS, {
+    fetchPolicy: 'network-only',
+    onCompleted: (data) => {
+      if (data?.myCollectionProgress) {
+        const progressMap = {};
+        data.myCollectionProgress.forEach(({ collection_id, progress }) => {
+          progressMap[collection_id] = progress;
+        });
+        setProgressData(prev => ({ ...prev, ...progressMap }));
+      }
+    }
+  });
 
   // Batch mutations
   const [batchRemoveMutation, { loading: isBatchRemoving }] = useMutation(
@@ -195,6 +210,22 @@ function UserCollectionPage() {
       setCollectionCreateMode(false);
     }
   }, [selectedItem]);
+
+  // Fetch progress data separately after collections load (async for better UX)
+  useEffect(() => {
+    const collections = data?.myCollectionTree?.collections || [];
+    const currentCollection = data?.myCollectionTree?.current_collection;
+
+    // Get all collection IDs that need progress (visible collections + current)
+    const collectionIds = collections.map(c => c.id);
+    if (currentCollection?.id) {
+      collectionIds.push(currentCollection.id);
+    }
+
+    if (collectionIds.length > 0) {
+      getCollectionProgress({ variables: { collectionIds } });
+    }
+  }, [data?.myCollectionTree?.collections, data?.myCollectionTree?.current_collection, getCollectionProgress]);
 
   const handleCollectionClick = (collection) => {
     // Check if this is a user collection (has parent_collection_id) or a DBoT collection
@@ -792,12 +823,21 @@ function UserCollectionPage() {
     );
   }
 
-  // Use backend's recursive progress calculation if available, otherwise fallback to filtered count
-  const ownedCount = current_collection?.progress?.owned_count ?? items.length;
-  const totalCount = current_collection?.progress?.total_count ?? filteredItems.length;
+  // Use backend's progress data from separate async query (or fallback to filtered count)
+  const currentProgress = current_collection?.id ? progressData[current_collection.id] : null;
+  const ownedCount = currentProgress?.owned_count ?? items.length;
+  const totalCount = currentProgress?.total_count ?? filteredItems.length;
+
+  // Merge progress data into collections for rendering
+  const collectionsWithProgress = useMemo(() => {
+    return collections.map(col => ({
+      ...col,
+      progress: progressData[col.id] || null
+    }));
+  }, [collections, progressData]);
 
   // Combine collections and grouped items for rendering
-  const displayItems = [...collections, ...groupedItems];
+  const displayItems = [...collectionsWithProgress, ...groupedItems];
 
   return (
     <div className="p-4 sm:p-3 max-w-[1400px] mx-auto">

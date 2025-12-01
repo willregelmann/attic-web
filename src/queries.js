@@ -927,12 +927,6 @@ export const MY_COLLECTION_TREE = gql`
         custom_image
         linked_dbot_collection_id
         image_url
-        progress {
-          owned_count
-          wishlist_count
-          total_count
-          percentage
-        }
         created_at
       }
       items {
@@ -994,12 +988,21 @@ export const MY_COLLECTION_TREE = gql`
         custom_image
         image_url
         representative_images
-        progress {
-          owned_count
-          wishlist_count
-          total_count
-          percentage
-        }
+      }
+    }
+  }
+`;
+
+// Fetch progress for multiple collections (async, separate from tree load)
+export const MY_COLLECTION_PROGRESS = gql`
+  query MyCollectionProgress($collectionIds: [ID!]!) {
+    myCollectionProgress(collection_ids: $collectionIds) {
+      collection_id
+      progress {
+        owned_count
+        wishlist_count
+        total_count
+        percentage
       }
     }
   }
