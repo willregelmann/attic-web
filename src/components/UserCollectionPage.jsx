@@ -828,13 +828,11 @@ function UserCollectionPage() {
   const ownedCount = currentProgress?.owned_count ?? items.length;
   const totalCount = currentProgress?.total_count ?? filteredItems.length;
 
-  // Merge progress data into collections for rendering
-  const collectionsWithProgress = useMemo(() => {
-    return collections.map(col => ({
-      ...col,
-      progress: progressData[col.id] || null
-    }));
-  }, [collections, progressData]);
+  // Merge progress data into collections for rendering (no useMemo - after early returns)
+  const collectionsWithProgress = collections.map(col => ({
+    ...col,
+    progress: progressData[col.id] || null
+  }));
 
   // Combine collections and grouped items for rendering
   const displayItems = [...collectionsWithProgress, ...groupedItems];
